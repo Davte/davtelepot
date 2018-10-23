@@ -40,6 +40,12 @@ setuptools.setup(
     url="https://bitbucket.org/davte/datelepot",
     packages=setuptools.find_packages(),
     platforms=['any'],
+    install_requires=[
+        'aiohttp>=3.4.4',
+        'bs4>=0.0.1',
+        'dataset>=1.1.0',
+        'telepot>=12.7'
+    ],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Framework :: AsyncIO",
