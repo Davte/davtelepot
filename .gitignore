@@ -1,0 +1,99 @@
+# local_* files
+local_*
+
+# databases
+*.db
+*.json
+
+# Data
+davtebot/data/*
+!davtebot/data/__init__.py
+!davtebot/data/davtebot_helper.json
+
+# OLD directory (backup files)
+Old/
+
+MiniScript utili/
+*.txt
+!requirements.txt
+
+# Bash files (to run the code) and nohup output file (nohup lets a script run after terminal closes)
+*.sh
+!RunMe.sh
+!RunOnEuler.sh
+!*push.sh
+!nautilus_VPN.sh
+*nohup.out
+
+#Pictures
+davtebot/img/*
+!davtebot/img/balance.png
+!davtebot/img/gear.png
+!davtebot/img/money.png
+!davtebot/img/ProfilePic.png
+!davtebot/img/ProfilePic.xcf
+!davtebot/img/robot.png
+!davtebot/img/search.png
+!davtebot/img/key.png
+!davtebot/img/malus.png
+
+# ---> Python
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
