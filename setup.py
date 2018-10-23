@@ -50,4 +50,5 @@ setuptools.setup(
         "Programming Language :: Python :: 3 :: Only",
         "Topic :: Communications :: Chat",
     ],
+    keywords='telepot telegram bot python wrapper',
 )
