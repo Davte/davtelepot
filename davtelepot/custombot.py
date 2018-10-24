@@ -17,7 +17,7 @@ import os
 
 # Third party modules
 import dataset
-import telepot
+import telepot, telepot.aio
 
 # Project modules
 from davteutil import Gettable, MyOD
