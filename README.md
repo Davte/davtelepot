@@ -1,4 +1,4 @@
-# datelepot
+# davtelepot
 This project conveniently subclasses third party telepot.aio.Bot, providing many interesting features.
 
 Please note that you need Python3.5+ to run async code
@@ -22,7 +22,7 @@ my_other_token = 'token_of_bot2'
 
 ## Usage
 ```
-from datelepot import Bot
+from davtelepot import Bot
 from data.passwords import my_token, my_other_token
 
 my_bot = Bot(token=my_token, db_name='my_db')

@@ -5,4 +5,4 @@ __version__ = "1.1.0"
 __maintainer__ = "Davide Testa"
 __contact__ = "t.me/davte"
 
-from datelepot.custombot import Bot
+from davtelepot.custombot import Bot

@@ -30,14 +30,14 @@ with open("README.md", "r") as readme_file:
     long_description = readme_file.read()
 
 setuptools.setup(
-    name='datelepot',
-    version=find_information("version", "datelepot", "__init__.py"),
-    author=find_information("author", "datelepot", "__init__.py"),
+    name='davtelepot',
+    version=find_information("version", "davtelepot", "__init__.py"),
+    author=find_information("author", "davtelepot", "__init__.py"),
     description="telepot.aio.Bot convenient subclass, featuring dataset-powered SQLite.",
-    license=find_information("license", "datelepot", "__init__.py"),
+    license=find_information("license", "davtelepot", "__init__.py"),
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://bitbucket.org/davte/datelepot",
+    url="https://bitbucket.org/davte/davtelepot",
     packages=setuptools.find_packages(),
     platforms=['any'],
     install_requires=[
