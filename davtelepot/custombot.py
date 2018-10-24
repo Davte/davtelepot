@@ -95,7 +95,7 @@ class Bot(telepot.aio.Bot, Gettable):
     MAX_GROUP_MESSAGES_PER_MINUTE = 20
     # Max length of text field for a Telegram message (UTF-8 text)
     TELEGRAM_MESSAGES_MAX_LEN = 4096
-    _path = os.path.dirname(__file__)
+    _path = '.'
     _unauthorized_message = None
     _unknown_command_message = None
     _maintenance_message = None
@@ -222,6 +222,13 @@ class Bot(telepot.aio.Bot, Gettable):
         if self.__class__.maintenance_message:
             return self.__class__._maintenance_message
         return "Bot is currently under maintenance! Retry later please."
+
+    @classmethod
+    def set_class_path(csl, path):
+        """Set class path, where files will be looked for.
+        For example, if send_photo receives `photo='mypic.png'`, it will parse it as `'{path}/mypic.png'.format(path=self.path)`
+        """
+        csl._path = path
 
     @classmethod
     def set_class_unauthorized_message(csl, unauthorized_message):
