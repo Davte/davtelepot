@@ -20,8 +20,8 @@ import dataset
 import telepot
 
 # Project modules
-from datelepot.utilities import Gettable, MyOD
-from datelepot.utilities import escape_html_chars, get_cleaned_text, make_lines_of_buttons, markdown_check, remove_html_tags, sleep_until
+from davteutil import Gettable, MyOD
+from davteutil import escape_html_chars, get_cleaned_text, make_lines_of_buttons, markdown_check, remove_html_tags, sleep_until
 
 def split_text_gracefully(text, limit, parse_mode):
     """Split text if it hits telegram limits for text messages.
