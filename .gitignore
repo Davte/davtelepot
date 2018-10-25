@@ -8,9 +8,11 @@ local_*
 *.txt
 !requirements.txt
 
-# Bash files (to run the code) and nohup output file (nohup lets a script run after terminal closes)
-*.sh
+# nohup output file (nohup lets a script run after terminal closes)
 *nohup.out
+
+# my_config.sh
+my_config.sh
 
 # ---> Python
 # Byte-compiled / optimized / DLL files
