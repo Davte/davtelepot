@@ -33,6 +33,7 @@ setuptools.setup(
     name='davtelepot',
     version=find_information("version", "davtelepot", "__init__.py"),
     author=find_information("author", "davtelepot", "__init__.py"),
+    email=find_information("email", "davtelepot", "__init__.py"),
     description="telepot.aio.Bot convenient subclass, featuring dataset-powered SQLite.",
     license=find_information("license", "davtelepot", "__init__.py"),
     long_description=long_description,
