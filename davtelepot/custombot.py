@@ -1658,7 +1658,7 @@ class Bot(telepot.aio.Bot, Gettable):
             awaits preliminary tasks and starts getting updates from telegram.
         If bot can't be got, restarts all bots in 5 minutes.
         """
-        await get_me()
+        await self.get_me()
         for task in self.run_before_loop:
             await task
         self.set_default_keyboard()
