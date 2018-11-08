@@ -27,9 +27,10 @@ import telepot
 import telepot.aio
 
 # Project modules
-from davteutil import Gettable, MyOD
-from davteutil import (escape_html_chars, get_cleaned_text,
-                       make_lines_of_buttons, markdown_check,
+from davteutil import (Gettable, escape_html_chars, get_cleaned_text,
+                       line_drawing_unordered_list,
+                       make_lines_of_buttons, markdown_check, MyOD,
+                       pick_most_similar_from_list,
                        remove_html_tags, sleep_until)
 
 
@@ -1631,12 +1632,10 @@ class Bot(telepot.aio.Bot, Gettable):
         self.to_be_obscured.remove(inline_message_id)
         return
 
-    async def continue_running(self):
-        """Get updates.
+    async def get_me(self):
+        """Get bot information.
 
-        If bot can be got, sets name and telegram_id,
-            awaits preliminary tasks and starts getting updates from telegram.
-        If bot can't be got, restarts all bots in 5 minutes.
+        Restart bots if bot can't be got.
         """
         try:
             me = await self.getMe()
@@ -1651,6 +1650,15 @@ class Bot(telepot.aio.Bot, Gettable):
             await asyncio.sleep(5*60)
             self.restart_bots()
             return
+
+    async def continue_running(self):
+        """Get updates.
+
+        If bot can be got, sets name and telegram_id,
+            awaits preliminary tasks and starts getting updates from telegram.
+        If bot can't be got, restarts all bots in 5 minutes.
+        """
+        await get_me()
         for task in self.run_before_loop:
             await task
         self.set_default_keyboard()
@@ -1730,7 +1738,7 @@ class Bot(telepot.aio.Bot, Gettable):
     @classmethod
     def run(cls, loop=None):
         """Call this method to run the async bots."""
-        if not loop:
+        if loop is None:
             loop = asyncio.get_event_loop()
         logging.info(
             "{sep}{subjvb} STARTED{sep}".format(
@@ -1752,8 +1760,9 @@ class Bot(telepot.aio.Bot, Gettable):
             loop.run_until_complete(cls.end_session())
         except Exception as e:
             logging.error(
-                '\nYour bot has been stopped. with error \'{}\''.format(
-                    e
+                '\nYour bot{vb} been stopped. with error \'{e}\''.format(
+                    e=e,
+                    vb='s have' if len(cls.instances) > 1 else ' has'
                 ),
                 exc_info=True
             )
@@ -1764,3 +1773,115 @@ class Bot(telepot.aio.Bot, Gettable):
             )
         )
         return
+
+    @classmethod
+    async def _run_manual_mode(cls):
+        available_bots = MyOD()
+        for code, bot in enumerate(
+            cls.instances.values()
+        ):
+            await bot.get_me()
+            available_bots[code] = dict(
+                bot=bot,
+                code=code,
+                name=bot.name
+            )
+        selected_bot = None
+        while selected_bot is None:
+            user_input = input(
+                "\n=============================================\n"
+                "Which bot would you like to control manually?\n"
+                "Available bots:\n{}\n\n\t\t".format(
+                    line_drawing_unordered_list(
+                        list(
+                            "{b[code]:>3} - {b[bot].name}".format(
+                                b=bot,
+                            )
+                            for bot in available_bots.values()
+                        )
+                    )
+                )
+            )
+            if (
+                user_input.isnumeric()
+                and int(user_input) in available_bots
+            ):
+                selected_bot = available_bots[int(user_input)]
+            else:
+                selected_bot = pick_most_similar_from_list(
+                    [
+                        bot['name']
+                        for bot in available_bots.values()
+                    ],
+                    user_input
+                )
+                selected_bot = available_bots.get_by_key_val(
+                    key='name',
+                    val=selected_bot,
+                    case_sensitive=False,
+                    return_value=True
+                )
+            if selected_bot is None:
+                logging.error("Invalid selection.")
+                continue
+            logging.info(
+                "Bot `{b[name]}` selected.".format(
+                    b=selected_bot
+                )
+            )
+            exit_code = await selected_bot['bot']._run_manually()
+            if exit_code == 0:
+                break
+        return
+
+    @classmethod
+    def run_manual_mode(cls, loop=None):
+        """Run in manual mode: send messages via bots."""
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        logging.info(
+            "=== MANUAL MODE STARTED ==="
+        )
+        try:
+            loop.run_until_complete(
+                cls._run_manual_mode()
+            )
+        except KeyboardInterrupt:
+            logging.info(
+                '\n\t\tYour script received a KeyboardInterrupt signal, "\
+                "your bot{} being stopped.'.format(
+                    's are' if len(cls.instances) > 1 else ' is'
+                )
+            )
+        except Exception as e:
+            logging.error(
+                '\nYour bot{vb} been stopped. with error \'{e}\''.format(
+                    e=e,
+                    vb='s have' if len(cls.instances) > 1 else ' has'
+                ),
+                exc_info=True
+            )
+        logging.info(
+            "=== MANUAL MODE STOPPED ==="
+        )
+
+    async def _run_manually(self):
+        user_input = '  choose_addressee'
+        while user_input:
+            try:
+                user_input = input(
+                    "Choose an addressee."
+                    "\n\t\t"
+                )
+            except KeyboardInterrupt:
+                logging.error("Keyboard interrupt.")
+                break
+            logging.info(user_input)
+
+
+if __name__ == '__main__':
+    # from davtelepot.custombot import Bot
+    # davtebot = Bot.get('335545766:AAEVvbdqy7OCG7ufxBwKVdBscdfddFF2lmk')
+    # davtetest = Bot.get('279769259:AAEri-FF8AZeLz0LAi4BpPVjkQcKeOOTimo')
+    # Bot.run_manual_mode()
+    print('Work in progress')
