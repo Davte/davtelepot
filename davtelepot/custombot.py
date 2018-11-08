@@ -1880,6 +1880,19 @@ class Bot(telepot.aio.Bot, Gettable):
 
 
 if __name__ == '__main__':
+    log_formatter = logging.Formatter(
+        "%(asctime)s [%(module)-15s %(levelname)-8s]     %(message)s",
+        style='%'
+    )
+    # Get root logger and set level to DEBUG
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    # ConsoleHandler (log to terminal)
+    ConsoleHandler = logging.StreamHandler()
+    ConsoleHandler.setFormatter(log_formatter)
+    ConsoleHandler.setLevel(logging.DEBUG)
+    # Add ConsoleHandler to root_logger
+    root_logger.addHandler(ConsoleHandler)
     # from davtelepot.custombot import Bot
     # davtebot = Bot.get('335545766:AAEVvbdqy7OCG7ufxBwKVdBscdfddFF2lmk')
     # davtetest = Bot.get('279769259:AAEri-FF8AZeLz0LAi4BpPVjkQcKeOOTimo')
