@@ -1753,9 +1753,13 @@ class Bot(telepot.aio.Bot, Gettable):
             loop.run_until_complete(cls.check_task())
         except KeyboardInterrupt:
             logging.info(
-                '\n\t\tYour script received a KeyboardInterrupt signal, "
-                "your bot{} being stopped.'.format(
-                    's are' if len(cls.instances) > 1 else ' is'
+                (
+                    "\n\t\tYour script received a KeyboardInterrupt signal, "
+                    "your bot{} being stopped."
+                ).format(
+                    's are'
+                    if len(cls.instances) > 1
+                    else ' is'
                 )
             )
 
@@ -1851,8 +1855,10 @@ class Bot(telepot.aio.Bot, Gettable):
             )
         except KeyboardInterrupt:
             logging.info(
-                '\n\t\tYour script received a KeyboardInterrupt signal, "
-                "your bot{} being stopped.'.format(
+                (
+                    "\n\t\tYour script received a KeyboardInterrupt signal, "
+                    "your bot{} being stopped."
+                ).format(
                     's are' if len(cls.instances) > 1 else ' is'
                 )
             )
