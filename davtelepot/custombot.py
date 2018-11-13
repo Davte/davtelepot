@@ -365,11 +365,13 @@ class Bot(telepot.aio.Bot, Gettable):
         if maintenance_message:
             self.set_maintenance_message(maintenance_message)
         if self.maintenance:
-            return "<i>Bot has just been put under maintenance!</i>\n\n"\
-                   "Until further notice, it will reply to users "\
-                   "with the following message:\n\n{}".format(
-                        self.maintenance_message
-                   )
+            return (
+                "<i>Bot has just been put under maintenance!</i>\n\n"
+                "Until further notice, it will reply to users "
+                "with the following message:\n\n{}"
+            ).format(
+                self.maintenance_message
+            )
         return "<i>Maintenance ended!</i>"
 
     def set_authorization_function(self, authorization_function):
@@ -1598,9 +1600,10 @@ class Bot(telepot.aio.Bot, Gettable):
         """
         if type(when) is int:
             when = datetime.datetime.now() + datetime.timedelta(seconds=when)
-        assert type(when) is datetime.datetime, "when must be a datetime "\
-                                                "instance or a number of "\
-                                                "seconds (int) to be awaited"
+        assert type(when) is datetime.datetime, (
+            "when must be a datetime instance or a number of seconds (int) "
+            "to be awaited"
+        )
         if 'inline_message_id' not in update:
             logging.info(
                 "This inline query result owns no inline_keyboard, so it "
@@ -1750,7 +1753,7 @@ class Bot(telepot.aio.Bot, Gettable):
             loop.run_until_complete(cls.check_task())
         except KeyboardInterrupt:
             logging.info(
-                '\n\t\tYour script received a KeyboardInterrupt signal, "\
+                '\n\t\tYour script received a KeyboardInterrupt signal, "
                 "your bot{} being stopped.'.format(
                     's are' if len(cls.instances) > 1 else ' is'
                 )
@@ -1848,7 +1851,7 @@ class Bot(telepot.aio.Bot, Gettable):
             )
         except KeyboardInterrupt:
             logging.info(
-                '\n\t\tYour script received a KeyboardInterrupt signal, "\
+                '\n\t\tYour script received a KeyboardInterrupt signal, "
                 "your bot{} being stopped.'.format(
                     's are' if len(cls.instances) > 1 else ' is'
                 )
