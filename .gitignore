@@ -14,6 +14,9 @@ local_*
 # my_config.sh
 my_config.sh
 
+# Test
+davtelepot/test.py
+
 # ---> Python
 # Byte-compiled / optimized / DLL files
 __pycache__/
