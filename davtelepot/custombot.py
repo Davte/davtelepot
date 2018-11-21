@@ -1940,10 +1940,24 @@ class Bot(telepot.aio.Bot, Gettable):
                             """SELECT telegram_id, MAX(name) name
                             FROM (
                                 SELECT telegram_id,
+                                    COALESCE(
                                     first_name || ' ' || last_name ||
-                                    ' (' ||username || ')' AS name
+                                    ' (' || username || ')',
+                                    username,
+                                    first_name || ' ' || last_name,
+                                    last_name,
+                                    first_name
+                                    ) AS name
                                 FROM users
-                                WHERE first_name || last_name || username
+                                WHERE COALESCE(
+                                    first_name || last_name || username,
+                                    first_name || username,
+                                    last_name || username,
+                                    first_name || last_name,
+                                    username,
+                                    last_name,
+                                    first_name
+                                )
                                 LIKE '%{u}%'
                                 UNION ALL
                                 SELECT telegram_id, name
