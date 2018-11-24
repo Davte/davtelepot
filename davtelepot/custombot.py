@@ -1628,6 +1628,40 @@ class Bot(telepot.aio.Bot, Gettable):
                 )
         return sent
 
+    async def forward_message(self, chat_id, update=None, from_chat_id=None,
+                              message_id=None, disable_notification=False):
+        """Forward message from `from_chat_id` to `chat_id`.
+
+        Set disable_notification to True to avoid disturbing recipient.
+        """
+        try:
+            if from_chat_id is None or message_id is None:
+                if (
+                    type(update) is not dict
+                    or 'chat' not in update
+                    or 'id' not in update['chat']
+                    or message_id not in update
+                ):
+                    raise Exception("Wrong parameters, cannot forward.")
+                from_chat_id = update['chat']['id']
+                message_id = update['message_id']
+            await self.avoid_flooding(chat_id)
+            sent = await self.forwardMessage(
+                chat_id=chat_id,
+                from_chat_id=from_chat_id,
+                disable_notification=disable_notification,
+                message_id=message_id,
+            )
+            if isinstance(sent, Exception):
+                raise Exception("Forwarding failed.")
+        except Exception as e:
+            logging.error(
+                "Error sending photo\n{}".format(
+                    e
+                ),
+                exc_info=False  # Set exc_info=True for more information
+            )
+
     async def send_and_destroy(self, chat_id, answer,
                                timer=60, mode='text', **kwargs):
         """Send a message or photo and delete it after `timer` seconds."""
