@@ -2032,7 +2032,8 @@ class Bot(telepot.aio.Bot, Gettable):
                                 chat_id=selected_user['telegram_id'],
                                 photo=photo,
                                 caption=caption,
-                                parse_mode='HTML'
+                                parse_mode='HTML',
+                                use_stored=False
                             )
                         except Exception as e:
                             logging.error(e)
