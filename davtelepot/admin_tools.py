@@ -10,20 +10,28 @@ davtelepot.admin_tools.init(my_bot)
 
 # Third party modules
 from davteutil.utilities import (
-    get_cleaned_text, get_user, escape_html_chars, extract,
+    async_wrapper, get_cleaned_text, get_user, escape_html_chars, extract,
     line_drawing_unordered_list, make_button, make_inline_keyboard,
     remove_html_tags
 )
 
 
 TALK_MESSAGES = dict(
-    confirm_user_button=dict(
-        en='Talk to {u}?',
-        it='Parla con {u}?'
+    admin_warning=dict(
+        en=(
+            'You are now talking to {u}.\n'
+            'Until you end this session, your messages will be '
+            'forwarded to each other.'
+        ),
+        it={
+            'Sei ora connesso con {u}.\n'
+            'Finché non chiuderai la connessione, i messaggi che scriverai '
+            'qui saranno inoltrati a {u}, e ti inoltrerò i suoi.'
+        },
     ),
-    confirm_user_text=dict(
-        en='Do you want to talk to {u}?',
-        it='Vuoi parlare con {u}?'
+    help_text=dict(
+        en='Press the button to search for user.',
+        it='Premi il pulsante per scegliere un utente.'
     ),
     search_button=dict(
         en="🔍 Search for user",
@@ -43,11 +51,70 @@ TALK_MESSAGES = dict(
             "<code>{q}</code>"
         ),
     ),
+    instructions=dict(
+        en=(
+            'Write a part of name, surname or username of the user you want '
+            'to talk to.'
+        ),
+        it=(
+            'Scrivi una parte del nome, cognome o username dell\'utente con '
+            'cui vuoi parlare.'
+        ),
+    ),
+    stop=dict(
+        en=(
+            'End session'
+        ),
+        it={
+            'Termina la sessione'
+        },
+    ),
+    user_warning=dict(
+        en=(
+            '{u}, admin of this bot, wants to talk to you.\n'
+            'Until this session is ended by {u}, your messages will be '
+            'forwarded to each other.'
+        ),
+        it={
+            '{u}, amministratore di questo bot, vuole parlare con te.\n'
+            'Finché non chiuderà la connessione, i messaggi che scriverai '
+            'qui saranno inoltrati a {u}, e ti inoltrerò i suoi.'
+        },
+    ),
     # key=dict(
     #     en='',
     #     it='',
     # ),
+    # key=dict(
+    #     en=(
+    #         ''
+    #     ),
+    #     it={
+    #         ''
+    #     },
+    # ),
 )
+
+
+async def _forward_to(update, bot, sender, addressee, is_admin=False):
+    if update['text'].lower() in ['stop'] and is_admin:
+        pass  # Remove custom parser to sender and addressee
+    else:
+        bot.set_custom_parser(
+            async_wrapper(
+                _forward_to,
+                bot=bot,
+                sender=sender,
+                addressee=addressee,
+                is_admin=is_admin
+            ),
+            sender
+        )
+        await bot.forward_message(
+            chat_id=addressee,
+            update=update
+        )
+    return
 
 
 def get_talk_panel(text, bot, update):
@@ -76,14 +143,30 @@ def get_talk_panel(text, bot, update):
                             last_name,
                             first_name
                         ) LIKE '%{username}%'
+                        ORDER BY LOWER(
+                            COALESCE(
+                                first_name || last_name || username,
+                                last_name || username,
+                                first_name || username,
+                                username,
+                                first_name || last_name,
+                                last_name,
+                                first_name
+                            )
+                        )
+                        LIMIT 26
                         """.format(
                             username=text
                         )
                     )
                 )
-    if len(users) == 0:
+    if len(text) == 0:
         text = (
-            bot.get_message('talk', 'user_not_found', update=update)
+            bot.get_message(
+                'talk',
+                'help_text',
+                update=update
+            )
         ).format(
             q=escape_html_chars(
                 remove_html_tags(text)
@@ -102,33 +185,33 @@ def get_talk_panel(text, bot, update):
             ],
             1
         )
-    elif len(users) == 1:
-        user = users[0]
+    elif len(users) == 0:
         text = (
             bot.get_message(
-                'talk', 'confirm_user_text',
+                'talk',
+                'user_not_found',
                 update=update
             )
         ).format(
-            u=get_user(user)
+            q=escape_html_chars(
+                remove_html_tags(text)
+            )
         )
         reply_markup = make_inline_keyboard(
             [
                 make_button(
-                    (
-                        bot.get_message(
-                            'talk', 'confirm_user_button',
-                            update=update
-                        )
-                    ).format(
-                        u=get_user(user)
-                    )
+                    bot.get_message(
+                        'talk', 'search_button',
+                        update=update
+                    ),
+                    prefix='talk:///',
+                    data=['search']
                 )
             ],
             1
         )
     else:
-        text = "{header}\n\n{u}".format(
+        text = "{header}\n\n{u}{etc}".format(
             header=bot.get_message(
                 'talk', 'select_user',
                 update=update
@@ -136,8 +219,13 @@ def get_talk_panel(text, bot, update):
             u=line_drawing_unordered_list(
                 [
                     get_user(user)
-                    for user in users
+                    for user in users[:25]
                 ]
+            ),
+            etc=(
+                '\n\n[...]'
+                if len(users) > 25
+                else ''
             )
         )
         reply_markup = make_inline_keyboard(
@@ -162,7 +250,7 @@ def get_talk_panel(text, bot, update):
                         user['id']
                     ]
                 )
-                for user in users
+                for user in users[:25]
             ],
             2
         )
@@ -176,13 +264,94 @@ async def _talk_command(update, bot):
         ['talk']
     )
     text, reply_markup = get_talk_panel(text, bot, update)
-    return
+    return dict(
+        text=text,
+        parse_mode='HTML',
+        reply_markup=reply_markup,
+    )
 
 
 async def _talk_button(update, bot):
     telegram_id = update['from']['id']
     command, *arguments = extract(update['data'], '///').split('|')
     result, text, reply_markup = '', '', None
+    if command == 'search':
+        bot.set_custom_parser(
+            await async_wrapper(
+                _talk_command,
+                bot=bot
+            ),
+            update
+        )
+        text = bot.get_message(
+            'talk', 'instructions',
+            update=update
+        )
+        reply_markup = None
+    elif command == 'select':
+        if len(arguments) < 1:
+            result = "Errore!"
+        else:
+            with bot.db as db:
+                user_record = db['users'].find_one(
+                    id=int(arguments[0])
+                )
+                admin_record = db['users'].find_one(
+                    telegram_id=telegram_id
+                )
+                db['talking_sessions'].insert(
+                    dict(
+                        user=user_record['id'],
+                        admin=admin_record['id'],
+                        cancelled=0
+                    )
+                )
+            await bot.send_message(
+                chat_id=user_record['telegram_id'],
+                text=bot.get_message(
+                    'talk', 'user_warning',
+                    update=update
+                )
+            )
+            await bot.send_message(
+                chat_id=admin_record['telegram_id'],
+                text=bot.get_message(
+                    'talk', 'admin_warning',
+                    update=update
+                ),
+                reply_markup=make_inline_keyboard(
+                    [
+                        make_button(
+                            bot.get_message(
+                                'talk', 'stop',
+                                update=update
+                            ),
+                            prefix='talk:///',
+                            data=['stop']
+                        )
+                    ]
+                )
+            )
+            bot.set_custom_parser(
+                await async_wrapper(
+                    _forward_to,
+                    bot=bot
+                ),
+                user_telegram_id=user_record['telegram_id'],
+                admin_telegram_id=admin_record['telegram_id'],
+            )
+    elif command == 'stop':
+        with bot.db as db:
+            admin_record = db['users'].find_one(
+                telegram_id=telegram_id
+            )
+            db['talking_sessions'].update(
+                dict(
+                    admin=admin_record['id'],
+                    cancelled=1
+                ),
+                ['admin']
+            )
     if text:
         return dict(
             text=result,
