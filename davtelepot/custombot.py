@@ -467,7 +467,8 @@ class Bot(telepot.aio.Bot, Gettable):
         self.last_sending_time['absolute'] = datetime.datetime.now()
         return
 
-    def get_message(self, *fields, update=None, language=None):
+    def get_message(self, *fields, update=None, language=None,
+                    **format_kwargs):
         """Given a list of strings (`fields`), return proper message.
 
         If `language` is not passed, it is extracted from `update`.
@@ -517,7 +518,9 @@ class Bot(telepot.aio.Bot, Gettable):
                         )
                     )
                     return "Invalid message!"
-        return result[language]
+        return result[language].format(
+            **format_kwargs
+        )
 
     async def on_inline_query(self, update):
         """Schedule handling of received inline queries.

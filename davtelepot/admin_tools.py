@@ -101,7 +101,7 @@ async def _forward_to(update, bot, sender, addressee, is_admin=False):
         pass  # Remove custom parser to sender and addressee
     else:
         bot.set_custom_parser(
-            async_wrapper(
+            await async_wrapper(
                 _forward_to,
                 bot=bot,
                 sender=sender,
