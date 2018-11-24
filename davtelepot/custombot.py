@@ -1892,6 +1892,8 @@ class Bot(telepot.aio.Bot, Gettable):
                         "Choose an addressee."
                         "\n\t\t"
                     )
+                    if len(user_input) == 0:
+                        return 65  # Let user select a different bot
                 except KeyboardInterrupt:
                     logging.error("Keyboard interrupt.")
                     return 0  # Stop running
