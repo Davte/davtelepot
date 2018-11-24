@@ -50,7 +50,7 @@ TALK_MESSAGES = dict(
 )
 
 
-def get_talk_panel(text, bot):
+def get_talk_panel(text, bot, update):
     """Return text and reply markup of talk panel.
 
     Get 'user_id' as string, username as string or void string for main menu.
@@ -175,13 +175,14 @@ async def _talk_command(update, bot):
         bot,
         ['talk']
     )
-    text, reply_markup = get_talk_panel(text, bot)
+    text, reply_markup = get_talk_panel(text, bot, update)
     return
 
 
 async def _talk_button(update, bot):
     telegram_id = update['from']['id']
     command, *arguments = extract(update['data'], '///').split('|')
+    result, text, reply_markup = '', '', None
     if text:
         return dict(
             text=result,
@@ -210,7 +211,7 @@ def init(bot):
 
     @bot.additional_task(when='BEFORE')
     async def load_talking_sessions():
-        with botd.db as db:
+        with bot.db as db:
             for session in db.query(
                 """SELECT *
                 FROM talking_sessions
