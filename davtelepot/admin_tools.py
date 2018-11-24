@@ -311,6 +311,8 @@ async def _talk_button(update, bot):
                 text=bot.get_message(
                     'talk', 'user_warning',
                     update=update
+                ).format(
+                    u=get_user(admin_record)
                 )
             )
             await bot.send_message(
@@ -318,6 +320,8 @@ async def _talk_button(update, bot):
                 text=bot.get_message(
                     'talk', 'admin_warning',
                     update=update
+                ).format(
+                    u=get_user(user_record)
                 ),
                 reply_markup=make_inline_keyboard(
                     [
@@ -335,10 +339,22 @@ async def _talk_button(update, bot):
             bot.set_custom_parser(
                 await async_wrapper(
                     _forward_to,
-                    bot=bot
+                    bot=bot,
+                    sender=user_record['telegram_id'],
+                    addressee=admin_record['telegram_id'],
+                    is_admin=False
                 ),
-                user_telegram_id=user_record['telegram_id'],
-                admin_telegram_id=admin_record['telegram_id'],
+                user_record['telegram_id']
+            )
+            bot.set_custom_parser(
+                await async_wrapper(
+                    _forward_to,
+                    bot=bot,
+                    sender=admin_record['telegram_id'],
+                    addressee=user_record['telegram_id'],
+                    is_admin=True
+                ),
+                admin_record['telegram_id']
             )
     elif command == 'stop':
         with bot.db as db:
