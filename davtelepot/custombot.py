@@ -1245,9 +1245,9 @@ class Bot(telepot.aio.Bot, Gettable):
 
         def decorator(func):
             if when == 'b':
-                self.run_before_loop.append(func())
+                self.run_before_loop.append(func)
             elif when == 'a':
-                self.run_after_loop.append(func())
+                self.run_after_loop.append(func)
         return decorator
 
     def set_default_keyboard(self, keyboard='set_default'):
@@ -1670,7 +1670,7 @@ class Bot(telepot.aio.Bot, Gettable):
         """
         await self.get_me()
         for task in self.run_before_loop:
-            await task
+            await task()
         self.set_default_keyboard()
         asyncio.ensure_future(
             self.message_loop(handler=self.routing_table)
@@ -1707,7 +1707,7 @@ class Bot(telepot.aio.Bot, Gettable):
         """
         for bot in cls.instances.values():
             for task in bot.run_after_loop:
-                await task
+                await task()
             for message in bot.to_be_destroyed:
                 try:
                     await bot.delete_message(message)
