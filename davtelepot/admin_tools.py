@@ -9,7 +9,7 @@ davtelepot.admin_tools.init(my_bot)
 """
 
 # Third party modules
-from davteutil import (
+from davteutil.utilities import (
     get_cleaned_text, get_user, escape_html_chars, extract,
     line_drawing_unordered_list, make_button, make_inline_keyboard,
     remove_html_tags
