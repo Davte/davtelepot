@@ -199,6 +199,7 @@ class Bot(telepot.aio.Bot, Gettable):
         self.chat_actions = dict(
             pinned=MyOD()
         )
+        self.messages = dict()
 
     @property
     def name(self):
@@ -465,6 +466,58 @@ class Bot(telepot.aio.Bot, Gettable):
             ]
         self.last_sending_time['absolute'] = datetime.datetime.now()
         return
+
+    def get_message(self, *fields, update=None, language=None):
+        """Given a list of strings (`fields`), return proper message.
+
+        If `language` is not passed, it is extracted from `update`.
+        Fall back to English message if language is not available.
+        """
+        if (
+            language is None
+            and update is not None
+            and type(update) is dict
+            and 'from' in update
+            and 'language_code' in update['from']
+        ):
+            language = update['from']['language_code']
+        if language is None:
+            language = 'en'
+        result = self.messages
+        for field in fields:
+            if field not in result:
+                logging.error(
+                    "Please define self.message{f}".format(
+                        f=''.join(
+                            '[\'{field}\']'.format(
+                                field=field
+                            )
+                            for field in fields
+                        )
+                    )
+                )
+                return "Invalid message!"
+            result = result[field]
+        if language not in result:
+            language = extract(
+                language,
+                ender='-'
+            )
+            if language not in result:
+                language = 'en'
+                if language not in result:
+                    logging.error(
+                        "Please define self.message{f}['en']".format(
+                            f=''.join(
+                                '[\'{field}\']'.format(
+                                    field=field
+                                )
+                                for field in fields
+                            )
+                        )
+                    )
+                    return "Invalid message!"
+        return result[language]
 
     async def on_inline_query(self, update):
         """Schedule handling of received inline queries.
