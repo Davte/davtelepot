@@ -1489,6 +1489,8 @@ class Bot(telepot.aio.Bot, Gettable):
                         ) as photo_file:
                             buffered_picture.write(photo_file.read())
                         photo = buffered_picture.getvalue()
+        else:
+            use_stored = False
         caption = escape_html_chars(caption)
         if len(caption) > 199:
             new_caption = ''
