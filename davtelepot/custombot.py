@@ -1891,7 +1891,8 @@ class Bot(telepot.aio.Bot, Gettable):
             if user_input == '  choose_addressee':
                 try:
                     user_input = input(
-                        "Choose an addressee."
+                        "Choose an addressee.\n"
+                        "Press enter to change bot.\n"
                         "\n\t\t"
                     )
                     if len(user_input) == 0:
@@ -2006,6 +2007,8 @@ class Bot(telepot.aio.Bot, Gettable):
                     text = input(
                         "What would you like to send "
                         "{u[name]} ({u[telegram_id]})?\n"
+                        "Leave it blank if you want to select another "
+                        "addressee.\n"
                         "\t\t\t".format(
                             u=selected_user
                         )
