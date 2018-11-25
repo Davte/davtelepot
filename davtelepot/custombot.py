@@ -1644,7 +1644,7 @@ class Bot(telepot.aio.Bot, Gettable):
                     type(update) is not dict
                     or 'chat' not in update
                     or 'id' not in update['chat']
-                    or message_id not in update
+                    or 'message_id' not in update
                 ):
                     raise Exception("Wrong parameters, cannot forward.")
                 from_chat_id = update['chat']['id']
@@ -1660,7 +1660,7 @@ class Bot(telepot.aio.Bot, Gettable):
                 raise Exception("Forwarding failed.")
         except Exception as e:
             logging.error(
-                "Error sending photo\n{}".format(
+                "Error forwarding message:\n{}".format(
                     e
                 ),
                 exc_info=False  # Set exc_info=True for more information
