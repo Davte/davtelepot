@@ -165,11 +165,10 @@ def get_talk_panel(text, bot, update):
             bot.get_message(
                 'talk',
                 'help_text',
-                update=update
-            )
-        ).format(
-            q=escape_html_chars(
-                remove_html_tags(text)
+                update=update,
+                q=escape_html_chars(
+                    remove_html_tags(text)
+                )
             )
         )
         reply_markup = make_inline_keyboard(
@@ -190,11 +189,10 @@ def get_talk_panel(text, bot, update):
             bot.get_message(
                 'talk',
                 'user_not_found',
-                update=update
-            )
-        ).format(
-            q=escape_html_chars(
-                remove_html_tags(text)
+                update=update,
+                q=escape_html_chars(
+                    remove_html_tags(text)
+                )
             )
         )
         reply_markup = make_inline_keyboard(
@@ -310,8 +308,7 @@ async def _talk_button(update, bot):
                 chat_id=user_record['telegram_id'],
                 text=bot.get_message(
                     'talk', 'user_warning',
-                    update=update
-                ).format(
+                    update=update,
                     u=get_user(admin_record)
                 )
             )
@@ -319,8 +316,7 @@ async def _talk_button(update, bot):
                 chat_id=admin_record['telegram_id'],
                 text=bot.get_message(
                     'talk', 'admin_warning',
-                    update=update
-                ).format(
+                    update=update,
                     u=get_user(user_record)
                 ),
                 reply_markup=make_inline_keyboard(
