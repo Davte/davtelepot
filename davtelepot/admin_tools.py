@@ -23,11 +23,11 @@ TALK_MESSAGES = dict(
             'Until you end this session, your messages will be '
             'forwarded to each other.'
         ),
-        it={
+        it=(
             'Sei ora connesso con {u}.\n'
             'Finché non chiuderai la connessione, i messaggi che scriverai '
             'qui saranno inoltrati a {u}, e ti inoltrerò i suoi.'
-        },
+        ),
     ),
     help_text=dict(
         en='Press the button to search for user.',
@@ -364,6 +364,8 @@ async def _talk_button(update, bot):
                 ),
                 ['admin']
             )
+        # TODO: message which says it has stopped
+        # TODO: register talking session in database
     if text:
         return dict(
             text=result,
