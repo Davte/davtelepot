@@ -473,6 +473,7 @@ class Bot(telepot.aio.Bot, Gettable):
 
         If `language` is not passed, it is extracted from `update`.
         Fall back to English message if language is not available.
+        Pass `format_kwargs` to format function.
         """
         if (
             language is None
