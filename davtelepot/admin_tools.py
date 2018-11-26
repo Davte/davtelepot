@@ -81,9 +81,9 @@ TALK_MESSAGES = dict(
         en=(
             'End session'
         ),
-        it={
+        it=(
             'Termina la sessione'
-        },
+        ),
     ),
     user_session_ended=dict(
         en=(
