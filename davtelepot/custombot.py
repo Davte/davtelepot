@@ -479,14 +479,14 @@ class Bot(telepot.aio.Bot, Gettable):
         """
         if (
             language is None
-            and type(update) is dict
+            and isinstance(update, dict)
             and 'from' in update
             and 'language_code' in update['from']
         ):
             language = update['from']['language_code']
         if (
             language is None
-            and type(user_record) is dict
+            and isinstance(user_record, dict)
             and 'language_code' in user_record
         ):
             language = user_record['language_code']
