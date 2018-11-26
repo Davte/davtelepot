@@ -89,9 +89,9 @@ TALK_MESSAGES = dict(
         en=(
             'Session with admin {u} ended.'
         ),
-        it={
+        it=(
             'Sessione terminata con l\'amministratore {u}.'
-        },
+        ),
     ),
     user_warning=dict(
         en=(
@@ -99,11 +99,11 @@ TALK_MESSAGES = dict(
             'Until this session is ended by {u}, your messages will be '
             'forwarded to each other.'
         ),
-        it={
+        it=(
             '{u}, amministratore di questo bot, vuole parlare con te.\n'
             'Finché non chiuderà la connessione, i messaggi che scriverai '
             'qui saranno inoltrati a {u}, e ti inoltrerò i suoi.'
-        },
+        ),
     ),
     # key=dict(
     #     en='',
@@ -113,9 +113,9 @@ TALK_MESSAGES = dict(
     #     en=(
     #         ''
     #     ),
-    #     it={
+    #     it=(
     #         ''
-    #     },
+    #     ),
     # ),
 )
 
