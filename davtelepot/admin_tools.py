@@ -21,9 +21,9 @@ TALK_MESSAGES = dict(
         en=(
             'Session with user {u} ended.'
         ),
-        it={
+        it=(
             'Sessione terminata con l\'utente {u}.'
-        },
+        ),
     ),
     admin_warning=dict(
         en=(
