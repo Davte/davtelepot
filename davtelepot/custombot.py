@@ -467,22 +467,29 @@ class Bot(telepot.aio.Bot, Gettable):
         self.last_sending_time['absolute'] = datetime.datetime.now()
         return
 
-    def get_message(self, *fields, update=None, language=None,
-                    **format_kwargs):
+    def get_message(self, *fields, update=None, user_record=None,
+                    language=None, **format_kwargs):
         """Given a list of strings (`fields`), return proper message.
 
         If `language` is not passed, it is extracted from `update`.
+        If `update` is not passed either, `language` is extracted from
+            `user_record`.
         Fall back to English message if language is not available.
         Pass `format_kwargs` to format function.
         """
         if (
             language is None
-            and update is not None
             and type(update) is dict
             and 'from' in update
             and 'language_code' in update['from']
         ):
             language = update['from']['language_code']
+        if (
+            language is None
+            and type(user_record) is dict
+            and 'language_code' in user_record
+        ):
+            language = user_record['language_code']
         if language is None:
             language = 'en'
         result = self.messages
