@@ -10,13 +10,21 @@ davtelepot.admin_tools.init(my_bot)
 
 # Third party modules
 from davteutil.utilities import (
-    async_wrapper, get_cleaned_text, get_user, escape_html_chars, extract,
-    line_drawing_unordered_list, make_button, make_inline_keyboard,
+    async_wrapper, Confirmator, get_cleaned_text, get_user, escape_html_chars,
+    extract, line_drawing_unordered_list, make_button, make_inline_keyboard,
     remove_html_tags
 )
 
 
 TALK_MESSAGES = dict(
+    admin_session_ended=dict(
+        en=(
+            'Session with user {u} ended.'
+        ),
+        it={
+            'Sessione terminata con l\'utente {u}.'
+        },
+    ),
     admin_warning=dict(
         en=(
             'You are now talking to {u}.\n'
@@ -27,6 +35,14 @@ TALK_MESSAGES = dict(
             'Sei ora connesso con {u}.\n'
             'Finché non chiuderai la connessione, i messaggi che scriverai '
             'qui saranno inoltrati a {u}, e ti inoltrerò i suoi.'
+        ),
+    ),
+    end_session=dict(
+        en=(
+            'End session?'
+        ),
+        it=(
+            'Chiudere la sessione?'
         ),
     ),
     help_text=dict(
@@ -69,6 +85,14 @@ TALK_MESSAGES = dict(
             'Termina la sessione'
         },
     ),
+    user_session_ended=dict(
+        en=(
+            'Session with admin {u} ended.'
+        ),
+        it={
+            'Sessione terminata con l\'amministratore {u}.'
+        },
+    ),
     user_warning=dict(
         en=(
             '{u}, admin of this bot, wants to talk to you.\n'
@@ -98,7 +122,22 @@ TALK_MESSAGES = dict(
 
 async def _forward_to(update, bot, sender, addressee, is_admin=False):
     if update['text'].lower() in ['stop'] and is_admin:
-        pass  # Remove custom parser to sender and addressee
+        with bot.db as db:
+            admin_record = db['users'].find_one(
+                telegram_id=sender
+            )
+            session_record = db['talking_sessions'].find_one(
+                admin=admin_record['id'],
+                cancelled=0
+            )
+            user_record = db['users'].find_one(
+                id=session_record['user']
+            )
+        await end_session(
+            bot=bot,
+            user_record=user_record,
+            admin_record=admin_record
+        )
     else:
         bot.set_custom_parser(
             await async_wrapper(
@@ -269,6 +308,109 @@ async def _talk_command(update, bot):
     )
 
 
+async def start_session(bot, user_record, admin_record):
+    """Start talking session between user and admin.
+
+    Register session in database, so it gets loaded before message_loop starts.
+    Send a notification both to admin and user, set custom parsers and return.
+    """
+    with bot.db as db:
+        db['talking_sessions'].insert(
+            dict(
+                user=user_record['id'],
+                admin=admin_record['id'],
+                cancelled=0
+            )
+        )
+    await bot.send_message(
+        chat_id=user_record['telegram_id'],
+        text=bot.get_message(
+            'talk', 'user_warning',
+            user_record=user_record,
+            u=get_user(admin_record)
+        )
+    )
+    await bot.send_message(
+        chat_id=admin_record['telegram_id'],
+        text=bot.get_message(
+            'talk', 'admin_warning',
+            user_record=admin_record,
+            u=get_user(user_record)
+        ),
+        reply_markup=make_inline_keyboard(
+            [
+                make_button(
+                    bot.get_message(
+                        'talk', 'stop',
+                        user_record=admin_record
+                    ),
+                    prefix='talk:///',
+                    data=['stop', user_record['id']]
+                )
+            ]
+        )
+    )
+    bot.set_custom_parser(
+        await async_wrapper(
+            _forward_to,
+            bot=bot,
+            sender=user_record['telegram_id'],
+            addressee=admin_record['telegram_id'],
+            is_admin=False
+        ),
+        user_record['telegram_id']
+    )
+    bot.set_custom_parser(
+        await async_wrapper(
+            _forward_to,
+            bot=bot,
+            sender=admin_record['telegram_id'],
+            addressee=user_record['telegram_id'],
+            is_admin=True
+        ),
+        admin_record['telegram_id']
+    )
+    return
+
+
+async def end_session(bot, user_record, admin_record):
+    """End talking session between user and admin.
+
+    Cancel session in database, so it will not be loaded anymore.
+    Send a notification both to admin and user, clear custom parsers
+        and return.
+    """
+    with bot.db as db:
+        db['talking_sessions'].update(
+            dict(
+                admin=admin_record['id'],
+                cancelled=1
+            ),
+            ['admin']
+        )
+    await bot.send_message(
+        chat_id=user_record['telegram_id'],
+        text=bot.get_message(
+            'talk', 'user_session_ended',
+            user_record=user_record,
+            u=get_user(admin_record)
+        )
+    )
+    await bot.send_message(
+        chat_id=admin_record['telegram_id'],
+        text=bot.get_message(
+            'talk', 'admin_session_ended',
+            user_record=admin_record,
+            u=get_user(user_record)
+        ),
+    )
+    for record in (admin_record, user_record, ):
+        telegram_id = record['telegram_id']
+        if telegram_id in bot.custom_parsers:
+            del bot.custom_parsers[telegram_id]
+    return
+
+
 async def _talk_button(update, bot):
     telegram_id = update['from']['id']
     command, *arguments = extract(update['data'], '///').split('|')
@@ -287,7 +429,10 @@ async def _talk_button(update, bot):
         )
         reply_markup = None
     elif command == 'select':
-        if len(arguments) < 1:
+        if (
+            len(arguments) < 1
+            or not arguments[0].isnumeric()
+        ):
             result = "Errore!"
         else:
             with bot.db as db:
@@ -297,75 +442,37 @@ async def _talk_button(update, bot):
                 admin_record = db['users'].find_one(
                     telegram_id=telegram_id
                 )
-                db['talking_sessions'].insert(
-                    dict(
-                        user=user_record['id'],
-                        admin=admin_record['id'],
-                        cancelled=0
-                    )
-                )
-            await bot.send_message(
-                chat_id=user_record['telegram_id'],
-                text=bot.get_message(
-                    'talk', 'user_warning',
-                    update=update,
-                    u=get_user(admin_record)
-                )
-            )
-            await bot.send_message(
-                chat_id=admin_record['telegram_id'],
-                text=bot.get_message(
-                    'talk', 'admin_warning',
-                    update=update,
-                    u=get_user(user_record)
-                ),
-                reply_markup=make_inline_keyboard(
-                    [
-                        make_button(
-                            bot.get_message(
-                                'talk', 'stop',
-                                update=update
-                            ),
-                            prefix='talk:///',
-                            data=['stop']
-                        )
-                    ]
-                )
-            )
-            bot.set_custom_parser(
-                await async_wrapper(
-                    _forward_to,
-                    bot=bot,
-                    sender=user_record['telegram_id'],
-                    addressee=admin_record['telegram_id'],
-                    is_admin=False
-                ),
-                user_record['telegram_id']
-            )
-            bot.set_custom_parser(
-                await async_wrapper(
-                    _forward_to,
-                    bot=bot,
-                    sender=admin_record['telegram_id'],
-                    addressee=user_record['telegram_id'],
-                    is_admin=True
-                ),
-                admin_record['telegram_id']
+            await start_session(
+                bot,
+                user_record=user_record,
+                admin_record=admin_record
             )
     elif command == 'stop':
-        with bot.db as db:
-            admin_record = db['users'].find_one(
-                telegram_id=telegram_id
+        if (
+            len(arguments) < 1
+            or not arguments[0].isnumeric()
+        ):
+            result = "Errore!"
+        elif not Confirmator.get('stop_bots').confirm(telegram_id):
+            result = bot.get_message(
+                'talk', 'end_session',
+                update=update,
             )
-            db['talking_sessions'].update(
-                dict(
-                    admin=admin_record['id'],
-                    cancelled=1
-                ),
-                ['admin']
+        else:
+            with bot.db as db:
+                user_record = db['users'].find_one(
+                    id=int(arguments[0])
+                )
+                admin_record = db['users'].find_one(
+                    telegram_id=telegram_id
+                )
+            await end_session(
+                bot,
+                user_record=user_record,
+                admin_record=admin_record
             )
-        # TODO: message which says it has stopped
-        # TODO: register talking session in database
+            text = "Session ended."
+            reply_markup = None
     if text:
         return dict(
             text=result,
@@ -394,6 +501,7 @@ def init(bot):
 
     @bot.additional_task(when='BEFORE')
     async def load_talking_sessions():
+        sessions = []
         with bot.db as db:
             for session in db.query(
                 """SELECT *
@@ -401,7 +509,22 @@ def init(bot):
                 WHERE NOT cancelled
                 """
             ):
-                pass  # Set cutom_parser
+                sessions.append(
+                    dict(
+                        user_record=db['users'].find_one(
+                            id=session['user']
+                        ),
+                        admin_record=db['users'].find_one(
+                            id=session['admin']
+                        ),
+                    )
+                )
+            for session in sessions:
+                await start_session(
+                    bot=bot,
+                    user_record=session['user_record'],
+                    admin_record=session['admin_record']
+                )
 
     @bot.command(command='/talk', aliases=[], show_in_keyboard=False,
                  descr="Choose a user and forward messages to each other.",
