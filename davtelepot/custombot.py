@@ -24,7 +24,7 @@ import os
 # Third party modules
 import dataset
 from davteutil.utilities import (
-    Gettable, escape_html_chars, get_cleaned_text,
+    get_secure_key, Gettable, escape_html_chars, extract,
     line_drawing_unordered_list, make_lines_of_buttons, markdown_check, MyOD,
     pick_most_similar_from_list, remove_html_tags, sleep_until
 )
@@ -600,7 +600,7 @@ class Bot(telepot.aio.Bot, Gettable):
         else:
             for condition, handler in self.inline_query_handlers.items():
                 answerer = handler['function']
-                if condition(update['query']):
+                if condition(query):
                     if asyncio.iscoroutinefunction(answerer):
                         answer = await answerer(update)
                     else:
@@ -1739,6 +1739,48 @@ class Bot(telepot.aio.Bot, Gettable):
                 )
         self.to_be_obscured.remove(inline_message_id)
         return
+
+    async def save_picture(self, update, file_name, path='img/',
+                           extension='jpg'):
+        """Store `update` picture as `path`/`file_name`.`extension`."""
+        if not path.endswith('/'):
+            path = '{p}/'.format(
+                p=path
+            )
+        if not os.path.isdir(path):
+            path = '{path}/img/'.format(
+                path=self.path
+            )
+        if file_name.endswith('.'):
+            file_name = file_name[:-1]
+        complete_file_name = '{path}{name}.{ext}'.format(
+            path=self.path,
+            name=file_name,
+            ext=extension
+        )
+        while os.path.isfile(complete_file_name):
+            file_name += get_secure_key(length=1)
+            complete_file_name = '{path}{name}.{ext}'.format(
+                path=self.path,
+                name=file_name,
+                ext=extension
+            )
+        try:
+            await self.download_file(
+                update['photo'][-1]['file_id'],
+                complete_file_name
+            )
+        except Exception as e:
+            return dict(
+                result=1,  # Error
+                file_name=None,
+                error=e
+            )
+        return dict(
+            result=0,  # Success
+            file_name=complete_file_name,
+            error=None
+        )
 
     async def get_me(self):
         """Get bot information.
