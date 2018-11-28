@@ -1740,7 +1740,7 @@ class Bot(telepot.aio.Bot, Gettable):
         self.to_be_obscured.remove(inline_message_id)
         return
 
-    async def save_picture(self, update, file_name, path='img/',
+    async def save_picture(self, update, file_name=None, path='img/',
                            extension='jpg'):
         """Store `update` picture as `path`/`file_name`.`extension`."""
         if not path.endswith('/'):
@@ -1751,6 +1751,8 @@ class Bot(telepot.aio.Bot, Gettable):
             path = '{path}/img/'.format(
                 path=self.path
             )
+        if file_name is None:
+            file_name = get_secure_key(length=6)
         if file_name.endswith('.'):
             file_name = file_name[:-1]
         complete_file_name = '{path}{name}.{ext}'.format(
