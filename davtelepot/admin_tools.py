@@ -156,10 +156,13 @@ async def _forward_to(update, bot, sender, addressee, is_admin=False):
     return
 
 
-def get_talk_panel(text, bot, update):
+def get_talk_panel(update, bot, text=''):
     """Return text and reply markup of talk panel.
 
-    Get 'user_id' as string, username as string or void string for main menu.
+    `text` may be:
+    - `user_id` as string
+    - `username` as string
+    - `''` (empty string) for main menu (default)
     """
     users = []
     if len(text):
@@ -300,7 +303,7 @@ async def _talk_command(update, bot):
         bot,
         ['talk']
     )
-    text, reply_markup = get_talk_panel(text, bot, update)
+    text, reply_markup = get_talk_panel(update, bot, text)
     return dict(
         text=text,
         parse_mode='HTML',
