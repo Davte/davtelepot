@@ -1717,8 +1717,7 @@ class Bot(telepot.aio.Bot, Gettable):
             return
         inline_message_id = update['inline_message_id']
         self.to_be_obscured.append(inline_message_id)
-        while datetime.datetime.now() < when:
-            await sleep_until(when)
+        await sleep_until(when)
         try:
             await self.editMessageCaption(
                 inline_message_id,
