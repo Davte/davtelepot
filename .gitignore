@@ -19,7 +19,7 @@ my_config.sh
 
 # Test
 run_test.sh
-davtelepot/test.py
+davtelepot/test???.py
 
 # ---> Python
 # Byte-compiled / optimized / DLL files
