@@ -1,7 +1,11 @@
 #!/bin/bash
 
+# Get current directory
+this_script_directory=$(cd `dirname $0` && pwd)
+
 # Python virtual environment directory: packenv variable in my_config.sh
-source my_config.sh;
+source $this_script_directory/my_config.sh;
+
 # Ensure the success of importing procedure
 if [ -z ${packenv} ];
 then
