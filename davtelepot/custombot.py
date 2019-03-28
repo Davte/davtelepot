@@ -120,9 +120,9 @@ class Bot(telepot.aio.Bot, Gettable):
     instances = {}
     stop = False
     # Cooldown time between sent messages, to prevent hitting
-    # Telegram flood limits
+    #   Telegram flood limits
     # Current limits: 30 total messages sent per second,
-    # 1 message per second per chat, 20 messages per minute per group
+    #   1 message per second per chat, 20 messages per minute per group
     COOLDOWN_TIME_ABSOLUTE = datetime.timedelta(seconds=1/30)
     COOLDOWN_TIME_PER_CHAT = datetime.timedelta(seconds=1)
     MAX_GROUP_MESSAGES_PER_MINUTE = 20
@@ -254,7 +254,7 @@ class Bot(telepot.aio.Bot, Gettable):
 
     @property
     def unknown_command_message(self):
-        """Message to be returned if user sends an unknown command in private chat.
+        """Message to be returned if user sends an unknown command.
 
         If instance message is not set, class message is returned.
         """
