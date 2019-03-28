@@ -1976,7 +1976,9 @@ class Bot(telepot.aio.Bot, Gettable):
             )
         )
         try:
-            loop.run_until_complete(cls.check_task())
+            loop.run_until_complete(
+                cls.check_task()
+            )
         except KeyboardInterrupt:
             logging.info(
                 (
