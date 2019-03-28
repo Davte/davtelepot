@@ -1,6 +1,9 @@
 # local_* files
 local_*
 
+# Python virtual environment
+venv/
+
 # databases
 *.db
 *.json
@@ -15,6 +18,7 @@ local_*
 my_config.sh
 
 # Test
+run_test.sh
 davtelepot/test.py
 
 # ---> Python
