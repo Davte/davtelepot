@@ -25,8 +25,8 @@ my_other_token = 'token_of_bot2'
 from davtelepot import Bot
 from data.passwords import my_token, my_other_token
 
-my_bot = Bot(token=my_token, db_name='my_db')
-my_other_bot = Bot(token=my_other_token, db_name='my_other_db')
+my_bot = Bot.get(token=my_token, db_name='my_db')
+my_other_bot = Bot.get(token=my_other_token, db_name='my_other_db')
 
 @my_bot.command('/foo')
 async def foo_command(update):
