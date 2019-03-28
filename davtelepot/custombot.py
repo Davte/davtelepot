@@ -404,10 +404,11 @@ class Bot(telepot.aio.Bot, Gettable):
         self.get_chat_id = get_chat_id_function
 
     async def avoid_flooding(self, chat_id):
-        """asyncio-sleep until COOLDOWN_TIME (per_chat and absolute) has passed.
+        """asyncio-sleep until COOLDOWN_TIME has passed.
 
         To prevent hitting Telegram flood limits, send_message and
             send_photo await this function.
+        Consider cooldown time per chat and absolute.
         """
         if type(chat_id) is int and chat_id > 0:
             while (
