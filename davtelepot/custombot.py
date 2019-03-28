@@ -1972,7 +1972,7 @@ class Bot(telepot.aio.Bot, Gettable):
         logging.info(
             "{sep}{subjvb} STARTED{sep}".format(
                 sep='-'*10,
-                subjvb='BOT HAS' if len(cls.instances) == 1 else 'BOTS HAVE'
+                subjvb=('BOT HAS' if len(cls.instances) == 1 else 'BOTS HAVE')
             )
         )
         try:
