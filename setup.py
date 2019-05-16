@@ -51,7 +51,7 @@ setuptools.setup(
     license=find_information("license", "davtelepot", "__init__.py"),
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://bitbucket.org/davte/davtelepot",
+    url="https://gogs.davte.it/davte/davtelepot",
     packages=setuptools.find_packages(),
     platforms=['any'],
     install_requires=[
