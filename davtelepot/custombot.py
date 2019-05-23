@@ -2305,3 +2305,28 @@ class Bot(telepot.aio.Bot, Gettable):
                             else:
                                 logging.info("Invalid name, please try again.")
         return 65  # Keep running, making user select another bot
+
+    def create_views(self, views, overwrite=False):
+        """Take a list of `views` and add them to bot database.
+
+        Each element of this list should have
+        - a `name` field
+        - a `query field`
+        """
+        with self.db as db:
+            for view in views:
+                try:
+                    if overwrite:
+                        db.query(
+                            f"""
+                                DROP VIEW IF EXISTS {view['name']}
+                            """
+                        )
+                    db.query(
+                        f"""
+                            CREATE VIEW IF NOT EXISTS {view['name']}
+                            AS {view['query']}
+                        """
+                    )
+                except Exception as e:
+                    logging.error(f"{e}")
