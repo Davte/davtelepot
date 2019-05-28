@@ -58,7 +58,6 @@ setuptools.setup(
         'aiohttp>=3.4.4',
         'bs4>=0.0.1',
         'dataset>=1.1.0',
-        'davteutil',
         'telepot>=12.7'
     ],
     classifiers=[

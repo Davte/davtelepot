@@ -23,13 +23,15 @@ import os
 
 # Third party modules
 import dataset
-from davteutil.utilities import (
+import telepot
+import telepot.aio
+
+# Project modules
+from davtelepot.utilities import (
     get_secure_key, Gettable, escape_html_chars, extract,
     line_drawing_unordered_list, make_lines_of_buttons, markdown_check, MyOD,
     pick_most_similar_from_list, remove_html_tags, sleep_until
 )
-import telepot
-import telepot.aio
 
 
 def split_text_gracefully(text, limit, parse_mode):
