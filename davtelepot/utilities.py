@@ -737,7 +737,7 @@ class CachedPage(Gettable):
 
     @property
     def url(self):
-        """Geet cached page url."""
+        """Get cached page url."""
         return self._url
 
     @property
