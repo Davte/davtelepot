@@ -166,8 +166,10 @@ class Bot(telepot.aio.Bot, Gettable):
                 name=db_name,
                 ext='.db' if not db_name.endswith('.db') else ''
             )
+            self._database = dataset.connect(self.db_url)
         else:
             self._db_url = None
+            self._database = None
         self._unauthorized_message = None
         self.authorization_function = lambda update, authorization_level: True
         self.get_chat_id = lambda update: (
@@ -222,12 +224,20 @@ class Bot(telepot.aio.Bot, Gettable):
 
     @property
     def db(self):
-        """Connect to bot's database.
+        """Return the dataset.Database instance related to `self`.
 
-        It must be used inside a with statement: `with bot.db as db`
+        To start a transaction with bot's database, use a with statement:
+        ```python3
+        with bot.db as db:
+            db['your_table'].insert(
+                dict(
+                    name='John',
+                    age=45
+                )
+            )
+        ```
         """
-        if self.db_url:
-            return dataset.connect(self.db_url)
+        return self._database
 
     @property
     def default_keyboard(self):
