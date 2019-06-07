@@ -15,6 +15,7 @@ import time
 
 # Third party modules
 import aiohttp
+from aiohttp import web
 from bs4 import BeautifulSoup
 
 
