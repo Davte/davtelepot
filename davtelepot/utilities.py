@@ -1457,3 +1457,13 @@ def pick_most_similar_from_list(list_, item):
             element
         )
     )
+
+
+def run_aiohttp_server(app, *args, **kwargs):
+    """Run an aiohttp web app, with its positional and keyword arguments.
+
+    Useful to run apps in dedicated threads.
+    """
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    web.run_app(app, *args, **kwargs)
