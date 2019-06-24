@@ -1468,3 +1468,17 @@ def run_aiohttp_server(app, *args, **kwargs):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     web.run_app(app, *args, **kwargs)
+
+
+def custom_join(_list, joiner, final=None):
+    """Join elements of `_list` using `joiner` (`final` as last joiner)."""
+    _list = list(map(str, _list))
+    if final is None:
+        final = joiner
+    if len(_list) == 0:
+        return ''
+    if len(_list) == 1:
+        return _list[0]
+    if len(_list) == 2:
+        return final.join(_list)
+    return joiner.join(_list[:-1]) + final + _list[-1]
