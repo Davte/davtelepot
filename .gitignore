@@ -8,6 +8,9 @@ venv/
 *.db
 *.json
 
+# Data folders
+data/
+
 *.txt
 !requirements.txt
 
