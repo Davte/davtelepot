@@ -351,13 +351,591 @@ class TelegramBot(object):
         See https://core.telegram.org/bots/api#sendanimation for details.
         """
         return await self.api_request(
+            'sendAnimation',
+            parameters=locals()
+        )
+
+    async def sendVoice(self, chat_id, voice,
+                        caption=None,
+                        parse_mode=None,
+                        duration=None,
+                        disable_notification=None,
+                        reply_to_message_id=None,
+                        reply_markup=None):
+        """Send an audio file to be displayed as playable voice message.
+
+        `voice` must be in an .ogg file encoded with OPUS.
+        See https://core.telegram.org/bots/api#sendvoice for details.
+        """
+        return await self.api_request(
+            'sendVoice',
+            parameters=locals()
+        )
+
+    async def sendVideoNote(self, chat_id, video_note,
+                            duration=None,
+                            length=None,
+                            thumb=None,
+                            disable_notification=None,
+                            reply_to_message_id=None,
+                            reply_markup=None):
+        """Send a rounded square mp4 video message of up to 1 minute long.
+
+        See https://core.telegram.org/bots/api#sendvideonote for details.
+        """
+        return await self.api_request(
+            'sendVideoNote',
+            parameters=locals()
+        )
+
+    async def sendMediaGroup(self, chat_id, media,
+                             disable_notification=None,
+                             reply_to_message_id=None):
+        """Send a group of photos or videos as an album.
+
+        `media` must be a list of `InputMediaPhoto` and/or `InputMediaVideo`
+            objects.
+        See https://core.telegram.org/bots/api#sendmediagroup for details.
+        """
+        return await self.api_request(
+            'sendMediaGroup',
+            parameters=locals()
+        )
+
+    async def sendLocation(self, chat_id, latitude, longitude,
+                           live_period=None,
+                           disable_notification=None,
+                           reply_to_message_id=None,
+                           reply_markup=None):
+        """Send a point on the map. May be kept updated for a `live_period`.
+
+        See https://core.telegram.org/bots/api#sendlocation for details.
+        """
+        return await self.api_request(
+            'sendLocation',
+            parameters=locals()
+        )
+
+    async def editMessageLiveLocation(self, latitude, longitude,
+                                      chat_id=None, message_id=None,
+                                      inline_message_id=None,
+                                      reply_markup=None):
+        """Edit live location messages.
+
+        A location can be edited until its live_period expires or editing is
+            explicitly disabled by a call to stopMessageLiveLocation.
+        The message to be edited may be identified through `inline_message_id`
+            OR the couple (`chat_id`, `message_id`).
+        See https://core.telegram.org/bots/api#editmessagelivelocation
+            for details.
+        """
+        return await self.api_request(
+            'editMessageLiveLocation',
+            parameters=locals()
+        )
+
+    async def stopMessageLiveLocation(self,
+                                      chat_id=None, message_id=None,
+                                      inline_message_id=None,
+                                      reply_markup=None):
+        """Stop updating a live location message before live_period expires.
+
+        The position to be stopped may be identified through
+            `inline_message_id` OR the couple (`chat_id`, `message_id`).
+        `reply_markup` may be only and `InlineKeyboardMarkup`.
+        See https://core.telegram.org/bots/api#stopmessagelivelocation
+            for details.
+        """
+        return await self.api_request(
+            'stopMessageLiveLocation',
+            parameters=locals()
+        )
+
+    async def sendVenue(self, chat_id, latitude, longitude, title, address,
+                        foursquare_id=None,
+                        foursquare_type=None,
+                        disable_notification=None,
+                        reply_to_message_id=None,
+                        reply_markup=None):
+        """Send information about a venue.
+
+        Integrated with FourSquare.
+        See https://core.telegram.org/bots/api#sendvenue for details.
+        """
+        return await self.api_request(
+            'sendVenue',
+            parameters=locals()
+        )
+
+    async def sendContact(self, chat_id, phone_number, first_name,
+                          last_name=None,
+                          vcard=None,
+                          disable_notification=None,
+                          reply_to_message_id=None,
+                          reply_markup=None):
+        """Send a phone contact.
+
+        See https://core.telegram.org/bots/api#sendcontact for details.
+        """
+        return await self.api_request(
+            'sendContact',
+            parameters=locals()
+        )
+
+    async def sendPoll(self, chat_id, question, options,
+                       dummy=None,
+                       disable_notification=None,
+                       reply_to_message_id=None,
+                       reply_markup=None):
+        """Send a native poll in a group, a supergroup or channel.
+
+        See https://core.telegram.org/bots/api#sendpoll for details.
+        """
+        return await self.api_request(
+            'sendPoll',
+            parameters=locals()
+        )
+
+    async def sendChatAction(self, chat_id, action):
+        """Fake a typing status or similar.
+
+        See https://core.telegram.org/bots/api#sendchataction for details.
+        """
+        return await self.api_request(
+            'sendChatAction',
+            parameters=locals()
+        )
+
+    async def getUserProfilePhotos(self, user_id,
+                                   offset=None,
+                                   limit=None,):
+        """Get a list of profile pictures for a user.
+
+        See https://core.telegram.org/bots/api#getuserprofilephotos
+            for details.
+        """
+        return await self.api_request(
+            'getUserProfilePhotos',
+            parameters=locals()
+        )
+
+    async def getFile(self, file_id):
+        """Get basic info about a file and prepare it for downloading.
+
+        For the moment, bots can download files of up to
+            20MB in size.
+        On success, a File object is returned. The file can then be downloaded
+            via the link https://api.telegram.org/file/bot<token>/<file_path>,
+            where <file_path> is taken from the response.
+
+        See https://core.telegram.org/bots/api#getfile for details.
+        """
+        return await self.api_request(
+            'getFile',
+            parameters=locals()
+        )
+
+    async def kickChatMember(self, chat_id, user_id,
+                             until_date=None):
+        """Kick a user from a group, a supergroup or a channel.
+
+        In the case of supergroups and channels, the user will not be able to
+            return to the group on their own using invite links, etc., unless
+            unbanned first.
+        Note: In regular groups (non-supergroups), this method will only work
+            if the ‘All Members Are Admins’ setting is off in the target group.
+            Otherwise members may only be removed by the group's creator or by
+            the member that added them.
+        See https://core.telegram.org/bots/api#kickchatmember for details.
+        """
+        return await self.api_request(
+            'kickChatMember',
+            parameters=locals()
+        )
+
+    async def unbanChatMember(self, chat_id, user_id):
+        """Unban a previously kicked user in a supergroup or channel.
+
+        The user will not return to the group or channel automatically, but
+            will be able to join via link, etc.
+        The bot must be an administrator for this to work.
+        Return True on success.
+        See https://core.telegram.org/bots/api#unbanchatmember for details.
+        """
+        return await self.api_request(
+            'unbanChatMember',
+            parameters=locals()
+        )
+
+    async def restrictChatMember(self, chat_id, user_id,
+                                 until_date=None,
+                                 can_send_messages=None,
+                                 can_send_media_messages=None,
+                                 can_send_other_messages=None,
+                                 can_add_web_page_previews=None):
+        """Restrict a user in a supergroup.
+
+        The bot must be an administrator in the supergroup for this to work
+            and must have the appropriate admin rights.
+            Pass True for all boolean parameters to lift restrictions from a
+            user.
+        Return True on success.
+        See https://core.telegram.org/bots/api#restrictchatmember for details.
+        """
+        return await self.api_request(
+            'restrictChatMember',
+            parameters=locals()
+        )
+
+    async def promoteChatMember(self, chat_id, user_id,
+                                can_change_info=None,
+                                can_post_messages=None,
+                                can_edit_messages=None,
+                                can_delete_messages=None,
+                                can_invite_users=None,
+                                can_restrict_members=None,
+                                can_pin_messages=None,
+                                can_promote_members=None):
+        """Promote or demote a user in a supergroup or a channel.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate admin rights.
+        Pass False for all boolean parameters to demote a user.
+        Return True on success.
+        See https://core.telegram.org/bots/api#promotechatmember for details.
+        """
+        return await self.api_request(
+            'promoteChatMember',
+            parameters=locals()
+        )
+
+    async def exportChatInviteLink(self, chat_id):
+        """Generate a new invite link for a chat and revoke any active link.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate admin rights.
+        Return the new invite link as String on success.
+        NOTE: to get the current invite link, use `getChat` method.
+        See https://core.telegram.org/bots/api#exportchatinvitelink
+            for details.
+        """
+        return await self.api_request(
+            'exportChatInviteLink',
+            parameters=locals()
+        )
+
+    async def setChatPhoto(self, chat_id, photo):
+        """Set a new profile photo for the chat.
+
+        Photos can't be changed for private chats.
+        `photo` must be an input file (file_id and urls are not allowed).
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate admin rights.
+        Return True on success.
+        See https://core.telegram.org/bots/api#setchatphoto for details.
+        """
+        return await self.api_request(
+            'setChatPhoto',
+            parameters=locals()
+        )
+
+    async def deleteChatPhoto(self, chat_id):
+        """Delete a chat photo.
+
+        Photos can't be changed for private chats.
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate admin rights.
+        Return True on success.
+        See https://core.telegram.org/bots/api#deletechatphoto for details.
+        """
+        return await self.api_request(
+            'deleteChatPhoto',
+            parameters=locals()
+        )
+
+    async def setChatTitle(self, chat_id, title):
+        """Change the title of a chat.
+
+        Titles can't be changed for private chats.
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate admin rights.
+        Return True on success.
+        See https://core.telegram.org/bots/api#setchattitle for details.
+        """
+        return await self.api_request(
+            'setChatTitle',
+            parameters=locals()
+        )
+
+    async def setChatDescription(self, chat_id, description):
+        """Change the description of a supergroup or a channel.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate admin rights.
+        Return True on success.
+        See https://core.telegram.org/bots/api#setchatdescription for details.
+        """
+        return await self.api_request(
+            'setChatDescription',
+            parameters=locals()
+        )
+
+    async def pinChatMessage(self, chat_id, message_id,
+                             disable_notification=None):
+        """Pin a message in a group, a supergroup, or a channel.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the ‘can_pin_messages’ admin right in the supergroup or
+            ‘can_edit_messages’ admin right in the channel.
+        Return True on success.
+        See https://core.telegram.org/bots/api#pinchatmessage for details.
+        """
+        return await self.api_request(
+            'pinChatMessage',
+            parameters=locals()
+        )
+
+    async def unpinChatMessage(self, chat_id):
+        """Unpin a message in a group, a supergroup, or a channel.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the ‘can_pin_messages’ admin right in the supergroup or
+            ‘can_edit_messages’ admin right in the channel.
+        Return True on success.
+        See https://core.telegram.org/bots/api#unpinchatmessage for details.
+        """
+        return await self.api_request(
+            'unpinChatMessage',
+            parameters=locals()
+        )
+
+    async def leaveChat(self, chat_id):
+        """Make the bot leave a group, supergroup or channel.
+
+        Return True on success.
+        See https://core.telegram.org/bots/api#leavechat for details.
+        """
+        return await self.api_request(
+            'leaveChat',
+            parameters=locals()
+        )
+
+    async def getChat(self, chat_id):
+        """Get up to date information about the chat.
+
+        Return a Chat object on success.
+        See https://core.telegram.org/bots/api#getchat for details.
+        """
+        return await self.api_request(
+            'getChat',
+            parameters=locals()
+        )
+
+    async def getChatAdministrators(self, chat_id):
+        """Get a list of administrators in a chat.
+
+        On success, return an Array of ChatMember objects that contains
+            information about all chat administrators except other bots.
+        If the chat is a group or a supergroup and no administrators were
+            appointed, only the creator will be returned.
+
+        See https://core.telegram.org/bots/api#getchatadministrators
+            for details.
+        """
+        return await self.api_request(
+            'getChatAdministrators',
+            parameters=locals()
+        )
+
+    async def getChatMembersCount(self, chat_id):
+        """Get the number of members in a chat.
+
+        Returns Int on success.
+        See https://core.telegram.org/bots/api#getchatmemberscount for details.
+        """
+        return await self.api_request(
+            'getChatMembersCount',
+            parameters=locals()
+        )
+
+    async def getChatMember(self, chat_id, user_id):
+        """Get information about a member of a chat.
+
+        Returns a ChatMember object on success.
+        See https://core.telegram.org/bots/api#getchatmember for details.
+        """
+        return await self.api_request(
+            'getChatMember',
+            parameters=locals()
+        )
+
+    async def setChatStickerSet(self, chat_id, sticker_set_name):
+        """Set a new group sticker set for a supergroup.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate admin rights.
+        Use the field `can_set_sticker_set` optionally returned in getChat
+            requests to check if the bot can use this method.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setchatstickerset for details.
+        """
+        return await self.api_request(
+            'setChatStickerSet',
+            parameters=locals()
+        )
+
+    async def deleteChatStickerSet(self, chat_id):
+        """Delete a group sticker set from a supergroup.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate admin rights.
+        Use the field `can_set_sticker_set` optionally returned in getChat
+            requests to check if the bot can use this method.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#deletechatstickerset for details.
+        """
+        return await self.api_request(
+            'deleteChatStickerSet',
+            parameters=locals()
+        )
+
+    async def answerCallbackQuery(self, callback_query_id,
+                                  text=None,
+                                  show_alert=None,
+                                  url=None,
+                                  cache_time=None):
+        """Send answers to callback queries sent from inline keyboards.
+
+        The answer will be displayed to the user as a notification at the top
+            of the chat screen or as an alert.
+        On success, True is returned.
+        See https://core.telegram.org/bots/api#answercallbackquery for details.
+        """
+        return await self.api_request(
+            'answerCallbackQuery',
+            parameters=locals()
+        )
+
+    async def editMessageText(self, text,
+                              chat_id=None, message_id=None,
+                              inline_message_id=None,
+                              parse_mode=None,
+                              disable_web_page_preview=None,
+                              reply_markup=None):
+        """Edit text and game messages.
+
+        On success, if edited message is sent by the bot, the edited Message
+            is returned, otherwise True is returned.
+        See https://core.telegram.org/bots/api#editmessagetext for details.
+        """
+        return await self.api_request(
+            'editMessageText',
+            parameters=locals()
+        )
+
+    async def method_name(self, chat_id, method_name,
+                          dummy=None,
+                          disable_notification=None,
+                          reply_to_message_id=None,
+                          reply_markup=None):
+        """method_name.
+
+        See https://core.telegram.org/bots/api#method_name for details.
+        """
+        return await self.api_request(
             'method_name',
             parameters=locals()
         )
 
-    async def method_name(
-        self, chat_id, reply_to_message_id=None, reply_markup=None
-    ):
+    async def method_name(self, chat_id, method_name,
+                          dummy=None,
+                          disable_notification=None,
+                          reply_to_message_id=None,
+                          reply_markup=None):
+        """method_name.
+
+        See https://core.telegram.org/bots/api#method_name for details.
+        """
+        return await self.api_request(
+            'method_name',
+            parameters=locals()
+        )
+
+    async def method_name(self, chat_id, method_name,
+                          dummy=None,
+                          disable_notification=None,
+                          reply_to_message_id=None,
+                          reply_markup=None):
+        """method_name.
+
+        See https://core.telegram.org/bots/api#method_name for details.
+        """
+        return await self.api_request(
+            'method_name',
+            parameters=locals()
+        )
+
+    async def method_name(self, chat_id, method_name,
+                          dummy=None,
+                          disable_notification=None,
+                          reply_to_message_id=None,
+                          reply_markup=None):
+        """method_name.
+
+        See https://core.telegram.org/bots/api#method_name for details.
+        """
+        return await self.api_request(
+            'method_name',
+            parameters=locals()
+        )
+
+    async def method_name(self, chat_id, method_name,
+                          dummy=None,
+                          disable_notification=None,
+                          reply_to_message_id=None,
+                          reply_markup=None):
+        """method_name.
+
+        See https://core.telegram.org/bots/api#method_name for details.
+        """
+        return await self.api_request(
+            'method_name',
+            parameters=locals()
+        )
+
+    async def method_name(self, chat_id, method_name,
+                          dummy=None,
+                          disable_notification=None,
+                          reply_to_message_id=None,
+                          reply_markup=None):
+        """method_name.
+
+        See https://core.telegram.org/bots/api#method_name for details.
+        """
+        return await self.api_request(
+            'method_name',
+            parameters=locals()
+        )
+
+    async def method_name(self, chat_id, method_name,
+                          dummy=None,
+                          disable_notification=None,
+                          reply_to_message_id=None,
+                          reply_markup=None):
+        """method_name.
+
+        See https://core.telegram.org/bots/api#method_name for details.
+        """
+        return await self.api_request(
+            'method_name',
+            parameters=locals()
+        )
+
+    async def method_name(self, chat_id, method_name,
+                          dummy=None,
+                          disable_notification=None,
+                          reply_to_message_id=None,
+                          reply_markup=None):
         """method_name.
 
         See https://core.telegram.org/bots/api#method_name for details.
@@ -609,19 +1187,14 @@ class Bot(TelegramBot):
     async def route_update(self, update):
         """Pass `update` to proper method.
 
-        Work in progress: at the moment the update gets simply printed.
+        Work in progress: at the moment the update gets simply printed and
+            echoed back in the same chat.
         """
         print(update)
         await self.sendMessage(
             chat_id=update['message']['chat']['id'],
-            text="Ciaone!"
+            text=update['message']['text']
         )
-        with open('rrr.txt', 'r') as _file:
-            await self.sendDocument(
-                chat_id=update['message']['chat']['id'],
-                document=_file,
-                caption="Prova!"
-            )
         return
 
     @classmethod
