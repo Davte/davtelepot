@@ -94,23 +94,18 @@ class TelegramBot(object):
         return response['result']
 
     @staticmethod
-    def clean_parameters(parameters, exclude=[]):
-        """Remove key-value couples from `parameters` dict.
+    def adapt_parameters(parameters, exclude=[]):
+        """Build a aiohttp.FormData object from given `paramters`.
 
-        Remove the couple having `self` as key, keys in `exclude` list,
-            and couples with empty value.
-        Adapt files parameters.
+        Exclude `self`, empty values and parameters in `exclude` list.
+        Cast integers to string to avoid TypeError during json serialization.
         """
         exclude.append('self')
         data = aiohttp.FormData()
         for key, value in parameters.items():
-            if (key in exclude or value is None):
-                pass
-            elif type(value) is int:
-                data.add_field(key, str(value))
-            elif key in ['photo', 'audio', 'document']:
-                data.add_field(key, value)
-            else:
+            if not (key in exclude or value is None):
+                if type(value) is int:
+                    value = str(value)
                 data.add_field(key, value)
         return data
 
@@ -151,7 +146,7 @@ class TelegramBot(object):
         """
         response_object = None
         session, session_must_be_closed = self.get_session(method)
-        parameters = self.clean_parameters(parameters, exclude=exclude)
+        parameters = self.adapt_parameters(parameters, exclude=exclude)
         try:
             async with session.post(
                 "https://api.telegram.org/bot"
