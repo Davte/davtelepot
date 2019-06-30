@@ -40,7 +40,7 @@ class TelegramApiMethod(object):
         result = ''
         if self.table is None:
             return "No parameters"
-        rows = self.table.find_all('tr')
+        rows = self.table.tbody.find_all('tr')
         if rows is None:
             rows = []
         for row in rows:
