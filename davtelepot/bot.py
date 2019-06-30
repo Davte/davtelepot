@@ -1034,6 +1034,144 @@ class TelegramBot(object):
             parameters=locals()
         )
 
+    async def sendInvoice(self, chat_id, title, description, payload,
+                          provider_token, start_parameter, currency, prices,
+                          provider_data=None,
+                          photo_url=None,
+                          photo_size=None,
+                          photo_width=None,
+                          photo_height=None,
+                          need_name=None,
+                          need_phone_number=None,
+                          need_email=None,
+                          need_shipping_address=None,
+                          send_phone_number_to_provider=None,
+                          send_email_to_provider=None,
+                          is_flexible=None,
+                          disable_notification=None,
+                          reply_to_message_id=None,
+                          reply_markup=None):
+        """Send an invoice.
+
+        On success, the sent Message is returned.
+        See https://core.telegram.org/bots/api#sendinvoice for details.
+        """
+        return await self.api_request(
+            'sendInvoice',
+            parameters=locals()
+        )
+
+    async def answerShippingQuery(self, shipping_query_id, ok,
+                                  shipping_options=None,
+                                  error_message=None):
+        """Reply to shipping queries.
+
+        On success, True is returned.
+        If you sent an invoice requesting a shipping address and the parameter
+            is_flexible was specified, the Bot API will send an Update with a
+            shipping_query field to the bot.
+        See https://core.telegram.org/bots/api#answershippingquery for details.
+        """
+        return await self.api_request(
+            'answerShippingQuery',
+            parameters=locals()
+        )
+
+    async def answerPreCheckoutQuery(self, pre_checkout_query_id, ok,
+                                     error_message=None):
+        """Respond to pre-checkout queries.
+
+        Once the user has confirmed their payment and shipping details, the Bot
+            API sends the final confirmation in the form of an Update with the
+            field pre_checkout_query.
+        On success, True is returned.
+        Note: The Bot API must receive an answer within 10 seconds after the
+            pre-checkout query was sent.
+        See https://core.telegram.org/bots/api#answerprecheckoutquery for
+            details.
+        """
+        return await self.api_request(
+            'answerPreCheckoutQuery',
+            parameters=locals()
+        )
+
+    async def setPassportDataErrors(self, user_id, errors):
+        """Refuse a Telegram Passport element with `errors`.
+
+        Inform a user that some of the Telegram Passport elements they provided
+            contains errors.
+        The user will not be able to re-submit their Passport to you until the
+            errors are fixed (the contents of the field for which you returned
+            the error must change).
+        Returns True on success.
+        Use this if the data submitted by the user doesn't satisfy the
+            standards your service requires for any reason.
+            For example, if a birthday date seems invalid, a submitted document
+            is blurry, a scan shows evidence of tampering, etc.
+        Supply some details in the error message to make sure the user knows
+            how to correct the issues.
+        See https://core.telegram.org/bots/api#setpassportdataerrors for
+            details.
+        """
+        return await self.api_request(
+            'setPassportDataErrors',
+            parameters=locals()
+        )
+
+    async def sendGame(self, chat_id, game_short_name,
+                       disable_notification=None,
+                       reply_to_message_id=None,
+                       reply_markup=None):
+        """Send a game.
+
+        On success, the sent Message is returned.
+        See https://core.telegram.org/bots/api#sendgame for
+            details.
+        """
+        return await self.api_request(
+            'sendGame',
+            parameters=locals()
+        )
+
+    async def setGameScore(self, user_id, score,
+                           force=None,
+                           disable_edit_message=None,
+                           chat_id=None, message_id=None,
+                           inline_message_id=None):
+        """Set the score of the specified user in a game.
+
+        On success, if the message was sent by the bot, returns the edited
+            Message, otherwise returns True.
+        Returns an error, if the new score is not greater than the user's
+            current score in the chat and force is False.
+        See https://core.telegram.org/bots/api#setgamescore for
+            details.
+        """
+        return await self.api_request(
+            'setGameScore',
+            parameters=locals()
+        )
+
+    async def getGameHighScores(self, user_id,
+                                chat_id=None, message_id=None,
+                                inline_message_id=None):
+        """Get data for high score tables.
+
+        Will return the score of the specified user and several of his
+            neighbors in a game.
+        On success, returns an Array of GameHighScore objects.
+        This method will currently return scores for the target user, plus two
+            of his closest neighbors on each side. Will also return the top
+            three users if the user and his neighbors are not among them.
+            Please note that this behavior is subject to change.
+        See https://core.telegram.org/bots/api#getgamehighscores for
+            details.
+        """
+        return await self.api_request(
+            'getGameHighScores',
+            parameters=locals()
+        )
+
 
 class Bot(TelegramBot):
     """Simple Bot object, providing methods corresponding to Telegram bot API.
