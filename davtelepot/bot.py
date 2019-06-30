@@ -442,7 +442,7 @@ class TelegramBot(object):
 
         The position to be stopped may be identified through
             `inline_message_id` OR the couple (`chat_id`, `message_id`).
-        `reply_markup` may be only and `InlineKeyboardMarkup`.
+        `reply_markup` type may be only `InlineKeyboardMarkup`.
         See https://core.telegram.org/bots/api#stopmessagelivelocation
             for details.
         """
@@ -792,7 +792,8 @@ class TelegramBot(object):
         Use the field `can_set_sticker_set` optionally returned in getChat
             requests to check if the bot can use this method.
         Returns True on success.
-        See https://core.telegram.org/bots/api#deletechatstickerset for details.
+        See https://core.telegram.org/bots/api#deletechatstickerset for
+            details.
         """
         return await self.api_request(
             'deleteChatStickerSet',
@@ -833,115 +834,203 @@ class TelegramBot(object):
             parameters=locals()
         )
 
-    async def method_name(self, chat_id, method_name,
-                          dummy=None,
-                          disable_notification=None,
-                          reply_to_message_id=None,
-                          reply_markup=None):
-        """method_name.
+    async def editMessageCaption(self,
+                                 chat_id=None, message_id=None,
+                                 inline_message_id=None,
+                                 caption=None,
+                                 parse_mode=None,
+                                 reply_markup=None):
+        """Edit captions of messages.
 
-        See https://core.telegram.org/bots/api#method_name for details.
+        On success, if edited message is sent by the bot, the edited Message is
+            returned, otherwise True is returned.
+        See https://core.telegram.org/bots/api#editmessagecaption for details.
         """
         return await self.api_request(
-            'method_name',
+            'editMessageCaption',
             parameters=locals()
         )
 
-    async def method_name(self, chat_id, method_name,
-                          dummy=None,
-                          disable_notification=None,
-                          reply_to_message_id=None,
-                          reply_markup=None):
-        """method_name.
+    async def editMessageMedia(self,
+                               chat_id=None, message_id=None,
+                               inline_message_id=None,
+                               media=None,
+                               reply_markup=None):
+        """Edit animation, audio, document, photo, or video messages.
 
-        See https://core.telegram.org/bots/api#method_name for details.
+        If a message is a part of a message album, then it can be edited only
+            to a photo or a video. Otherwise, message type can be changed
+            arbitrarily.
+        When inline message is edited, new file can't be uploaded.
+        Use previously uploaded file via its file_id or specify a URL.
+        On success, if the edited message was sent by the bot, the edited
+            Message is returned, otherwise True is returned.
+        See https://core.telegram.org/bots/api#editmessagemedia for details.
         """
         return await self.api_request(
-            'method_name',
+            'editMessageMedia',
             parameters=locals()
         )
 
-    async def method_name(self, chat_id, method_name,
-                          dummy=None,
-                          disable_notification=None,
-                          reply_to_message_id=None,
-                          reply_markup=None):
-        """method_name.
+    async def editMessageReplyMarkup(self,
+                                     chat_id=None, message_id=None,
+                                     inline_message_id=None,
+                                     reply_markup=None):
+        """Edit only the reply markup of messages.
 
-        See https://core.telegram.org/bots/api#method_name for details.
+        On success, if edited message is sent by the bot, the edited Message is
+            returned, otherwise True is returned.
+        See https://core.telegram.org/bots/api#editmessagereplymarkup for
+            details.
         """
         return await self.api_request(
-            'method_name',
+            'editMessageReplyMarkup',
             parameters=locals()
         )
 
-    async def method_name(self, chat_id, method_name,
-                          dummy=None,
-                          disable_notification=None,
-                          reply_to_message_id=None,
-                          reply_markup=None):
-        """method_name.
+    async def stopPoll(self, chat_id, message_id,
+                       reply_markup=None):
+        """Stop a poll which was sent by the bot.
 
-        See https://core.telegram.org/bots/api#method_name for details.
+        On success, the stopped Poll with the final results is returned.
+        `reply_markup` type may be only `InlineKeyboardMarkup`.
+        See https://core.telegram.org/bots/api#stoppoll for details.
         """
         return await self.api_request(
-            'method_name',
+            'stopPoll',
             parameters=locals()
         )
 
-    async def method_name(self, chat_id, method_name,
-                          dummy=None,
-                          disable_notification=None,
-                          reply_to_message_id=None,
-                          reply_markup=None):
-        """method_name.
+    async def deleteMessage(self, chat_id, message_id):
+        """Delete a message, including service messages.
 
-        See https://core.telegram.org/bots/api#method_name for details.
+            - A message can only be deleted if it was sent less than 48 hours
+                ago.
+            - Bots can delete outgoing messages in private chats, groups, and
+                supergroups.
+            - Bots can delete incoming messages in private chats.
+            - Bots granted can_post_messages permissions can delete outgoing
+                messages in channels.
+            - If the bot is an administrator of a group, it can delete any
+                message there.
+            - If the bot has can_delete_messages permission in a supergroup or
+                a channel, it can delete any message there.
+            Returns True on success.
+
+        See https://core.telegram.org/bots/api#deletemessage for details.
         """
         return await self.api_request(
-            'method_name',
+            'deleteMessage',
             parameters=locals()
         )
 
-    async def method_name(self, chat_id, method_name,
-                          dummy=None,
+    async def sendSticker(self, chat_id, sticker,
                           disable_notification=None,
                           reply_to_message_id=None,
                           reply_markup=None):
-        """method_name.
+        """Send .webp stickers.
 
-        See https://core.telegram.org/bots/api#method_name for details.
+        On success, the sent Message is returned.
+        See https://core.telegram.org/bots/api#sendsticker for details.
         """
         return await self.api_request(
-            'method_name',
+            'sendSticker',
             parameters=locals()
         )
 
-    async def method_name(self, chat_id, method_name,
-                          dummy=None,
-                          disable_notification=None,
-                          reply_to_message_id=None,
-                          reply_markup=None):
-        """method_name.
+    async def getStickerSet(self, name):
+        """Get a sticker set.
 
-        See https://core.telegram.org/bots/api#method_name for details.
+        On success, a StickerSet object is returned.
+        See https://core.telegram.org/bots/api#getstickerset for details.
         """
         return await self.api_request(
-            'method_name',
+            'getStickerSet',
             parameters=locals()
         )
 
-    async def method_name(self, chat_id, method_name,
-                          dummy=None,
-                          disable_notification=None,
-                          reply_to_message_id=None,
-                          reply_markup=None):
-        """method_name.
+    async def uploadStickerFile(self, user_id, png_sticker):
+        """Upload a .png file as a sticker.
 
-        See https://core.telegram.org/bots/api#method_name for details.
+        Use it later via `createNewStickerSet` and `addStickerToSet` methods
+            (can be used multiple times).
+        Return the uploaded File on success.
+        `png_sticker` must be a *.png image up to 512 kilobytes in size,
+            dimensions must not exceed 512px, and either width or height must
+            be exactly 512px.
+        See https://core.telegram.org/bots/api#uploadstickerfile for details.
         """
         return await self.api_request(
-            'method_name',
+            'uploadStickerFile',
+            parameters=locals()
+        )
+
+    async def createNewStickerSet(self, user_id,
+                                  name, title, png_sticker, emojis,
+                                  contains_masks=None,
+                                  mask_position=None):
+        """Create new sticker set owned by a user.
+
+        The bot will be able to edit the created sticker set.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#createnewstickerset for details.
+        """
+        return await self.api_request(
+            'createNewStickerSet',
+            parameters=locals()
+        )
+
+    async def addStickerToSet(self, user_id, name, png_sticker, emojis,
+                              mask_position=None):
+        """Add a new sticker to a set created by the bot.
+
+        Returns True on success.
+        See https://core.telegram.org/bots/api#addstickertoset for details.
+        """
+        return await self.api_request(
+            'addStickerToSet',
+            parameters=locals()
+        )
+
+    async def setStickerPositionInSet(self, sticker, position):
+        """Move a sticker in a set created by the bot to a specific position .
+
+        Position is 0-based.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setstickerpositioninset for
+            details.
+        """
+        return await self.api_request(
+            'setStickerPositionInSet',
+            parameters=locals()
+        )
+
+    async def deleteStickerFromSet(self, sticker):
+        """Delete a sticker from a set created by the bot.
+
+        Returns True on success.
+        See https://core.telegram.org/bots/api#deletestickerfromset for
+            details.
+        """
+        return await self.api_request(
+            'deleteStickerFromSet',
+            parameters=locals()
+        )
+
+    async def answerInlineQuery(self, inline_query_id, results,
+                                cache_time=None,
+                                is_personal=None,
+                                next_offset=None,
+                                switch_pm_text=None,
+                                switch_pm_parameter=None):
+        """Send answers to an inline query.
+
+        On success, True is returned.
+        No more than 50 results per query are allowed.
+        See https://core.telegram.org/bots/api#answerinlinequery for details.
+        """
+        return await self.api_request(
+            'answerInlineQuery',
             parameters=locals()
         )
 
