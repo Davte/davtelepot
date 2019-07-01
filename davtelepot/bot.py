@@ -34,6 +34,7 @@ class Bot(TelegramBot):
     _maintenance_message = ("I am currently under maintenance!\n"
                             "Please retry later...")
     _authorization_denied_message = None
+    _unknown_command_message = None
 
     def __init__(
         self, token, hostname='', certificate=None, max_connections=40,
@@ -110,6 +111,8 @@ class Bot(TelegramBot):
             'passport_data': self.passport_data_message_handler
         }
         self.individual_text_message_handlers = dict()
+        self.commands = dict()
+        self._unknown_command_message = None
         self._under_maintenance = False
         self._allowed_during_maintenance = []
         self._maintenance_message = None
@@ -256,6 +259,16 @@ class Bot(TelegramBot):
         """
         return self._default_keyboard
 
+    @property
+    def unknown_command_message(self):
+        """Message to be returned if user sends an unknown command.
+
+        If instance message is not set, class message is returned.
+        """
+        if self._unknown_command_message:
+            return self._unknown_command_message
+        return self.__class__._unknown_command_message
+
     async def message_router(self, update):
         """Route Telegram `message` update to appropriate message handler."""
         for key, value in update.items():
@@ -346,20 +359,19 @@ class Bot(TelegramBot):
         if user_id in self.individual_text_message_handlers:
             replier = self.individual_text_message_handlers[user_id]
             del self.individual_text_message_handlers[user_id]
-        elif text.startswith('/'):  # Command handler
+        elif text.startswith('/'):  # Handle commands
             # A command must always start with the ‘/’ symbol and may not be
             # longer than 32 characters.
             # Commands can use latin letters, numbers and underscores.
-            print(text)
             command = re.search(
-                r"([A-z_1-9]){1,32}",
+                r"([A-z_1-9]){1,32}",  # Command pattern (without leading `/`)
                 text
-            ).group(0)  # Get the first group characters matching pattern
+            ).group(0)  # Get the first group of characters matching pattern
             if command in self.commands:
                 replier = self.commands[command]['function']
             elif update['chat']['id'] > 0:
-                replier = self.unknown_command_message
-        else:  # Check alias and text parsers
+                reply = self.unknown_command_message
+        else:  # Handle command aliases and text parsers
             logging.info("#TODO alias and text parsers")
         if replier:
             if asyncio.iscoroutinefunction(replier):
@@ -747,6 +759,22 @@ class Bot(TelegramBot):
         Default authorization_function always evaluates True.
         """
         self.authorization_function = authorization_function
+
+    @classmethod
+    def set_class_unknown_command_message(cls, unknown_command_message):
+        """Set class unknown command message.
+
+        It will be returned if user sends an unknown command in private chat.
+        """
+        cls._unknown_command_message = unknown_command_message
+
+    def set_unknown_command_message(self, unknown_command_message):
+        """Set instance unknown command message.
+
+        It will be returned if user sends an unknown command in private chat.
+        If instance message is None, default class message is used.
+        """
+        self._unknown_command_message = unknown_command_message
 
     def set_chat_id_getter(self, getter):
         """Set chat_id getter.
