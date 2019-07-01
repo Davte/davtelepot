@@ -6,6 +6,7 @@ A simple aiohttp asyncronous web client is used to make requests.
 
 # Standard library modules
 import asyncio
+import json
 import logging
 
 # Third party modules
@@ -98,8 +99,8 @@ class TelegramBot(object):
         data = aiohttp.FormData()
         for key, value in parameters.items():
             if not (key in exclude or value is None):
-                if type(value) is int:
-                    value = str(value)
+                if type(value) in (int, dict, list,):
+                    value = json.dumps(value, separators=(',', ':'))
                 data.add_field(key, value)
         return data
 
