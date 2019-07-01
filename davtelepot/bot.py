@@ -30,6 +30,8 @@ class Bot(TelegramBot):
     local_host = 'localhost'
     port = 3000
     final_state = 0
+    _maintenance_message = ("I am currently under maintenance!\n"
+                            "Please retry later...")
 
     def __init__(
         self, token, hostname='', certificate=None, max_connections=40,
@@ -58,6 +60,9 @@ class Bot(TelegramBot):
         self._session_token = get_secure_key(length=10)
         self._name = None
         self._telegram_id = None
+        self._under_maintenance = False
+        self._allowed_during_maintenance = []
+        self._maintenance_message = None
         return
 
     @property
@@ -136,6 +141,122 @@ class Bot(TelegramBot):
         Useful to ignore repeated updates and restore original update order.
         """
         return self._offset
+
+    @property
+    def under_maintenance(self):
+        """Return True if bot is under maintenance.
+
+        While under maintenance, bot will reply `self.maintenance_message` to
+            any update, except those which `self.is_allowed_during_maintenance`
+            returns True for.
+        """
+        return self._under_maintenance
+
+    @property
+    def allowed_during_maintenance(self):
+        """Return the list of criteria to allow an update during maintenance.
+
+        If any of this criteria returns True on an update, that update will be
+            handled even during maintenance.
+        """
+        return self._allowed_during_maintenance
+
+    @property
+    def maintenance_message(self):
+        """Message to be returned if bot is under maintenance.
+
+        If instance message is not set, class message is returned.
+        """
+        if self._maintenance_message:
+            return self._maintenance_message
+        if self.__class__.maintenance_message:
+            return self.__class__._maintenance_message
+        return ("I am currently under maintenance!\n"
+                "Please retry later...")
+
+    @classmethod
+    def set_class_maintenance_message(cls, maintenance_message):
+        """Set class maintenance message.
+
+        It will be returned if bot is under maintenance, unless and instance
+            `_maintenance_message` is set.
+        """
+        cls._maintenance_message = maintenance_message
+
+    def set_maintenance_message(self, maintenance_message):
+        """Set instance maintenance message.
+
+        It will be returned if bot is under maintenance.
+        If instance message is None, default class message is used.
+        """
+        self._maintenance_message = maintenance_message
+
+    def change_maintenance_status(self, maintenance_message=None, status=None):
+        """Put the bot under maintenance or end it.
+
+        While in maintenance, bot will reply to users with maintenance_message
+            with a few exceptions.
+        If status is not set, it is by default the opposite of the current one.
+        Optionally, `maintenance_message` may be set.
+        """
+        if status is None:
+            status = not self.under_maintenance
+        assert type(status) is bool, "status must be a boolean value!"
+        self._under_maintenance = status
+        if maintenance_message:
+            self.set_maintenance_message(maintenance_message)
+        return self._under_maintenance  # Return new status
+
+    def is_allowed_during_maintenance(self, update):
+        """Return True if update is allowed during maintenance.
+
+        An update is allowed if any of the criteria in
+            `self.allowed_during_maintenance` returns True called on it.
+        """
+        for criterion in self.allowed_during_maintenance:
+            if criterion(update):
+                return True
+        return False
+
+    def allow_during_maintenance(self, criterion):
+        """Add a criterion to allow certain updates during maintenance.
+
+        `criterion` must be a function taking a Telegram `update` dictionary
+            and returning a boolean.
+        ```# Example of criterion
+        def allow_text_messages(update):
+            if 'message' in update and 'text' in update['message']:
+                return True
+            return False
+        ```
+        """
+        self._allowed_during_maintenance.append(criterion)
+
+    async def handle_update_during_maintenance(self, update):
+        """Handle an update while bot is under maintenance.
+
+        Handle all types of updates.
+        """
+        if (
+            'message' in update
+            and 'chat' in update['message']
+            and update['message']['chat']['id'] > 0
+        ):
+            return await self.send_message(
+                text=self.maintenance_message,
+                update=update['message'],
+                reply_to_update=True
+            )
+        elif 'callback_query' in update:
+            pass
+        elif 'inline_query' in update:
+            await self.answer_inline_query(
+                update['inline_query']['id'],
+                self.maintenance_message,
+                cache_time=30,
+                is_personal=False,
+            )
+        return
 
     async def webhook_feeder(self, request):
         """Handle incoming HTTP `request`s.
@@ -269,6 +390,11 @@ class Bot(TelegramBot):
             text=update['message']['text']
         )
         return
+        if (
+            self.under_maintenance
+            and not self.is_allowed_during_maintenance(update)
+        ):
+            return await self.handle_update_during_maintenance(update)
 
     @classmethod
     async def start_app(cls):
