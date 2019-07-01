@@ -13,7 +13,7 @@ from aiohttp import web
 
 # Project modules
 from api import TelegramBot, TelegramError
-from utilities import get_secure_key
+from utilities import get_secure_key, make_lines_of_buttons
 
 # Do not log aiohttp `INFO` and `DEBUG` levels
 logging.getLogger('aiohttp').setLevel(logging.WARNING)
@@ -124,6 +124,8 @@ class Bot(TelegramBot):
         self._authorization_denied_message = None
         # Default authorization function (always return True)
         self.authorization_function = lambda update, authorization_level: True
+        self.default_reply_keyboard_elements = []
+        self._default_keyboard = dict()
         return
 
     @property
@@ -244,6 +246,14 @@ class Bot(TelegramBot):
         if self._authorization_denied_message:
             return self._authorization_denied_message
         return self.__class__._authorization_denied_message
+
+    @property
+    def default_keyboard(self):
+        """Get the default keyboard.
+
+        It is sent when reply_markup is left blank and chat is private.
+        """
+        return self._default_keyboard
 
     async def message_router(self, update):
         """Route Telegram `message` update to appropriate message handler."""
@@ -733,6 +743,33 @@ class Bot(TelegramBot):
             del self.individual_text_message_handlers[identifier]
         return
 
+    def set_default_keyboard(self, keyboard='set_default'):
+        """Set a default keyboard for the bot.
+
+        If a keyboard is not passed as argument, a default one is generated,
+            based on aliases of commands.
+        """
+        if keyboard == 'set_default':
+            buttons = [
+                dict(
+                    text=x
+                )
+                for x in self.default_reply_keyboard_elements
+            ]
+            if len(buttons) == 0:
+                self._default_keyboard = None
+            else:
+                self._default_keyboard = dict(
+                    keyboard=make_lines_of_buttons(
+                        buttons,
+                        (2 if len(buttons) < 4 else 3)  # Row length
+                    ),
+                    resize_keyboard=True
+                )
+        else:
+            self._default_keyboard = keyboard
+        return
+
     async def webhook_feeder(self, request):
         """Handle incoming HTTP `request`s.
 
@@ -774,6 +811,7 @@ class Bot(TelegramBot):
 
     def setup(self):
         """Make bot ask for updates and handle responses."""
+        self.set_default_keyboard()
         if not self.webhook_url:
             asyncio.ensure_future(self.get_updates())
         else:
