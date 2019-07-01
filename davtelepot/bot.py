@@ -701,6 +701,7 @@ class Bot(TelegramBot):
 
     def set_individual_text_message_handler(self, handler,
                                         update=None, user_id=None):
+                                            update=None, user_id=None):
         """Set a custom text message handler for the user.
 
         Any text message update from the user will be handled by this custom
