@@ -112,6 +112,14 @@ class Bot(TelegramBot):
         self._under_maintenance = False
         self._allowed_during_maintenance = []
         self._maintenance_message = None
+        # Default chat_id getter: same chat as update
+        self.get_chat_id = lambda update: (
+            update['message']['chat']['id']
+            if 'message' in update and 'chat' in update['message']
+            else update['chat']['id']
+            if 'chat' in update
+            else None
+        )
         # Message to be returned if user is not allowed to call method
         self._authorization_denied_message = None
         # Default authorization function (always return True)
@@ -663,6 +671,15 @@ class Bot(TelegramBot):
         Default authorization_function always evaluates True.
         """
         self.authorization_function = authorization_function
+
+    def set_chat_id_getter(self, getter):
+        """Set chat_id getter.
+
+        It must be a function that takes an update and returns the proper
+            chat_id.
+        """
+        assert callable(getter), "Chat id getter must be a function!"
+        self.get_chat_id = getter
 
     @staticmethod
     def get_identifier_from_update_or_user_id(user_id=None, update=None):
