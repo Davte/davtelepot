@@ -6,6 +6,7 @@ camelCase methods mirror API directly, while snake_case ones act as middlewares
 
 # Standard library modules
 import asyncio
+from collections import OrderedDict
 import logging
 import re
 
@@ -112,6 +113,8 @@ class Bot(TelegramBot):
         }
         self.individual_text_message_handlers = dict()
         self.commands = dict()
+        self.command_aliases = dict()
+        self.text_message_parsers = OrderedDict()
         self._unknown_command_message = None
         self._under_maintenance = False
         self._allowed_during_maintenance = []
@@ -369,10 +372,25 @@ class Bot(TelegramBot):
             ).group(0)  # Get the first group of characters matching pattern
             if command in self.commands:
                 replier = self.commands[command]['function']
-            elif update['chat']['id'] > 0:
+            elif 'chat' in update and update['chat']['id'] > 0:
                 reply = self.unknown_command_message
         else:  # Handle command aliases and text parsers
-            logging.info("#TODO alias and text parsers")
+            # Aliases are case insensitive: text and alias are both .lower()
+            for alias, function in self.command_aliases.items():
+                if text.startswith(alias.lower()):
+                    replier = function
+                    break
+            # Text message update parsers
+            for check_function, parser in self.text_message_parsers.items():
+                if (
+                    parser['argument'] == 'text'
+                    and check_function(text)
+                ) or (
+                    parser['argument'] == 'update'
+                    and check_function(update)
+                ):
+                    replier = parser['function']
+                    break
         if replier:
             if asyncio.iscoroutinefunction(replier):
                 reply = await replier(update)
