@@ -153,7 +153,7 @@ class TelegramBot(object):
                         await response.json()  # Telegram returns json objects
                     )
                 except TelegramError as e:
-                    logging.error(f"{e}")
+                    logging.error(f"API {e}")
                     return e
                 except Exception as e:
                     logging.error(f"{e}", exc_info=True)
