@@ -60,6 +60,20 @@ class Bot(TelegramBot):
         self._session_token = get_secure_key(length=10)
         self._name = None
         self._telegram_id = None
+        # The following routing table associates each type of Telegram `update`
+        #   with a Bot method to be invoked on it.
+        self.routing_table = {
+            'message': self.message_router,
+            'edited_message': self.edited_message_handler,
+            'channel_post': self.channel_post_handler,
+            'edited_channel_post': self.edited_channel_post_handler,
+            'inline_query': self.inline_query_handler,
+            'chosen_inline_result': self.chosen_inline_result_handler,
+            'callback_query': self.callback_query_handler,
+            'shipping_query': self.shipping_query_handler,
+            'pre_checkout_query': self.pre_checkout_query_handler,
+            'poll': self.poll_handler,
+        }
         self._under_maintenance = False
         self._allowed_during_maintenance = []
         self._maintenance_message = None
@@ -173,6 +187,88 @@ class Bot(TelegramBot):
             return self.__class__._maintenance_message
         return ("I am currently under maintenance!\n"
                 "Please retry later...")
+
+    async def message_router(self, update):
+        """Route Telegram `message` update to appropriate message handler."""
+        for key, value in update.items():
+            if key in self.message_handlers:
+                return await self.message_handlers[key](update)
+        logging.error(
+            f"The following message update was received: {update}\n"
+            "However, this message type is unknown."
+        )
+
+    async def edited_message_handler(self, update):
+        """Handle Telegram `edited_message` update."""
+        logging.info(
+            f"The following update was received: {update}\n"
+            "However, this edited_message handler does nothing yet."
+        )
+        return
+
+    async def channel_post_handler(self, update):
+        """Handle Telegram `channel_post` update."""
+        logging.info(
+            f"The following update was received: {update}\n"
+            "However, this channel_post handler does nothing yet."
+        )
+        return
+
+    async def edited_channel_post_handler(self, update):
+        """Handle Telegram `edited_channel_post` update."""
+        logging.info(
+            f"The following update was received: {update}\n"
+            "However, this edited_channel_post handler does nothing yet."
+        )
+        return
+
+    async def inline_query_handler(self, update):
+        """Handle Telegram `inline_query` update."""
+        logging.info(
+            f"The following update was received: {update}\n"
+            "However, this inline_query handler does nothing yet."
+        )
+        return
+
+    async def chosen_inline_result_handler(self, update):
+        """Handle Telegram `chosen_inline_result` update."""
+        logging.info(
+            f"The following update was received: {update}\n"
+            "However, this chosen_inline_result handler does nothing yet."
+        )
+        return
+
+    async def callback_query_handler(self, update):
+        """Handle Telegram `callback_query` update."""
+        logging.info(
+            f"The following update was received: {update}\n"
+            "However, this callback_query handler does nothing yet."
+        )
+        return
+
+    async def shipping_query_handler(self, update):
+        """Handle Telegram `shipping_query` update."""
+        logging.info(
+            f"The following update was received: {update}\n"
+            "However, this shipping_query handler does nothing yet."
+        )
+        return
+
+    async def pre_checkout_query_handler(self, update):
+        """Handle Telegram `pre_checkout_query` update."""
+        logging.info(
+            f"The following update was received: {update}\n"
+            "However, this pre_checkout_query handler does nothing yet."
+        )
+        return
+
+    async def poll_handler(self, update):
+        """Handle Telegram `poll` update."""
+        logging.info(
+            f"The following update was received: {update}\n"
+            "However, this poll handler does nothing yet."
+        )
+        return
 
     @classmethod
     def set_class_maintenance_message(cls, maintenance_message):
@@ -381,20 +477,29 @@ class Bot(TelegramBot):
     async def route_update(self, update):
         """Pass `update` to proper method.
 
-        Work in progress: at the moment the update gets simply printed and
-            echoed back in the same chat.
+        Update objects have two keys:
+        - `update_id` (which is used as offset while retrieving new updates)
+        - One and only one of the following
+            `message`
+            `edited_message`
+            `channel_post`
+            `edited_channel_post`
+            `inline_query`
+            `chosen_inline_result`
+            `callback_query`
+            `shipping_query`
+            `pre_checkout_query`
+            `poll`
         """
-        print(update)
-        await self.sendMessage(
-            chat_id=update['message']['chat']['id'],
-            text=update['message']['text']
-        )
-        return
         if (
             self.under_maintenance
             and not self.is_allowed_during_maintenance(update)
         ):
             return await self.handle_update_during_maintenance(update)
+        for key, value in update.items():
+            if key in self.routing_table:
+                return await self.routing_table[key](value)
+        logging.error(f"Unknown type of update.\n{update}")
 
     @classmethod
     async def start_app(cls):
