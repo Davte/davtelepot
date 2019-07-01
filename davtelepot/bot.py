@@ -673,6 +673,7 @@ class Bot(TelegramBot):
             as reply_markup (only those messages can be edited, which were
             sent with no reply markup or with an inline keyboard).
         """
+        # TODO prevent Telegram flood control
         if 'message' in update:
             update = update['message']
         if chat_id is None and 'chat' in update:

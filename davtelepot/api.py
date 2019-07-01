@@ -139,6 +139,7 @@ class TelegramBot(object):
             will be closed on `Bot.app.cleanup`.
         Result may be a Telegram API json response, None, or Exception.
         """
+        # TODO prevent Telegram flood control
         response_object = None
         session, session_must_be_closed = self.get_session(method)
         parameters = self.adapt_parameters(parameters, exclude=exclude)
