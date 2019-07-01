@@ -108,6 +108,7 @@ class Bot(TelegramBot):
             'connected_website': self.connected_website_message_handler,
             'passport_data': self.passport_data_message_handler
         }
+        self.individual_text_message_handlers = dict()
         self._under_maintenance = False
         self._allowed_during_maintenance = []
         self._maintenance_message = None
@@ -323,9 +324,9 @@ class Bot(TelegramBot):
         replier, reply = None, None
         text = update['text'].lower()
         user_id = update['from']['id'] if 'from' in update else None
-        if user_id in self.custom_text_message_handlers:  # Custom handler
-            replier = self.custom_text_message_handlers[user_id]
-            del self.custom_text_message_handlers[user_id]
+        if user_id in self.individual_text_message_handlers:
+            replier = self.individual_text_message_handlers[user_id]
+            del self.individual_text_message_handlers[user_id]
         elif text.startswith('/'):  # Command handler
             # A command must always start with the ‘/’ symbol and may not be
             # longer than 32 characters.
@@ -662,6 +663,58 @@ class Bot(TelegramBot):
         Default authorization_function always evaluates True.
         """
         self.authorization_function = authorization_function
+
+    @staticmethod
+    def get_identifier_from_update_or_user_id(user_id=None, update=None):
+        """Get telegram id of user given an update.
+
+        Result itself may be passed as either parameter (for backward
+            compatibility).
+        """
+        identifier = user_id or update
+        assert identifier is not None, (
+            "Provide a user_id or update object to get a user identifier."
+        )
+        if isinstance(identifier, dict) and 'from' in identifier:
+            identifier = identifier['from']['id']
+        assert type(identifier) is int, (
+            "Unable to find a user identifier."
+        )
+        return identifier
+
+    def set_individual_text_message_handler(self, handler,
+                                        update=None, user_id=None):
+        """Set a custom text message handler for the user.
+
+        Any text message update from the user will be handled by this custom
+            handler instead of default handlers for commands, aliases and text.
+        Custom handlers last one single use, but they can call this method and
+            set themselves as next custom text message handler.
+        """
+        identifier = self.get_identifier_from_update_or_user_id(
+            user_id=user_id,
+            update=update
+        )
+        assert callable(handler), (f"Handler `{handler.name}` is not "
+                                   "callable. Custom text message handler "
+                                   "could not be set.")
+        self.individual_text_message_handlers[identifier] = handler
+        return
+
+    def remove_individual_text_message_handler(self,
+                                           update=None, user_id=None):
+        """Remove a custom text message handler for the user.
+
+        Any text message update from the user will be handled by default
+            handlers for commands, aliases and text.
+        """
+        identifier = self.get_identifier_from_update_or_user_id(
+            user_id=user_id,
+            update=update
+        )
+        if identifier in self.individual_text_message_handlers:
+            del self.individual_text_message_handlers[identifier]
+        return
 
     async def webhook_feeder(self, request):
         """Handle incoming HTTP `request`s.
