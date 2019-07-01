@@ -74,6 +74,39 @@ class Bot(TelegramBot):
             'pre_checkout_query': self.pre_checkout_query_handler,
             'poll': self.poll_handler,
         }
+        self.message_handlers = {
+            'text': self.text_message_handler,
+            'audio': self.audio_message_handler,
+            'document': self.document_message_handler,
+            'animation': self.animation_message_handler,
+            'game': self.game_message_handler,
+            'photo': self.photo_message_handler,
+            'sticker': self.sticker_message_handler,
+            'video': self.video_message_handler,
+            'voice': self.voice_message_handler,
+            'video_note': self.video_note_message_handler,
+            'contact': self.contact_message_handler,
+            'location': self.location_message_handler,
+            'venue': self.venue_message_handler,
+            'poll': self.poll_message_handler,
+            'new_chat_members': self.new_chat_members_message_handler,
+            'left_chat_member': self.left_chat_member_message_handler,
+            'new_chat_title': self.new_chat_title_message_handler,
+            'new_chat_photo': self.new_chat_photo_message_handler,
+            'delete_chat_photo': self.delete_chat_photo_message_handler,
+            'group_chat_created': self.group_chat_created_message_handler,
+            'supergroup_chat_created': (
+                self.supergroup_chat_created_message_handler
+            ),
+            'channel_chat_created': self.channel_chat_created_message_handler,
+            'migrate_to_chat_id': self.migrate_to_chat_id_message_handler,
+            'migrate_from_chat_id': self.migrate_from_chat_id_message_handler,
+            'pinned_message': self.pinned_message_message_handler,
+            'invoice': self.invoice_message_handler,
+            'successful_payment': self.successful_payment_message_handler,
+            'connected_website': self.connected_website_message_handler,
+            'passport_data': self.passport_data_message_handler
+        }
         self._under_maintenance = False
         self._allowed_during_maintenance = []
         self._maintenance_message = None
@@ -269,6 +302,242 @@ class Bot(TelegramBot):
             "However, this poll handler does nothing yet."
         )
         return
+
+    async def text_message_handler(self, update):
+        """Handle `text` message update."""
+        replier, reply = None, None
+        text = update['text'].lower()
+        user_id = update['from']['id'] if 'from' in update else None
+        if user_id in self.custom_text_message_handlers:  # Custom handler
+            replier = self.custom_text_message_handlers[user_id]
+            del self.custom_text_message_handlers[user_id]
+        elif text.startswith('/'):  # Command handler
+            # A command must always start with the ‘/’ symbol and may not be
+            # longer than 32 characters.
+            # Commands can use latin letters, numbers and underscores.
+            print(text)
+            command = re.search(
+                r"([A-z_1-9]){1,32}",
+                text
+            ).group(0)  # Get the first group characters matching pattern
+            if command in self.commands:
+                replier = self.commands[command]['function']
+            elif update['chat']['id'] > 0:
+                replier = self.unknown_command_message
+        else:  # Check alias and text parsers
+            logging.info("#TODO alias and text parsers")
+        if replier:
+            if asyncio.iscoroutinefunction(replier):
+                reply = await replier(update)
+            else:
+                reply = replier(update)
+        if reply:
+            if type(reply) is str:
+                reply = dict(text=reply)
+            try:
+                return await self.send_message(update=update, **reply)
+            except Exception as e:
+                logging.error(
+                    f"Failed to handle text message:\n{e}",
+                    exc_info=True
+                )
+        return
+
+    async def audio_message_handler(self, update):
+        """Handle `audio` message update."""
+        logging.info(
+            "A audio message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def document_message_handler(self, update):
+        """Handle `document` message update."""
+        logging.info(
+            "A document message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def animation_message_handler(self, update):
+        """Handle `animation` message update."""
+        logging.info(
+            "A animation message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def game_message_handler(self, update):
+        """Handle `game` message update."""
+        logging.info(
+            "A game message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def photo_message_handler(self, update):
+        """Handle `photo` message update."""
+        logging.info(
+            "A photo message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def sticker_message_handler(self, update):
+        """Handle `sticker` message update."""
+        logging.info(
+            "A sticker message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def video_message_handler(self, update):
+        """Handle `video` message update."""
+        logging.info(
+            "A video message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def voice_message_handler(self, update):
+        """Handle `voice` message update."""
+        logging.info(
+            "A voice message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def video_note_message_handler(self, update):
+        """Handle `video_note` message update."""
+        logging.info(
+            "A video_note message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def contact_message_handler(self, update):
+        """Handle `contact` message update."""
+        logging.info(
+            "A contact message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def location_message_handler(self, update):
+        """Handle `location` message update."""
+        logging.info(
+            "A location message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def venue_message_handler(self, update):
+        """Handle `venue` message update."""
+        logging.info(
+            "A venue message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def poll_message_handler(self, update):
+        """Handle `poll` message update."""
+        logging.info(
+            "A poll message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def new_chat_members_message_handler(self, update):
+        """Handle `new_chat_members` message update."""
+        logging.info(
+            "A new_chat_members message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def left_chat_member_message_handler(self, update):
+        """Handle `left_chat_member` message update."""
+        logging.info(
+            "A left_chat_member message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def new_chat_title_message_handler(self, update):
+        """Handle `new_chat_title` message update."""
+        logging.info(
+            "A new_chat_title message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def new_chat_photo_message_handler(self, update):
+        """Handle `new_chat_photo` message update."""
+        logging.info(
+            "A new_chat_photo message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def delete_chat_photo_message_handler(self, update):
+        """Handle `delete_chat_photo` message update."""
+        logging.info(
+            "A delete_chat_photo message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def group_chat_created_message_handler(self, update):
+        """Handle `group_chat_created` message update."""
+        logging.info(
+            "A group_chat_created message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def supergroup_chat_created_message_handler(self, update):
+        """Handle `supergroup_chat_created` message update."""
+        logging.info(
+            "A supergroup_chat_created message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def channel_chat_created_message_handler(self, update):
+        """Handle `channel_chat_created` message update."""
+        logging.info(
+            "A channel_chat_created message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def migrate_to_chat_id_message_handler(self, update):
+        """Handle `migrate_to_chat_id` message update."""
+        logging.info(
+            "A migrate_to_chat_id message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def migrate_from_chat_id_message_handler(self, update):
+        """Handle `migrate_from_chat_id` message update."""
+        logging.info(
+            "A migrate_from_chat_id message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def pinned_message_message_handler(self, update):
+        """Handle `pinned_message` message update."""
+        logging.info(
+            "A pinned_message message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def invoice_message_handler(self, update):
+        """Handle `invoice` message update."""
+        logging.info(
+            "A invoice message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def successful_payment_message_handler(self, update):
+        """Handle `successful_payment` message update."""
+        logging.info(
+            "A successful_payment message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def connected_website_message_handler(self, update):
+        """Handle `connected_website` message update."""
+        logging.info(
+            "A connected_website message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def passport_data_message_handler(self, update):
+        """Handle `passport_data` message update."""
+        logging.info(
+            "A passport_data message update was received, "
+            "but this handler does nothing yet."
+        )
 
     @classmethod
     def set_class_maintenance_message(cls, maintenance_message):
