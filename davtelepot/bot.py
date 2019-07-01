@@ -7,6 +7,7 @@ camelCase methods mirror API directly, while snake_case ones act as middlewares
 # Standard library modules
 import asyncio
 import logging
+import re
 
 # Third party modules
 from aiohttp import web
@@ -571,6 +572,71 @@ class Bot(TelegramBot):
         logging.info(
             "A passport_data message update was received, "
             "but this handler does nothing yet."
+        )
+
+    async def send_message(self, chat_id=None, text=None,
+                           parse_mode=None,
+                           disable_web_page_preview=None,
+                           disable_notification=None,
+                           reply_to_message_id=None,
+                           reply_markup=None,
+                           update=dict(),
+                           reply_to_update=False,
+                           send_default_keyboard=True):
+        """Send text via message(s).
+
+        This method wraps lower-level `sendMessage` method.
+        Pass an `update` to extract `chat_id` and `message_id` from it.
+        Set `reply_to_update` = True to reply to `update['message_id']`.
+        Set `send_default_keyboard` = False to avoid sending default keyboard
+            as reply_markup (only those messages can be edited, which were
+            sent with no reply markup or with an inline keyboard).
+        """
+        if 'message' in update:
+            update = update['message']
+        if chat_id is None and 'chat' in update:
+            chat_id = self.get_chat_id(update)
+        if reply_to_update and 'message_id' in update:
+            reply_to_message_id = update['message_id']
+        if (
+            send_default_keyboard
+            and reply_markup is None
+            and type(chat_id) is int
+            and chat_id > 0
+            and text != self.authorization_denied_message
+        ):
+            reply_markup = self.default_keyboard
+        return await self.sendMessage(
+            chat_id=chat_id,
+            text=text,
+            parse_mode=parse_mode,
+            disable_web_page_preview=disable_web_page_preview,
+            disable_notification=disable_notification,
+            reply_to_message_id=reply_to_message_id,
+            reply_markup=reply_markup
+        )
+
+    async def answer_inline_query(self,
+                                  inline_query_id=None,
+                                  results=[],
+                                  cache_time=None,
+                                  is_personal=None,
+                                  next_offset=None,
+                                  switch_pm_text=None,
+                                  switch_pm_parameter=None):
+        """Answer inline queries.
+
+        This method wraps lower-level `answerInlineQuery` method.
+        """
+        # If results is a string, cast to proper type
+        return await self.answerInlineQuery(
+            inline_query_id=inline_query_id,
+            results=results,
+            cache_time=cache_time,
+            is_personal=is_personal,
+            next_offset=next_offset,
+            switch_pm_text=switch_pm_text,
+            switch_pm_parameter=switch_pm_parameter,
         )
 
     @classmethod
