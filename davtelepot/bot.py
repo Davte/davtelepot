@@ -32,6 +32,7 @@ class Bot(TelegramBot):
     final_state = 0
     _maintenance_message = ("I am currently under maintenance!\n"
                             "Please retry later...")
+    _authorization_denied_message = None
 
     def __init__(
         self, token, hostname='', certificate=None, max_connections=40,
@@ -110,6 +111,10 @@ class Bot(TelegramBot):
         self._under_maintenance = False
         self._allowed_during_maintenance = []
         self._maintenance_message = None
+        # Message to be returned if user is not allowed to call method
+        self._authorization_denied_message = None
+        # Default authorization function (always return True)
+        self.authorization_function = lambda update, authorization_level: True
         return
 
     @property
@@ -220,6 +225,16 @@ class Bot(TelegramBot):
             return self.__class__._maintenance_message
         return ("I am currently under maintenance!\n"
                 "Please retry later...")
+
+    @property
+    def authorization_denied_message(self):
+        """Return this text if user is unauthorized to make a request.
+
+        If instance message is not set, class message is returned.
+        """
+        if self._authorization_denied_message:
+            return self._authorization_denied_message
+        return self.__class__._authorization_denied_message
 
     async def message_router(self, update):
         """Route Telegram `message` update to appropriate message handler."""
@@ -622,6 +637,31 @@ class Bot(TelegramBot):
                 is_personal=False,
             )
         return
+
+    @classmethod
+    def set_class_authorization_denied_message(csl, message):
+        """Set class authorization denied message.
+
+        It will be returned if user is unauthorized to make a request.
+        """
+        csl._authorization_denied_message = message
+
+    def set_authorization_denied_message(self, message):
+        """Set instance authorization denied message.
+
+        If instance message is None, default class message is used.
+        """
+        self._authorization_denied_message = message
+
+    def set_authorization_function(self, authorization_function):
+        """Set a custom authorization_function.
+
+        It should evaluate True if user is authorized to perform a specific
+            action and False otherwise.
+        It should take update and role and return a Boolean.
+        Default authorization_function always evaluates True.
+        """
+        self.authorization_function = authorization_function
 
     async def webhook_feeder(self, request):
         """Handle incoming HTTP `request`s.
