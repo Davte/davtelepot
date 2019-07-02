@@ -99,7 +99,10 @@ class TelegramBot(object):
         data = aiohttp.FormData()
         for key, value in parameters.items():
             if not (key in exclude or value is None):
-                if type(value) in (int, dict, list,):
+                if (
+                    type(value) in (int, list,)
+                    or (type(value) is dict and 'file' not in value)
+                ):
                     value = json.dumps(value, separators=(',', ':'))
                 data.add_field(key, value)
         return data
@@ -206,7 +209,9 @@ class TelegramBot(object):
             certificate = self.certificate
         if type(certificate) is str:
             try:
-                certificate = open(certificate, 'r')
+                certificate = dict(
+                    file=open(certificate, 'r')
+                )
             except FileNotFoundError as e:
                 logging.error(f"{e}\nCertificate set to `None`")
                 certificate = None
@@ -214,8 +219,8 @@ class TelegramBot(object):
             'setWebhook',
             parameters=locals()
         )
-        if certificate is not None:  # Close certificate file, if it was open
-            certificate.close()
+        if type(certificate) is dict:  # Close certificate file, if it was open
+            certificate['file'].close()
         return result
 
     async def deleteWebhook(self):
