@@ -6,6 +6,7 @@ A simple aiohttp asyncronous web client is used to make requests.
 
 # Standard library modules
 import asyncio
+import datetime
 import json
 import logging
 
@@ -55,16 +56,56 @@ class TelegramBot(object):
             close=False
         )
     }
+    _absolute_cooldown_timedelta = datetime.timedelta(seconds=1/30)
+    _per_chat_cooldown_timedelta = datetime.timedelta(seconds=1)
+    _allowed_messages_per_group_per_minute = 20
 
     def __init__(self, token):
         """Set bot token and store HTTP sessions."""
         self._token = token
         self.sessions = dict()
+        self._flood_wait = 0
+        self.last_sending_time = dict(
+            absolute=(
+                datetime.datetime.now()
+                - self.absolute_cooldown_timedelta
+            )
+        )
 
     @property
     def token(self):
         """Telegram API bot token."""
         return self._token
+
+    @property
+    def flood_wait(self):
+        """Seconds to wait before next API requests."""
+        return self._flood_wait
+
+    @property
+    def absolute_cooldown_timedelta(self):
+        """Return time delta to wait between messages (any chat).
+
+        Return class value (all bots have the same limits).
+        """
+        return self.__class__._absolute_cooldown_timedelta
+
+    @property
+    def per_chat_cooldown_timedelta(self):
+        """Return time delta to wait between messages in a chat.
+
+        Return class value (all bots have the same limits).
+        """
+        return self.__class__._per_chat_cooldown_timedelta
+
+    @property
+    def allowed_messages_per_group_per_minute(self):
+        """Return maximum number of messages allowed in a group per minute.
+
+        Group, supergroup and channels are considered.
+        Return class value (all bots have the same limits).
+        """
+        return self.__class__._allowed_messages_per_group_per_minute
 
     @staticmethod
     def check_telegram_api_json(response):
@@ -135,6 +176,80 @@ class TelegramBot(object):
             session_must_be_closed = True
         return session, session_must_be_closed
 
+    def set_flood_wait(self, flood_wait):
+        """Wait `flood_wait` seconds before next request."""
+        self._flood_wait = flood_wait
+
+    async def prevent_flooding(self, chat_id):
+        """Await until request may be sent safely.
+
+        Telegram flood control won't allow too many API requests in a small
+            period.
+        Exact limits are unknown, but less than 30 total private chat messages
+            per second, less than 1 private message per chat and less than 20
+            group chat messages per chat per minute should be safe.
+        """
+        now = datetime.datetime.now
+        if type(chat_id) is int and chat_id > 0:
+            while (
+                now() < (
+                    self.last_sending_time['absolute']
+                    + self.absolute_cooldown_timedelta
+                )
+            ) or (
+                chat_id in self.last_sending_time
+                and (
+                    now() < (
+                        self.last_sending_time[chat_id]
+                        + self.per_chat_cooldown_timedelta
+                    )
+                )
+            ):
+                await asyncio.sleep(
+                    self.absolute_cooldown_timedelta.seconds
+                )
+            self.last_sending_time[chat_id] = now()
+        else:
+            while (
+                now() < (
+                    self.last_sending_time['absolute']
+                    + self.absolute_cooldown_timedelta
+                )
+            ) or (
+                chat_id in self.last_sending_time
+                and len(
+                    [
+                        sending_datetime
+                        for sending_datetime in self.last_sending_time[chat_id]
+                        if sending_datetime >= (
+                            now()
+                            - datetime.timedelta(minutes=1)
+                        )
+                    ]
+                ) >= self.allowed_messages_per_group_per_minute
+            ) or (
+                chat_id in self.last_sending_time
+                and len(self.last_sending_time[chat_id]) > 0
+                and now() < (
+                    self.last_sending_time[chat_id][-1]
+                    + self.per_chat_cooldown_timedelta
+                )
+            ):
+                await asyncio.sleep(0.5)
+            if chat_id not in self.last_sending_time:
+                self.last_sending_time[chat_id] = []
+            self.last_sending_time[chat_id].append(now())
+            self.last_sending_time[chat_id] = [
+                sending_datetime
+                for sending_datetime in self.last_sending_time[chat_id]
+                if sending_datetime >= (
+                    now()
+                    - self.longest_cooldown_timedelta
+                )
+            ]
+        self.last_sending_time['absolute'] = now()
+        return
+
     async def api_request(self, method, parameters={}, exclude=[]):
         """Return the result of a Telegram bot API request, or an Exception.
 
@@ -142,9 +257,11 @@ class TelegramBot(object):
             will be closed on `Bot.app.cleanup`.
         Result may be a Telegram API json response, None, or Exception.
         """
-        # TODO prevent Telegram flood control
         response_object = None
         session, session_must_be_closed = self.get_session(method)
+        # Prevent Telegram flood control for all methodsd having a `chat_id`
+        if 'chat_id' in parameters:
+            await self.prevent_flooding(parameters['chat_id'])
         parameters = self.adapt_parameters(parameters, exclude=exclude)
         try:
             async with session.post(
@@ -157,7 +274,21 @@ class TelegramBot(object):
                         await response.json()  # Telegram returns json objects
                     )
                 except TelegramError as e:
-                    logging.error(f"API {e}")
+                    logging.error(f"API error response - {e}")
+                    if e.code == 420:  # Flood error!
+                        try:
+                            flood_wait = int(
+                                e.description.split('_')[-1]
+                            ) + 30
+                        except Exception as e:
+                            logging.error(f"{e}")
+                            flood_wait = 5*60
+                        logging.critical(
+                            "Telegram antiflood control triggered!\n"
+                            f"Wait {flood_wait} seconds before making another "
+                            "request"
+                        )
+                        self.set_flood_wait(flood_wait)
                     return e
                 except Exception as e:
                     logging.error(f"{e}", exc_info=True)
