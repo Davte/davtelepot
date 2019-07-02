@@ -208,15 +208,15 @@ class TelegramBot(object):
             try:
                 certificate = open(certificate, 'r')
             except FileNotFoundError as e:
-                logging.error(f"{e}")
+                logging.error(f"{e}\nCertificate set to `None`")
                 certificate = None
-        # certificate = dict(
-        #     file=certificate
-        # )
-        return await self.api_request(
+        result = await self.api_request(
             'setWebhook',
             parameters=locals()
         )
+        if certificate is not None:  # Close certificate file, if it was open
+            certificate.close()
+        return result
 
     async def deleteWebhook(self):
         """Remove webhook integration and switch back to getUpdate.
