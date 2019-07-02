@@ -973,15 +973,15 @@ class Bot(TelegramBot):
             self._telegram_id = me['id']
         except Exception as e:
             logging.error(
-                f"Information about bot with token {self.token} could not "
-                f"be got. Restarting in 5 minutes...\n\n"
+                f"API getMe method failed, information about this bot could "
+                f"not be retrieved. Restarting in 5 minutes...\n\n"
                 f"Error information:\n{e}"
             )
             await asyncio.sleep(5*60)
             self.__class__.stop(
                 65,
-                f"Information about bot with token {self.token} could not "
-                "be got. Restarting..."
+                f"Information aformation about this bot could "
+                f"not be retrieved. Restarting..."
             )
 
     def setup(self):
@@ -1012,6 +1012,11 @@ class Bot(TelegramBot):
             allowed_updates=allowed_updates
         )  # `setWebhook` API method returns `True` on success
         webhook_information = await self.getWebhookInfo()
+        webhook_information['url'] = webhook_information['url'].replace(
+            self.token, "<BOT_TOKEN>"
+        ).replace(
+            self.session_token, "<SESSION_TOKEN>"
+        )
         if webhook_was_set:
             logging.info(
                 f"Webhook was set correctly.\n"
