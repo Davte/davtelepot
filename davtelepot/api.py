@@ -210,9 +210,9 @@ class TelegramBot(object):
             except FileNotFoundError as e:
                 logging.error(f"{e}")
                 certificate = None
-        certificate = dict(
-            file=certificate
-        )
+        # certificate = dict(
+        #     file=certificate
+        # )
         return await self.api_request(
             'setWebhook',
             parameters=locals()
