@@ -745,8 +745,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                          update=dict(),
                          reply_to_update=False,
                          send_default_keyboard=True,
-                         use_stored_file_id=True,
-                         is_second_try=False):
+                         use_stored_file_id=True):
         """Send photos.
 
         This method wraps lower-level `TelegramBot.sendPhoto` method.
@@ -828,22 +827,6 @@ class Bot(TelegramBot, ObjectWithDatabase):
                             errors=True
                         ),
                         ['path']
-                    )
-                if not is_second_try:
-                    logging.info("Trying again (only once)...")
-                    sent_update = await self.send_photo(
-                        chat_id=chat_id,
-                        photo=photo,
-                        caption=caption,
-                        parse_mode=parse_mode,
-                        disable_notification=disable_notification,
-                        reply_to_message_id=reply_to_message_id,
-                        reply_markup=reply_markup,
-                        update=update,
-                        reply_to_update=reply_to_update,
-                        send_default_keyboard=send_default_keyboard,
-                        use_stored_file_id=use_stored_file_id,
-                        is_second_try=True
                     )
         if (
             type(sent_update) is dict
