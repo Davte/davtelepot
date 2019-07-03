@@ -15,13 +15,14 @@ from aiohttp import web
 
 # Project modules
 from api import TelegramBot, TelegramError
+from database import ObjectWithDatabase
 from utilities import escape_html_chars, get_secure_key, make_lines_of_buttons
 
 # Do not log aiohttp `INFO` and `DEBUG` levels
 logging.getLogger('aiohttp').setLevel(logging.WARNING)
 
 
-class Bot(TelegramBot):
+class Bot(TelegramBot, ObjectWithDatabase):
     """Simple Bot object, providing methods corresponding to Telegram bot API.
 
     Multiple Bot() instances may be run together, along with a aiohttp web app.
@@ -41,7 +42,7 @@ class Bot(TelegramBot):
 
     def __init__(
         self, token, hostname='', certificate=None, max_connections=40,
-        allowed_updates=[]
+        allowed_updates=[], database_url='bot.db'
     ):
         """Init a bot instance.
 
@@ -56,8 +57,11 @@ class Bot(TelegramBot):
         allowed_updates : List(str)
             Allowed update types (empty list to allow all).
         """
+        # Append `self` to class list of instances
         self.__class__.bots.append(self)
-        super().__init__(token)
+        # Call superclasses constructors with proper arguments
+        TelegramBot.__init__(self, token)
+        ObjectWithDatabase.__init__(self, database_url=database_url)
         self._path = None
         self._offset = 0
         self._hostname = hostname
