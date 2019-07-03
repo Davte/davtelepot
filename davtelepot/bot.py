@@ -840,6 +840,60 @@ class Bot(TelegramBot, ObjectWithDatabase):
             )
         return sent_message_update
 
+    async def edit_message_text(self, text,
+                                chat_id=None, message_id=None,
+                                inline_message_id=None,
+                                parse_mode='HTML',
+                                disable_web_page_preview=None,
+                                reply_markup=None,
+                                update=None):
+        """Edit message text, sending new messages if necessary.
+
+        This method wraps lower-level `TelegramBot.editMessageText` method.
+        Pass an `update` to extract a message identifier from it.
+        """
+        if update is not None:
+            message_identifier = self.get_message_identifier(update)
+            if 'chat_id' in message_identifier:
+                chat_id = message_identifier['chat_id']
+                message_id = message_identifier['message_id']
+            if 'inline_message_id' in message_identifier:
+                inline_message_id = message_identifier['inline_message_id']
+        for i, text_chunk in enumerate(
+            self.split_message_text(
+                text=text,
+                limit=self.__class__.TELEGRAM_MESSAGES_MAX_LEN - 200,
+                parse_mode=parse_mode
+            )
+        ):
+            if i == 0:
+                edited_message = await self.editMessageText(
+                    text=text_chunk,
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    inline_message_id=inline_message_id,
+                    parse_mode=parse_mode,
+                    disable_web_page_preview=disable_web_page_preview,
+                    reply_markup=reply_markup
+                )
+                if chat_id is None:
+                    # Cannot send messages without a chat_id
+                    # Inline keyboards attached to inline query results may be
+                    # in chats the bot cannot reach.
+                    break
+            else:
+                await self.send_message(
+                    text=text,
+                    chat_id=chat_id,
+                    parse_mode=parse_mode,
+                    disable_web_page_preview=disable_web_page_preview,
+                    reply_markup=reply_markup,
+                    update=update,
+                    reply_to_update=True,
+                    send_default_keyboard=False
+                )
+        return edited_message
+
     async def send_photo(self, chat_id=None, photo=None,
                          caption=None,
                          parse_mode=None,
