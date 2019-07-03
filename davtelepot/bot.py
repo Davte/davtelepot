@@ -420,7 +420,10 @@ class Bot(TelegramBot):
             if type(reply) is str:
                 reply = dict(text=reply)
             try:
-                return await self.send_message(update=update, **reply)
+                if 'text' in reply:
+                    return await self.send_message(update=update, **reply)
+                if 'photo' in reply:
+                    return await self.send_photo(update=update, **reply)
             except Exception as e:
                 logging.error(
                     f"Failed to handle text message:\n{e}",
