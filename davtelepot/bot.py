@@ -20,7 +20,7 @@ from api import TelegramBot, TelegramError
 from database import ObjectWithDatabase
 from utilities import (
     escape_html_chars, get_secure_key, make_inline_query_answer,
-    make_lines_of_buttons
+    make_lines_of_buttons, remove_html_tags
 )
 
 # Do not log aiohttp `INFO` and `DEBUG` levels
@@ -453,11 +453,55 @@ class Bot(TelegramBot, ObjectWithDatabase):
         return
 
     async def callback_query_handler(self, update):
-        """Handle Telegram `callback_query` update."""
-        logging.info(
-            f"The following update was received: {update}\n"
-            "However, this callback_query handler does nothing yet."
-        )
+        """Handle Telegram `callback_query` update.
+
+        A callback query is sent when users press inline keyboard buttons.
+        Bad clients may send malformed or deceiving callback queries:
+            never put secrets in buttons and always check request validity!
+        Get an `answer` from the callback handler associated to the query
+            prefix and use it to edit the source message (or send new ones
+            if text is longer than single message limit).
+        Anyway, the query is answered, otherwise the client would hang and
+            the bot would look like idle.
+        """
+        assert 'data' in update, "Malformed callback query lacking data field."
+        answer = dict()
+        data = update['data']
+        for start_text, handler in self.callback_handlers.items():
+            if data.startswith(start_text):
+                _function = handler['function']
+                if asyncio.iscoroutinefunction(_function):
+                    answer = await _function(update)
+                else:
+                    answer = _function(update)
+                break
+        if type(answer) is str:
+            answer = dict(text=answer)
+        assert type(answer) is dict, "Invalid callback query answer."
+        if 'edit' in answer:
+            message_identifier = self.get_message_identifier(update)
+            edit = answer['edit']
+            method = (
+                self.edit_message_text if 'text' in edit
+                else self.editMessageCaption if 'caption' in edit
+                else self.editMessageReplyMarkup if 'reply_markup' in edit
+                else (lambda *args, **kwargs: None)
+            )
+            try:
+                await method(**message_identifier, **edit)
+            except TelegramError as e:
+                logging.info("Message was not modified:\n{}".format(e))
+        try:
+            return await self.answerCallbackQuery(
+                callback_query_id=update['id'],
+                **{
+                    key: (val[:180] if key == 'text' else val)
+                    for key, val in answer.items()
+                    if key in ('text', 'show_alert', 'cache_time')
+                }
+            )
+        except TelegramError as e:
+            logging.error(e)
         return
 
     async def shipping_query_handler(self, update):
@@ -1103,7 +1147,10 @@ class Bot(TelegramBot, ObjectWithDatabase):
                 reply_to_update=True
             )
         elif 'callback_query' in update:
-            pass
+            await self.answerCallbackQuery(
+                callback_query_id=update['id'],
+                text=remove_html_tags(self.maintenance_message[:45])
+            )
         elif 'inline_query' in update:
             await self.answer_inline_query(
                 update['inline_query']['id'],
@@ -1164,7 +1211,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         self.get_chat_id = getter
 
     @staticmethod
-    def get_identifier_from_update_or_user_id(user_id=None, update=None):
+    def get_user_identifier(user_id=None, update=None):
         """Get telegram id of user given an update.
 
         Result itself may be passed as either parameter (for backward
@@ -1181,6 +1228,24 @@ class Bot(TelegramBot, ObjectWithDatabase):
         )
         return identifier
 
+    @staticmethod
+    def get_message_identifier(update=dict()):
+        """Get a message identifier dictionary to edit `update`.
+
+        Pass the result as keyword arguments to `edit...` API methods.
+        """
+        if 'message' in update:
+            update = update['message']
+        if 'chat' in update and 'message_id' in update:
+            return dict(
+                chat_id=update['chat']['id'],
+                message_id=update['message_id']
+            )
+        elif 'inline_message_id' in update:
+            return dict(
+                inline_message_id=update['inline_message_id']
+            )
+
     def set_individual_text_message_handler(self, handler,
                                             update=None, user_id=None):
         """Set a custom text message handler for the user.
@@ -1190,7 +1255,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         Custom handlers last one single use, but they can call this method and
             set themselves as next custom text message handler.
         """
-        identifier = self.get_identifier_from_update_or_user_id(
+        identifier = self.get_user_identifier(
             user_id=user_id,
             update=update
         )
@@ -1207,7 +1272,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         Any text message update from the user will be handled by default
             handlers for commands, aliases and text.
         """
-        identifier = self.get_identifier_from_update_or_user_id(
+        identifier = self.get_user_identifier(
             user_id=user_id,
             update=update
         )
