@@ -18,7 +18,10 @@ from aiohttp import web
 # Project modules
 from api import TelegramBot, TelegramError
 from database import ObjectWithDatabase
-from utilities import escape_html_chars, get_secure_key, make_lines_of_buttons
+from utilities import (
+    escape_html_chars, get_secure_key, make_inline_query_answer,
+    make_lines_of_buttons
+)
 
 # Do not log aiohttp `INFO` and `DEBUG` levels
 logging.getLogger('aiohttp').setLevel(logging.WARNING)
@@ -41,6 +44,17 @@ class Bot(TelegramBot, ObjectWithDatabase):
     _authorization_denied_message = None
     _unknown_command_message = None
     TELEGRAM_MESSAGES_MAX_LEN = 4096
+    _default_inline_query_answer = [
+        dict(
+            type='article',
+            id=0,
+            title="I cannot answer this query, sorry",
+            input_message_content=dict(
+                message_text="I'm sorry "
+                "but I could not find an answer for your query."
+            )
+        )
+    ]
 
     def __init__(
         self, token, hostname='', certificate=None, max_connections=40,
@@ -87,6 +101,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
             'pre_checkout_query': self.pre_checkout_query_handler,
             'poll': self.poll_handler,
         }
+        # Different message update types need different handlers
         self.message_handlers = {
             'text': self.text_message_handler,
             'audio': self.audio_message_handler,
@@ -120,11 +135,17 @@ class Bot(TelegramBot, ObjectWithDatabase):
             'connected_website': self.connected_website_message_handler,
             'passport_data': self.passport_data_message_handler
         }
+        # Special text message handlers: individual, commands, aliases, parsers
         self.individual_text_message_handlers = dict()
         self.commands = dict()
         self.command_aliases = dict()
-        self.text_message_parsers = OrderedDict()
         self._unknown_command_message = None
+        self.text_message_parsers = OrderedDict()
+        # Inline query-related properties
+        self.inline_query_handlers = OrderedDict()
+        self._default_inline_query_answer = None
+        self.chosen_inline_result_handlers = dict()
+        # Maintenance properties
         self._under_maintenance = False
         self._allowed_during_maintenance = []
         self._maintenance_message = None
@@ -298,6 +319,37 @@ class Bot(TelegramBot, ObjectWithDatabase):
             return self._unknown_command_message
         return self.__class__._unknown_command_message
 
+    @property
+    def default_inline_query_answer(self):
+        """Answer to be returned if inline query returned None.
+
+        If instance default answer is not set, class one is returned.
+        """
+        if self._default_inline_query_answer:
+            return self._default_inline_query_answer
+        return self.__class__._default_inline_query_answer
+
+    @classmethod
+    def set_class_default_inline_query_answer(cls,
+                                              default_inline_query_answer):
+        """Set class default inline query answer.
+
+        It will be returned if an inline query returned no answer.
+        """
+        cls._default_inline_query_answer = make_inline_query_answer(
+            default_inline_query_answer
+        )
+
+    def set_default_inline_query_answer(self, default_inline_query_answer):
+        """Set a custom default_inline_query_answer.
+
+        It will be returned when no answer is found for an inline query.
+        If instance answer is None, default class answer is used.
+        """
+        self._default_inline_query_answer = make_inline_query_answer(
+            default_inline_query_answer
+        )
+
     async def message_router(self, update):
         """Route Telegram `message` update to appropriate message handler."""
         for key, value in update.items():
@@ -333,11 +385,40 @@ class Bot(TelegramBot, ObjectWithDatabase):
         return
 
     async def inline_query_handler(self, update):
-        """Handle Telegram `inline_query` update."""
-        logging.info(
-            f"The following update was received: {update}\n"
-            "However, this inline_query handler does nothing yet."
-        )
+        """Handle Telegram `inline_query` update.
+
+        Answer it with results or log errors.
+        """
+        query = update['query']
+        answer, switch_pm_text, switch_pm_parameter = None, None, None
+        for condition, handler in self.inline_query_handlers.items():
+            if condition(query):
+                _function = handler['function']
+                if asyncio.iscoroutinefunction(_function):
+                    answer = await _function(update)
+                else:
+                    answer = _function(update)
+                break
+        if not answer:
+            answer = self.default_inline_query_answer
+        if type(answer) is dict:
+            if 'switch_pm_text' in answer:
+                switch_pm_text = answer['switch_pm_text']
+            if 'switch_pm_parameter' in answer:
+                switch_pm_parameter = answer['switch_pm_parameter']
+            answer = answer['answer']
+        answer = make_inline_query_answer(answer)
+        try:
+            await self.answerInlineQuery(
+                update['id'],
+                answer,
+                cache_time=10,
+                is_personal=True,
+                switch_pm_text=switch_pm_text,
+                switch_pm_parameter=switch_pm_parameter
+            )
+        except Exception as e:
+            logging.info("Error answering inline query\n{}".format(e))
         return
 
     async def chosen_inline_result_handler(self, update):
@@ -857,8 +938,10 @@ class Bot(TelegramBot, ObjectWithDatabase):
         """Answer inline queries.
 
         This method wraps lower-level `answerInlineQuery` method.
+        If `results` is a string, cast it to proper type (list of dicts having
+            certain keys). See utilities.make_inline_query_answer for details.
         """
-        # If results is a string, cast to proper type
+        results = make_inline_query_answer(results)
         return await self.answerInlineQuery(
             inline_query_id=inline_query_id,
             results=results,

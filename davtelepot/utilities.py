@@ -1482,3 +1482,23 @@ def custom_join(_list, joiner, final=None):
     if len(_list) == 2:
         return final.join(_list)
     return joiner.join(_list[:-1]) + final + _list[-1]
+
+
+def make_inline_query_answer(answer):
+    """Return an article-type answer to inline query.
+
+    Takes either a string or a dictionary and returns a list.
+    """
+    if type(answer) is str:
+        answer = dict(
+            type='article',
+            id=0,
+            title=remove_html_tags(answer),
+            input_message_content=dict(
+                message_text=answer,
+                parse_mode='HTML'
+            )
+        )
+    if type(answer) is dict:
+        answer = [answer]
+    return answer
