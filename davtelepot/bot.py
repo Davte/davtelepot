@@ -28,6 +28,7 @@ class Bot(TelegramBot):
     """
 
     bots = []
+    _path = '.'
     runner = None
     local_host = 'localhost'
     port = 3000
@@ -57,6 +58,7 @@ class Bot(TelegramBot):
         """
         self.__class__.bots.append(self)
         super().__init__(token)
+        self._path = None
         self._offset = 0
         self._hostname = hostname
         self._certificate = certificate
@@ -135,6 +137,23 @@ class Bot(TelegramBot):
         self.default_reply_keyboard_elements = []
         self._default_keyboard = dict()
         return
+
+    @property
+    def path(self):
+        """Path where files should be looked for.
+
+        If no instance path is set, return class path.
+        """
+        return self._path or self.__class__._path
+
+    @classmethod
+    def set_class_path(csl, path):
+        """Set class path attribute."""
+        csl._path = path
+
+    def set_path(self, path):
+        """Set instance path attribute."""
+        self._path = path
 
     @property
     def hostname(self):
@@ -673,7 +692,6 @@ class Bot(TelegramBot):
             as reply_markup (only those messages can be edited, which were
             sent with no reply markup or with an inline keyboard).
         """
-        # TODO prevent Telegram flood control
         if 'message' in update:
             update = update['message']
         if chat_id is None and 'chat' in update:
