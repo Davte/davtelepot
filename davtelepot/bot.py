@@ -16,9 +16,9 @@ import re
 from aiohttp import web
 
 # Project modules
-from api import TelegramBot, TelegramError
-from database import ObjectWithDatabase
-from utilities import (
+from davtelepot.api import TelegramBot, TelegramError
+from davtelepot.database import ObjectWithDatabase
+from davtelepot.utilities import (
     escape_html_chars, get_secure_key, make_inline_query_answer,
     make_lines_of_buttons, remove_html_tags
 )
