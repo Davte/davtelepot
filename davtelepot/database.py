@@ -49,3 +49,25 @@ class ObjectWithDatabase(object):
     def db(self):
         """Return the dataset.Database instance related to `self`."""
         return self._database
+
+    def create_views(self, views, overwrite=False):
+        """Take a list of `views` and add them to bot database.
+
+        Overwrite existing views if `overwrite` is set to True.
+        Each element of this list should have
+        - a `name` field
+        - a `query field`
+        """
+        with self.db as db:
+            for view in views:
+                try:
+                    if overwrite:
+                        db.query(
+                            f"DROP VIEW IF EXISTS {view['name']}"
+                        )
+                    db.query(
+                        f"CREATE VIEW IF NOT EXISTS {view['name']}"
+                        f"AS {view['query']}"
+                    )
+                except Exception as e:
+                    logging.error(f"{e}")
