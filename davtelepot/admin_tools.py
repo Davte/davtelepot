@@ -491,6 +491,8 @@ async def _talk_button(update, bot):
 
 def init(bot):
     """Assign parsers, commands, buttons and queries to given `bot`."""
+    if not hasattr(bot, 'messages'):
+        bot.messages = dict()
     bot.messages['talk'] = TALK_MESSAGES
     with bot.db as db:
         if 'talking_sessions' not in db.tables:
