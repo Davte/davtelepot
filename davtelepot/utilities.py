@@ -174,13 +174,13 @@ async def async_request(url, type='get', mode='json', encoding='utf-8',
     """
     try:
         async with aiohttp.ClientSession() as s:
-                async with (
-                    s.get(url, timeout=30)
-                    if type == 'get'
-                    else s.post(url, timeout=30, data=kwargs)
-                ) as r:
-                    result = await r.read()
-                    result = result.decode(encoding)
+            async with (
+                s.get(url, timeout=30)
+                if type == 'get'
+                else s.post(url, timeout=30, data=kwargs)
+            ) as r:
+                result = await r.read()
+                result = result.decode(encoding)
     except Exception as e:
         logging.error(
             'Error making async request to {}:\n{}'.format(
