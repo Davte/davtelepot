@@ -1360,7 +1360,8 @@ class Bot(TelegramBot, ObjectWithDatabase):
     async def close_sessions(self):
         """Close open sessions."""
         for session_name, session in self.sessions.items():
-            await session.close()
+            if not session.closed:
+                await session.close()
 
     async def set_webhook(self, url=None, certificate=None,
                           max_connections=None, allowed_updates=None):

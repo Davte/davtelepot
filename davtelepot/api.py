@@ -296,7 +296,7 @@ class TelegramBot(object):
         except asyncio.TimeoutError as e:
             logging.info(f"{e}: {method} API call timed out")
         finally:
-            if session_must_be_closed:
+            if session_must_be_closed and not session.closed:
                 await session.close()
         return response_object
 
