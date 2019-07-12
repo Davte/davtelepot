@@ -352,17 +352,17 @@ class Bot(TelegramBot, ObjectWithDatabase):
             default_inline_query_answer
         )
 
-    async def message_router(self, update):
+    async def message_router(self, update, user_record):
         """Route Telegram `message` update to appropriate message handler."""
         for key, value in update.items():
             if key in self.message_handlers:
-                return await self.message_handlers[key](update)
+                return await self.message_handlers[key](update, user_record)
         logging.error(
             f"The following message update was received: {update}\n"
             "However, this message type is unknown."
         )
 
-    async def edited_message_handler(self, update):
+    async def edited_message_handler(self, update, user_record):
         """Handle Telegram `edited_message` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -370,7 +370,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         )
         return
 
-    async def channel_post_handler(self, update):
+    async def channel_post_handler(self, update, user_record):
         """Handle Telegram `channel_post` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -378,7 +378,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         )
         return
 
-    async def edited_channel_post_handler(self, update):
+    async def edited_channel_post_handler(self, update, user_record):
         """Handle Telegram `edited_channel_post` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -386,7 +386,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         )
         return
 
-    async def inline_query_handler(self, update):
+    async def inline_query_handler(self, update, user_record):
         """Handle Telegram `inline_query` update.
 
         Answer it with results or log errors.
@@ -420,7 +420,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
             logging.info("Error answering inline query\n{}".format(e))
         return
 
-    async def chosen_inline_result_handler(self, update):
+    async def chosen_inline_result_handler(self, update, user_record):
         """Handle Telegram `chosen_inline_result` update."""
         user_id = update['from']['id']
         if user_id in self.chosen_inline_result_handlers:
@@ -451,7 +451,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         self.chosen_inline_result_handlers[user_id][result_id] = func
         return
 
-    async def callback_query_handler(self, update):
+    async def callback_query_handler(self, update, user_record):
         """Handle Telegram `callback_query` update.
 
         A callback query is sent when users press inline keyboard buttons.
@@ -468,11 +468,12 @@ class Bot(TelegramBot, ObjectWithDatabase):
         data = update['data']
         for start_text, handler in self.callback_handlers.items():
             if data.startswith(start_text):
-                _function = handler['function']
-                if asyncio.iscoroutinefunction(_function):
-                    answer = await _function(update)
-                else:
-                    answer = _function(update)
+                _function = handler['handler']
+                answer = await _function(
+                    bot=self,
+                    update=update,
+                    user_record=user_record
+                )
                 break
         if type(answer) is str:
             answer = dict(text=answer)
@@ -503,7 +504,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
             logging.error(e)
         return
 
-    async def shipping_query_handler(self, update):
+    async def shipping_query_handler(self, update, user_record):
         """Handle Telegram `shipping_query` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -511,7 +512,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         )
         return
 
-    async def pre_checkout_query_handler(self, update):
+    async def pre_checkout_query_handler(self, update, user_record):
         """Handle Telegram `pre_checkout_query` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -519,7 +520,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         )
         return
 
-    async def poll_handler(self, update):
+    async def poll_handler(self, update, user_record):
         """Handle Telegram `poll` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -527,7 +528,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         )
         return
 
-    async def text_message_handler(self, update):
+    async def text_message_handler(self, update, user_record):
         """Handle `text` message update."""
         replier, reply = None, None
         text = update['text'].lower()
@@ -565,10 +566,11 @@ class Bot(TelegramBot, ObjectWithDatabase):
                     replier = parser['function']
                     break
         if replier:
-            if asyncio.iscoroutinefunction(replier):
-                reply = await replier(update)
-            else:
-                reply = replier(update)
+            reply = await replier(
+                bot=self,
+                update=update,
+                user_record=user_record
+            )
         if reply:
             if type(reply) is str:
                 reply = dict(text=reply)
@@ -584,196 +586,197 @@ class Bot(TelegramBot, ObjectWithDatabase):
                 )
         return
 
-    async def audio_message_handler(self, update):
+    async def audio_message_handler(self, update, user_record):
         """Handle `audio` message update."""
         logging.info(
             "A audio message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def document_message_handler(self, update):
+    async def document_message_handler(self, update, user_record):
         """Handle `document` message update."""
         logging.info(
             "A document message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def animation_message_handler(self, update):
+    async def animation_message_handler(self, update, user_record):
         """Handle `animation` message update."""
         logging.info(
             "A animation message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def game_message_handler(self, update):
+    async def game_message_handler(self, update, user_record):
         """Handle `game` message update."""
         logging.info(
             "A game message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def photo_message_handler(self, update):
+    async def photo_message_handler(self, update, user_record):
         """Handle `photo` message update."""
         logging.info(
             "A photo message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def sticker_message_handler(self, update):
+    async def sticker_message_handler(self, update, user_record):
         """Handle `sticker` message update."""
         logging.info(
             "A sticker message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def video_message_handler(self, update):
+    async def video_message_handler(self, update, user_record):
         """Handle `video` message update."""
         logging.info(
             "A video message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def voice_message_handler(self, update):
+    async def voice_message_handler(self, update, user_record):
         """Handle `voice` message update."""
         logging.info(
             "A voice message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def video_note_message_handler(self, update):
+    async def video_note_message_handler(self, update, user_record):
         """Handle `video_note` message update."""
         logging.info(
             "A video_note message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def contact_message_handler(self, update):
+    async def contact_message_handler(self, update, user_record):
         """Handle `contact` message update."""
         logging.info(
             "A contact message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def location_message_handler(self, update):
+    async def location_message_handler(self, update, user_record):
         """Handle `location` message update."""
         logging.info(
             "A location message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def venue_message_handler(self, update):
+    async def venue_message_handler(self, update, user_record):
         """Handle `venue` message update."""
         logging.info(
             "A venue message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def poll_message_handler(self, update):
+    async def poll_message_handler(self, update, user_record):
         """Handle `poll` message update."""
         logging.info(
             "A poll message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def new_chat_members_message_handler(self, update):
+    async def new_chat_members_message_handler(self, update, user_record):
         """Handle `new_chat_members` message update."""
         logging.info(
             "A new_chat_members message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def left_chat_member_message_handler(self, update):
+    async def left_chat_member_message_handler(self, update, user_record):
         """Handle `left_chat_member` message update."""
         logging.info(
             "A left_chat_member message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def new_chat_title_message_handler(self, update):
+    async def new_chat_title_message_handler(self, update, user_record):
         """Handle `new_chat_title` message update."""
         logging.info(
             "A new_chat_title message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def new_chat_photo_message_handler(self, update):
+    async def new_chat_photo_message_handler(self, update, user_record):
         """Handle `new_chat_photo` message update."""
         logging.info(
             "A new_chat_photo message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def delete_chat_photo_message_handler(self, update):
+    async def delete_chat_photo_message_handler(self, update, user_record):
         """Handle `delete_chat_photo` message update."""
         logging.info(
             "A delete_chat_photo message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def group_chat_created_message_handler(self, update):
+    async def group_chat_created_message_handler(self, update, user_record):
         """Handle `group_chat_created` message update."""
         logging.info(
             "A group_chat_created message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def supergroup_chat_created_message_handler(self, update):
+    async def supergroup_chat_created_message_handler(self, update,
+                                                      user_record):
         """Handle `supergroup_chat_created` message update."""
         logging.info(
             "A supergroup_chat_created message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def channel_chat_created_message_handler(self, update):
+    async def channel_chat_created_message_handler(self, update, user_record):
         """Handle `channel_chat_created` message update."""
         logging.info(
             "A channel_chat_created message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def migrate_to_chat_id_message_handler(self, update):
+    async def migrate_to_chat_id_message_handler(self, update, user_record):
         """Handle `migrate_to_chat_id` message update."""
         logging.info(
             "A migrate_to_chat_id message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def migrate_from_chat_id_message_handler(self, update):
+    async def migrate_from_chat_id_message_handler(self, update, user_record):
         """Handle `migrate_from_chat_id` message update."""
         logging.info(
             "A migrate_from_chat_id message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def pinned_message_message_handler(self, update):
+    async def pinned_message_message_handler(self, update, user_record):
         """Handle `pinned_message` message update."""
         logging.info(
             "A pinned_message message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def invoice_message_handler(self, update):
+    async def invoice_message_handler(self, update, user_record):
         """Handle `invoice` message update."""
         logging.info(
             "A invoice message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def successful_payment_message_handler(self, update):
+    async def successful_payment_message_handler(self, update, user_record):
         """Handle `successful_payment` message update."""
         logging.info(
             "A successful_payment message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def connected_website_message_handler(self, update):
+    async def connected_website_message_handler(self, update, user_record):
         """Handle `connected_website` message update."""
         logging.info(
             "A connected_website message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def passport_data_message_handler(self, update):
+    async def passport_data_message_handler(self, update, user_record):
         """Handle `passport_data` message update."""
         logging.info(
             "A passport_data message update was received, "
@@ -1711,7 +1714,13 @@ class Bot(TelegramBot, ObjectWithDatabase):
             return await self.handle_update_during_maintenance(update)
         for key, value in update.items():
             if key in self.routing_table:
-                return await self.routing_table[key](value)
+                with self.db as db:
+                    user_record = db['users'].find_one(
+                        telegram_id=self.get_user_identifier(
+                            update=value
+                        )
+                    )
+                return await self.routing_table[key](value, user_record)
         logging.error(f"Unknown type of update.\n{update}")
 
     def additional_task(self, when='BEFORE', *args, **kwargs):
