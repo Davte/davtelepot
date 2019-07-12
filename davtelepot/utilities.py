@@ -853,9 +853,7 @@ def get_user(record):
         'id' in from_
         and from_['id'] is not None
     ):
-        result = '<a href="tg://user?id={}">{{name}}</a>'.format(
-            from_['id']
-        )
+        result = f"""<a href="tg://user?id={from_['id']}">{{name}}</a>"""
     if 'username' in from_ and from_['username']:
         result = result.format(
             name=from_['username']
@@ -867,10 +865,7 @@ def get_user(record):
         and from_['last_name']
     ):
         result = result.format(
-            name='{} {}'.format(
-                from_['first_name'],
-                from_['last_name']
-            )
+            name=f"{from_['first_name']} {from_['last_name']}"
         )
     elif 'first_name' in from_ and from_['first_name']:
         result = result.format(
