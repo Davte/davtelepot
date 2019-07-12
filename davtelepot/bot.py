@@ -139,10 +139,12 @@ class Bot(TelegramBot, ObjectWithDatabase):
         }
         # Special text message handlers: individual, commands, aliases, parsers
         self.individual_text_message_handlers = dict()
-        self.commands = dict()
-        self.command_aliases = dict()
+        self.commands = OrderedDict()
+        self.command_aliases = OrderedDict()
         self._unknown_command_message = None
         self.text_message_parsers = OrderedDict()
+        # Callback query-related properties
+        self.callback_handlers = OrderedDict()
         # Inline query-related properties
         self.inline_query_handlers = OrderedDict()
         self._default_inline_query_answer = None
