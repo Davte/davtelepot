@@ -390,28 +390,25 @@ class Bot(TelegramBot, ObjectWithDatabase):
         Answer it with results or log errors.
         """
         query = update['query']
-        answer, switch_pm_text, switch_pm_parameter = None, None, None
+        results, switch_pm_text, switch_pm_parameter = None, None, None
         for condition, handler in self.inline_query_handlers.items():
             if condition(query):
-                _function = handler['function']
-                if asyncio.iscoroutinefunction(_function):
-                    answer = await _function(update)
-                else:
-                    answer = _function(update)
+                _handler = handler['handler']
+                results = await _handler(bot=self, update=update,
+                                         user_record=user_record)
                 break
-        if not answer:
-            answer = self.default_inline_query_answer
-        if type(answer) is dict:
-            if 'switch_pm_text' in answer:
-                switch_pm_text = answer['switch_pm_text']
-            if 'switch_pm_parameter' in answer:
-                switch_pm_parameter = answer['switch_pm_parameter']
-            answer = answer['answer']
-        answer = make_inline_query_answer(answer)
+        if not results:
+            results = self.default_inline_query_answer
+        if type(results) is dict:
+            if 'switch_pm_text' in results:
+                switch_pm_text = results['switch_pm_text']
+            if 'switch_pm_parameter' in results:
+                switch_pm_parameter = results['switch_pm_parameter']
+            results = results['answer']
         try:
             await self.answerInlineQuery(
                 update['id'],
-                answer,
+                results=results,
                 cache_time=10,
                 is_personal=True,
                 switch_pm_text=switch_pm_text,
@@ -1055,7 +1052,8 @@ class Bot(TelegramBot, ObjectWithDatabase):
                                   is_personal=None,
                                   next_offset=None,
                                   switch_pm_text=None,
-                                  switch_pm_parameter=None):
+                                  switch_pm_parameter=None,
+                                  update=None):
         """Answer inline queries.
 
         This method wraps lower-level `answerInlineQuery` method.
