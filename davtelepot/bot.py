@@ -1421,45 +1421,27 @@ class Bot(TelegramBot, ObjectWithDatabase):
                 )
             )
 
-        def decorator(func):
-            if asyncio.iscoroutinefunction(func):
-                async def decorated(message, user_record, bot):
-                    logging.info(
-                        "QUERY MATCHING CONDITION({c}) @{n} FROM({f})".format(
-                            c=condition.__name__,
-                            n=self.name,
-                            f=message['from']
-                        )
-                    )
-                    if self.authorization_function(
-                        update=message,
-                        user_record=user_record,
-                        authorization_level=authorization_level
-                    ):
-                        return await func(message)
-                    return self.unauthorized_message
-            else:
-                def decorated(message, user_record, bot):
-                    logging.info(
-                        "QUERY MATCHING CONDITION({c}) @{n} FROM({f})".format(
-                            c=condition.__name__,
-                            n=self.name,
-                            f=message['from']
-                        )
-                    )
-                    if self.authorization_function(
-                        update=message,
-                        user_record=user_record,
-                        authorization_level=authorization_level
-                    ):
-                        return func(message)
-                    return self.unauthorized_message
+        def query_decorator(handler):
+            async def decorated_query_handler(bot, update, user_record):
+                logging.info(
+                    f"Inline query matching condition "
+                    f"`{condition.__name__}@{bot.name}` from "
+                    f"`{update['from']}`"
+                )
+                if self.authorization_function(
+                    update=update,
+                    user_record=user_record,
+                    authorization_level=authorization_level
+                ):
+                    return await handler(bot=self, update=update,
+                                         user_record=user_record)
+                return self.unauthorized_message
             self.inline_query_handlers[condition] = dict(
-                function=decorated,
+                handler=decorated_query_handler,
                 description=description,
                 authorization_level=authorization_level
             )
-        return decorator
+        return query_decorator
 
     def set_chat_id_getter(self, getter):
         """Set chat_id getter.
