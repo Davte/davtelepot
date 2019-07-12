@@ -1060,6 +1060,8 @@ class Bot(TelegramBot, ObjectWithDatabase):
         If `results` is a string, cast it to proper type (list of dicts having
             certain keys). See utilities.make_inline_query_answer for details.
         """
+        if inline_query_id is None and isinstance(update, dict):
+            inline_query_id = self.get_message_identifier(update)
         results = make_inline_query_answer(results)
         return await self.answerInlineQuery(
             inline_query_id=inline_query_id,
