@@ -532,12 +532,13 @@ def init(bot):
                 )
 
     @bot.command(command='/talk', aliases=[], show_in_keyboard=False,
-                 descr="Choose a user and forward messages to each other.",
-                 auth='admin')
+                 description="Choose a user and forward messages to each "
+                             "other.",
+                 authorization_level='admin')
     async def talk_command(update):
         return await _talk_command(update, bot)
 
-    @bot.button(data='talk:///', auth='admin')
+    @bot.button(data='talk:///', authorization_level='admin')
     async def talk_button(update):
         return await _talk_button(update, bot)
     return
