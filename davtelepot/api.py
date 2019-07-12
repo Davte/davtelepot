@@ -99,6 +99,15 @@ class TelegramBot(object):
         return self.__class__._per_chat_cooldown_timedelta
 
     @property
+    def longest_cooldown_timedelta(self):
+        """Return the longest cooldown timedelta.
+
+        Updates sent more than `longest_cooldown_timedelta` ago will be
+            forgotten.
+        """
+        return datetime.timedelta(minutes=1)
+
+    @property
     def allowed_messages_per_group_per_minute(self):
         """Return maximum number of messages allowed in a group per minute.
 
