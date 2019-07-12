@@ -1481,6 +1481,12 @@ class Bot(TelegramBot, ObjectWithDatabase):
         assert identifier is not None, (
             "Provide a user_id or update object to get a user identifier."
         )
+        if (
+            isinstance(identifier, dict)
+            and 'message' in identifier
+            and 'from' not in identifier
+        ):
+            identifier = identifier['message']
         if isinstance(identifier, dict) and 'from' in identifier:
             identifier = identifier['from']['id']
         assert type(identifier) is int, (
