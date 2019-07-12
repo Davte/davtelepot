@@ -1518,3 +1518,8 @@ def make_inline_query_answer(answer):
     if type(answer) is dict:
         answer = [answer]
     return answer
+
+
+async def dummy_coroutine(*args, **kwargs):
+    """Accept everthing as argument and do nothing."""
+    return
