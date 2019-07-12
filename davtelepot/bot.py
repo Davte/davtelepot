@@ -829,10 +829,10 @@ class Bot(TelegramBot, ObjectWithDatabase):
                 text[-1] = text[-1][limit:]
             text_chunk = "\n".join(temp)  # Re-join this group of lines
             prefix, suffix = '', ''
-            is_last = len(text) > 0
+            is_last = len(text) == 0
             if text_part_number > 1:
                 prefix = f"{tags[0]}[...]{tags[1]}\n"
-            if is_last:
+            if not is_last:
                 suffix = f"\n{tags[0]}[...]{tags[1]}"
             yield (prefix + text_chunk + suffix), is_last
         return
