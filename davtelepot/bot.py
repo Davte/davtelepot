@@ -965,6 +965,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         If photo was already sent by this bot and `use_stored_file_id` is set
             to True, use file_id (it is faster and recommended).
         """
+        already_sent = False
         if 'message' in update:
             update = update['message']
         if chat_id is None and 'chat' in update:
