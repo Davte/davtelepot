@@ -164,7 +164,9 @@ class Bot(TelegramBot, ObjectWithDatabase):
         # Message to be returned if user is not allowed to call method
         self._authorization_denied_message = None
         # Default authorization function (always return True)
-        self.authorization_function = lambda update, authorization_level: True
+        self.authorization_function = (
+            lambda update, user_record=None, authorization_level='user': True
+        )
         self.default_reply_keyboard_elements = []
         self._default_keyboard = dict()
         return
