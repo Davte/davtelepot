@@ -66,7 +66,7 @@ class ObjectWithDatabase(object):
                             f"DROP VIEW IF EXISTS {view['name']}"
                         )
                     db.query(
-                        f"CREATE VIEW IF NOT EXISTS {view['name']}"
+                        f"CREATE VIEW IF NOT EXISTS {view['name']} "
                         f"AS {view['query']}"
                     )
                 except Exception as e:
