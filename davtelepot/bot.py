@@ -549,7 +549,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                 text
             ).group(0)  # Get the first group of characters matching pattern
             if command in self.commands:
-                replier = self.commands[command]['function']
+                replier = self.commands[command]['handler']
             elif 'chat' in update and update['chat']['id'] > 0:
                 reply = self.unknown_command_message
         else:  # Handle command aliases and text parsers
