@@ -845,7 +845,6 @@ def get_user(record):
     if not record:
         return
     from_ = {key: val for key, val in record.items()}
-    first_name, last_name, username, id_ = None, None, None, None
     result = '{name}'
     if 'telegram_id' in from_:
         from_['id'] = from_['telegram_id']
