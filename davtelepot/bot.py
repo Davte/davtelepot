@@ -1,70 +1,33 @@
 """Provide a simple Bot object, mirroring Telegram API methods.
 
-camelCase methods mirror API directly, while snake_case ones act as middleware
+camelCase methods mirror API directly, while snake_case ones act as middlewares
     someway.
-
-Usage
-    ```
-    import sys
-
-    from davtelepot.bot import Bot
-
-    from data.passwords import my_token, my_other_token
-
-    long_polling_bot = Bot(token=my_token, database_url='my_db')
-    webhook_bot = Bot(token=my_other_token, hostname='example.com',
-                      certificate='path/to/certificate.pem',
-                      database_url='my_other_db')
-
-    @long_polling_bot.command('/foo')
-    async def foo_command(bot, update, user_record, language):
-        return "Bar!"
-
-    @webhook_bot.command('/bar')
-    async def bar_command(bot, update, user_record, language):
-        return "Foo!"
-
-    exit_state = Bot.run(
-        local_host='127.0.0.5',
-        port=8552
-    )
-    sys.exit(exit_state)
-    ```
 """
 
 # Standard library modules
 import asyncio
-import datetime
+from collections import OrderedDict
 import io
-import inspect
 import logging
 import os
 import re
-import sys
-
-from collections import OrderedDict
-from typing import Callable, Union, Dict
 
 # Third party modules
 from aiohttp import web
 
 # Project modules
-from .api import TelegramBot, TelegramError
-from .database import ObjectWithDatabase
-from .languages import MultiLanguageObject
-from .messages import davtelepot_messages
-from .utilities import (
-    async_get, escape_html_chars, extract, get_secure_key,
-    make_inline_query_answer, make_lines_of_buttons, remove_html_tags
+from davtelepot.api import TelegramBot, TelegramError
+from davtelepot.database import ObjectWithDatabase
+from davtelepot.utilities import (
+    escape_html_chars, get_secure_key, make_inline_query_answer,
+    make_lines_of_buttons, remove_html_tags
 )
 
 # Do not log aiohttp `INFO` and `DEBUG` levels
 logging.getLogger('aiohttp').setLevel(logging.WARNING)
 
 
-# Some methods are not implemented yet: that's the reason behind the following statement
-# noinspection PyUnusedLocal,PyMethodMayBeStatic,PyMethodMayBeStatic
-class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
+class Bot(TelegramBot, ObjectWithDatabase):
     """Simple Bot object, providing methods corresponding to Telegram bot API.
 
     Multiple Bot() instances may be run together, along with a aiohttp web app.
@@ -73,8 +36,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     bots = []
     _path = '.'
     runner = None
-    # TODO: find a way to choose port automatically by default
-    # Setting port to 0 does not work unfortunately
     local_host = 'localhost'
     port = 3000
     final_state = 0
@@ -83,7 +44,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     _authorization_denied_message = None
     _unknown_command_message = None
     TELEGRAM_MESSAGES_MAX_LEN = 4096
-    _max_message_length = 3 * (TELEGRAM_MESSAGES_MAX_LEN - 100)
     _default_inline_query_answer = [
         dict(
             type='article',
@@ -95,12 +55,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
         )
     ]
-    _log_file_name = None
-    _errors_file_name = None
 
     def __init__(
         self, token, hostname='', certificate=None, max_connections=40,
-        allowed_updates=None, database_url='bot.db'
+        allowed_updates=[], database_url='bot.db'
     ):
         """Init a bot instance.
 
@@ -114,15 +72,12 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             Maximum number of HTTPS connections allowed.
         allowed_updates : List(str)
             Allowed update types (empty list to allow all).
-            @type allowed_updates: list(str)
         """
         # Append `self` to class list of instances
         self.__class__.bots.append(self)
         # Call superclasses constructors with proper arguments
         TelegramBot.__init__(self, token)
         ObjectWithDatabase.__init__(self, database_url=database_url)
-        MultiLanguageObject.__init__(self)
-        self.messages['davtelepot'] = davtelepot_messages
         self._path = None
         self.preliminary_tasks = []
         self.final_tasks = []
@@ -131,7 +86,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self._certificate = certificate
         self._max_connections = max_connections
         self._allowed_updates = allowed_updates
-        self._max_message_length = None
         self._session_token = get_secure_key(length=10)
         self._name = None
         self._telegram_id = None
@@ -152,7 +106,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         # Different message update types need different handlers
         self.message_handlers = {
             'text': self.text_message_handler,
-            'audio': self.audio_file_handler,
+            'audio': self.audio_message_handler,
             'document': self.document_message_handler,
             'animation': self.animation_message_handler,
             'game': self.game_message_handler,
@@ -181,26 +135,16 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             'invoice': self.invoice_message_handler,
             'successful_payment': self.successful_payment_message_handler,
             'connected_website': self.connected_website_message_handler,
-            'passport_data': self.passport_data_message_handler,
-            'dice': self.dice_handler,
+            'passport_data': self.passport_data_message_handler
         }
         # Special text message handlers: individual, commands, aliases, parsers
         self.individual_text_message_handlers = dict()
         self.commands = OrderedDict()
         self.command_aliases = OrderedDict()
-        self.messages['commands'] = dict()
-        self.messages['reply_keyboard_buttons'] = dict()
         self._unknown_command_message = None
         self.text_message_parsers = OrderedDict()
-        # Support for /help command
-        self.messages['help_sections'] = OrderedDict()
-        # Handle location messages
-        self.individual_location_handlers = dict()
-        # Handle voice messages
-        self.individual_voice_handlers = dict()
         # Callback query-related properties
         self.callback_handlers = OrderedDict()
-        self._callback_data_separator = None
         # Inline query-related properties
         self.inline_query_handlers = OrderedDict()
         self._default_inline_query_answer = None
@@ -217,8 +161,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             if 'chat' in update
             else None
         )
-        # Function to get updated list of bot administrators
-        self._get_administrators = lambda bot: []
         # Message to be returned if user is not allowed to call method
         self._authorization_denied_message = None
         # Default authorization function (always return True)
@@ -226,46 +168,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             lambda update, user_record=None, authorization_level='user': True
         )
         self.default_reply_keyboard_elements = []
-        self.recent_users = OrderedDict()
-        self._log_file_name = None
-        self._errors_file_name = None
-        self.placeholder_requests = dict()
-        self.shared_data = dict()
-        self.Role = None
-        self.packages = [sys.modules['davtelepot']]
-        # Add `users` table with its fields if missing
-        if 'users' not in self.db.tables:
-            table = self.db.create_table(
-                table_name='users'
-            )
-            table.create_column(
-                'telegram_id',
-                self.db.types.integer
-            )
-            table.create_column(
-                'privileges',
-                self.db.types.integer
-            )
-            table.create_column(
-                'username',
-                self.db.types.string
-            )
-            table.create_column(
-                'first_name',
-                self.db.types.string
-            )
-            table.create_column(
-                'last_name',
-                self.db.types.string
-            )
-            table.create_column(
-                'language_code',
-                self.db.types.string
-            )
-            table.create_column(
-                'selected_language_code',
-                self.db.types.string
-            )
+        self._default_keyboard = dict()
         return
 
     @property
@@ -277,77 +180,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         return self._path or self.__class__._path
 
     @classmethod
-    def set_class_path(cls, path):
+    def set_class_path(csl, path):
         """Set class path attribute."""
-        cls._path = path
+        csl._path = path
 
     def set_path(self, path):
         """Set instance path attribute."""
         self._path = path
-
-    @property
-    def log_file_name(self):
-        """Return log file name.
-
-        Fallback to class file name if set, otherwise return None.
-        """
-        return self._log_file_name or self.__class__._log_file_name
-
-    @property
-    def log_file_path(self):
-        """Return log file path basing on self.path and `_log_file_name`.
-
-        Fallback to class file if set, otherwise return None.
-        """
-        if self.log_file_name:
-            return f"{self.path}/data/{self.log_file_name}"
-
-    def set_log_file_name(self, file_name):
-        """Set log file name."""
-        self._log_file_name = file_name
-
-    @classmethod
-    def set_class_log_file_name(cls, file_name):
-        """Set class log file name."""
-        cls._log_file_name = file_name
-
-    @property
-    def errors_file_name(self):
-        """Return errors file name.
-
-        Fallback to class file name if set, otherwise return None.
-        """
-        return self._errors_file_name or self.__class__._errors_file_name
-
-    @property
-    def errors_file_path(self):
-        """Return errors file path basing on self.path and `_errors_file_name`.
-
-        Fallback to class file if set, otherwise return None.
-        """
-        if self.errors_file_name:
-            return f"{self.path}/data/{self.errors_file_name}"
-
-    def set_errors_file_name(self, file_name):
-        """Set errors file name."""
-        self._errors_file_name = file_name
-
-    @classmethod
-    def set_class_errors_file_name(cls, file_name):
-        """Set class errors file name."""
-        cls._errors_file_name = file_name
-
-    @classmethod
-    def get(cls, token, *args, **kwargs):
-        """Given a `token`, return class instance with that token.
-
-        If no instance is found, instantiate it.
-        Positional and keyword arguments may be passed as well.
-        """
-        for bot in cls.bots:
-            if bot.token == token:
-                return bot
-        return cls(token, *args, **kwargs)
 
     @property
     def hostname(self):
@@ -401,18 +240,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
         Empty list to allow all updates.
         """
-        return self._allowed_updates or []
-
-    @property
-    def max_message_length(self) -> int:
-        return self._max_message_length or self.__class__._max_message_length
-
-    @classmethod
-    def set_class_max_message_length(cls, max_message_length: int):
-        cls._max_message_length = max_message_length
-
-    def set_max_message_length(self, max_message_length: int):
-        self._max_message_length = max_message_length
+        return self._allowed_updates
 
     @property
     def name(self):
@@ -479,36 +307,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             return self._authorization_denied_message
         return self.__class__._authorization_denied_message
 
-    def get_keyboard(self, user_record=None, update=None,
-                     telegram_id=None):
-        """Return a reply keyboard translated into user language."""
-        if user_record is None:
-            user_record = dict()
-        if update is None:
-            update = dict()
-        if (not user_record) and telegram_id:
-            with self.db as db:
-                user_record = db['users'].find_one(telegram_id=telegram_id)
-        buttons = [
-            dict(
-                text=self.get_message(
-                    'reply_keyboard_buttons', command,
-                    user_record=user_record, update=update,
-                    default_message=element['reply_keyboard_button']
-                )
-            )
-            for command, element in self.commands.items()
-            if 'reply_keyboard_button' in element
-        ]
-        if len(buttons) == 0:
-            return
-        return dict(
-            keyboard=make_lines_of_buttons(
-                buttons,
-                (2 if len(buttons) < 4 else 3)  # Row length
-            ),
-            resize_keyboard=True
-        )
+    @property
+    def default_keyboard(self):
+        """Get the default keyboard.
+
+        It is sent when reply_markup is left blank and chat is private.
+        """
+        return self._default_keyboard
 
     @property
     def unknown_command_message(self):
@@ -517,31 +322,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         If instance message is not set, class message is returned.
         """
         if self._unknown_command_message:
-            message = self._unknown_command_message
-        else:
-            message = self.__class__._unknown_command_message
-        if isinstance(message, str):
-            message = message.format(bot=self)
-        return message
-
-    @property
-    def callback_data_separator(self):
-        """Separator between callback data elements.
-
-        Example of callback_data: 'my_button_prefix:///1|4|test'
-            Prefix: `my_button_prefix:///`
-            Separator: `|` <--- this is returned
-            Data: `['1', '4', 'test']`
-        """
-        return self._callback_data_separator
-
-    def set_callback_data_separator(self, separator):
-        """Set a callback_data separator.
-
-        See property `callback_data_separator` for details.
-        """
-        assert type(separator) is str, "Separator must be a string!"
-        self._callback_data_separator = separator
+            return self._unknown_command_message
+        return self.__class__._unknown_command_message
 
     @property
     def default_inline_query_answer(self):
@@ -574,44 +356,17 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             default_inline_query_answer
         )
 
-    def set_get_administrator_function(self,
-                                       new_function: Callable[[object],
-                                                              list]):
-        """Set a new get_administrators function.
-
-        This function should take bot as argument and return an updated list
-            of its administrators.
-        Example:
-        ```python
-        def get_administrators(bot):
-            admins = bot.db['users'].find(privileges=2)
-            return list(admins)
-        ```
-        """
-        self._get_administrators = new_function
-
-    @property
-    def administrators(self):
-        return self._get_administrators(self)
-
-    async def message_router(self, update, user_record, language):
+    async def message_router(self, update, user_record):
         """Route Telegram `message` update to appropriate message handler."""
-        bot = self
-        for key in self.message_handlers:
-            if key in update:
-                return await self.message_handlers[key](**{
-                    name: argument
-                    for name, argument in locals().items()
-                    if name in inspect.signature(
-                        self.message_handlers[key]
-                    ).parameters
-                })
+        for key, value in update.items():
+            if key in self.message_handlers:
+                return await self.message_handlers[key](update, user_record)
         logging.error(
             f"The following message update was received: {update}\n"
             "However, this message type is unknown."
         )
 
-    async def edited_message_handler(self, update, user_record, language=None):
+    async def edited_message_handler(self, update, user_record):
         """Handle Telegram `edited_message` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -619,7 +374,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def channel_post_handler(self, update, user_record, language=None):
+    async def channel_post_handler(self, update, user_record):
         """Handle Telegram `channel_post` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -627,7 +382,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def edited_channel_post_handler(self, update, user_record, language=None):
+    async def edited_channel_post_handler(self, update, user_record):
         """Handle Telegram `edited_channel_post` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -635,7 +390,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def inline_query_handler(self, update, user_record, language=None):
+    async def inline_query_handler(self, update, user_record):
         """Handle Telegram `inline_query` update.
 
         Answer it with results or log errors.
@@ -650,16 +405,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 break
         if not results:
             results = self.default_inline_query_answer
-        if isinstance(results, dict) and 'answer' in results:
+        if type(results) is dict:
             if 'switch_pm_text' in results:
                 switch_pm_text = results['switch_pm_text']
             if 'switch_pm_parameter' in results:
                 switch_pm_parameter = results['switch_pm_parameter']
             results = results['answer']
         try:
-            await self.answer_inline_query(
-                update=update,
-                user_record=user_record,
+            await self.answerInlineQuery(
+                update['id'],
                 results=results,
                 cache_time=10,
                 is_personal=True,
@@ -670,37 +424,38 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             logging.info("Error answering inline query\n{}".format(e))
         return
 
-    async def chosen_inline_result_handler(self, update, user_record, language=None):
+    async def chosen_inline_result_handler(self, update, user_record):
         """Handle Telegram `chosen_inline_result` update."""
-        if user_record is not None:
-            user_id = user_record['telegram_id']
-        else:
-            user_id = update['from']['id']
+        user_id = update['from']['id']
         if user_id in self.chosen_inline_result_handlers:
             result_id = update['result_id']
             handlers = self.chosen_inline_result_handlers[user_id]
             if result_id in handlers:
-                await handlers[result_id](update)
+                func = handlers[result_id]
+                if asyncio.iscoroutinefunction(func):
+                    await func(update)
+                else:
+                    func(update)
         return
 
-    def set_chosen_inline_result_handler(self, user_id, result_id, handler):
-        """Associate a `handler` to a `result_id` for `user_id`.
+    def set_inline_result_handler(self, user_id, result_id, func):
+        """Associate a func to a result_id.
 
-        When an inline result is chosen having that id, `handler` will
-            be called and passed the update as argument.
+        When an inline result is chosen having that id, function will
+            be passed the update as argument.
         """
         if type(user_id) is dict:
             user_id = user_id['from']['id']
         assert type(user_id) is int, "user_id must be int!"
         # Query result ids are parsed as str by telegram
         result_id = str(result_id)
-        assert callable(handler), "Handler must be callable"
+        assert callable(func), "func must be a callable"
         if user_id not in self.chosen_inline_result_handlers:
             self.chosen_inline_result_handlers[user_id] = {}
-        self.chosen_inline_result_handlers[user_id][result_id] = handler
+        self.chosen_inline_result_handlers[user_id][result_id] = func
         return
 
-    async def callback_query_handler(self, update, user_record, language=None):
+    async def callback_query_handler(self, update, user_record):
         """Handle Telegram `callback_query` update.
 
         A callback query is sent when users press inline keyboard buttons.
@@ -718,15 +473,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         for start_text, handler in self.callback_handlers.items():
             if data.startswith(start_text):
                 _function = handler['handler']
-                answer = await _function(
-                    bot=self,
-                    update=update,
-                    user_record=user_record,
-                    language=language
-                )
+                if asyncio.iscoroutinefunction(_function):
+                    answer = await _function(bot=self, update=update,
+                                             user_record=user_record)
+                else:
+                    answer = _function(bot=self, update=update,
+                                       user_record=user_record)
                 break
-        if answer is None:
-            answer = ''
         if type(answer) is str:
             answer = dict(text=answer)
         assert type(answer) is dict, "Invalid callback query answer."
@@ -756,7 +509,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             logging.error(e)
         return
 
-    async def shipping_query_handler(self, update, user_record, language=None):
+    async def shipping_query_handler(self, update, user_record):
         """Handle Telegram `shipping_query` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -764,7 +517,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def pre_checkout_query_handler(self, update, user_record, language=None):
+    async def pre_checkout_query_handler(self, update, user_record):
         """Handle Telegram `pre_checkout_query` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -772,7 +525,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def poll_handler(self, update, user_record, language=None):
+    async def poll_handler(self, update, user_record):
         """Handle Telegram `poll` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -780,7 +533,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def text_message_handler(self, update, user_record, language=None):
+    async def text_message_handler(self, update, user_record):
         """Handle `text` message update."""
         replier, reply = None, None
         text = update['text'].lower()
@@ -798,21 +551,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             ).group(0)  # Get the first group of characters matching pattern
             if command in self.commands:
                 replier = self.commands[command]['handler']
-            elif command in [
-                description['language_labelled_commands'][language]
-                for c, description in self.commands.items()
-                if 'language_labelled_commands' in description
-                   and language in description['language_labelled_commands']
-            ]:
-                replier = [
-                    description['handler']
-                    for c, description in self.commands.items()
-                    if 'language_labelled_commands' in description
-                       and language in description['language_labelled_commands']
-                       and command == description['language_labelled_commands'][language]
-                ][0]
             elif 'chat' in update and update['chat']['id'] > 0:
-                reply = dict(text=self.unknown_command_message)
+                reply = self.unknown_command_message
         else:  # Handle command aliases and text parsers
             # Aliases are case insensitive: text and alias are both .lower()
             for alias, function in self.command_aliases.items():
@@ -828,24 +568,23 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                     parser['argument'] == 'update'
                     and check_function(update)
                 ):
-                    replier = parser['handler']
+                    replier = parser['function']
                     break
         if replier:
-            reply = await replier(
-                bot=self,
-                **{
-                    name: argument
-                    for name, argument in locals().items()
-                    if name in inspect.signature(
-                        replier
-                    ).parameters
-                }
-            )
+            if asyncio.iscoroutinefunction(replier):
+                reply = await replier(bot=self, update=update,
+                                      user_record=user_record)
+            else:
+                reply = replier(bot=self, update=update,
+                                user_record=user_record)
         if reply:
             if type(reply) is str:
                 reply = dict(text=reply)
             try:
-                return await self.reply(update=update, **reply)
+                if 'text' in reply:
+                    return await self.send_message(update=update, **reply)
+                if 'photo' in reply:
+                    return await self.send_photo(update=update, **reply)
             except Exception as e:
                 logging.error(
                     f"Failed to handle text message:\n{e}",
@@ -853,179 +592,133 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return
 
-    async def audio_file_handler(self, update, user_record, language=None):
-        """Handle `audio` file update."""
+    async def audio_message_handler(self, update, user_record):
+        """Handle `audio` message update."""
         logging.info(
-            "A audio file update was received, "
+            "A audio message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def document_message_handler(self, update, user_record, language=None):
+    async def document_message_handler(self, update, user_record):
         """Handle `document` message update."""
         logging.info(
             "A document message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def animation_message_handler(self, update, user_record, language=None):
+    async def animation_message_handler(self, update, user_record):
         """Handle `animation` message update."""
         logging.info(
             "A animation message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def game_message_handler(self, update, user_record, language=None):
+    async def game_message_handler(self, update, user_record):
         """Handle `game` message update."""
         logging.info(
             "A game message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def photo_message_handler(self, update, user_record, language=None):
+    async def photo_message_handler(self, update, user_record):
         """Handle `photo` message update."""
         logging.info(
             "A photo message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def sticker_message_handler(self, update, user_record, language=None):
+    async def sticker_message_handler(self, update, user_record):
         """Handle `sticker` message update."""
         logging.info(
             "A sticker message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def video_message_handler(self, update, user_record, language=None):
+    async def video_message_handler(self, update, user_record):
         """Handle `video` message update."""
         logging.info(
             "A video message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def voice_message_handler(self, update, user_record, language=None):
+    async def voice_message_handler(self, update, user_record):
         """Handle `voice` message update."""
-        replier, reply = None, None
-        user_id = update['from']['id'] if 'from' in update else None
-        if user_id in self.individual_voice_handlers:
-            replier = self.individual_voice_handlers[user_id]
-            del self.individual_voice_handlers[user_id]
-        if replier:
-            reply = await replier(
-                bot=self,
-                **{
-                    name: argument
-                    for name, argument in locals().items()
-                    if name in inspect.signature(
-                        replier
-                    ).parameters
-                }
-            )
-        if reply:
-            if type(reply) is str:
-                reply = dict(text=reply)
-            try:
-                return await self.reply(update=update, **reply)
-            except Exception as e:
-                logging.error(
-                    f"Failed to handle voice message:\n{e}",
-                    exc_info=True
-                )
-        return
+        logging.info(
+            "A voice message update was received, "
+            "but this handler does nothing yet."
+        )
 
-    async def video_note_message_handler(self, update, user_record, language=None):
+    async def video_note_message_handler(self, update, user_record):
         """Handle `video_note` message update."""
         logging.info(
             "A video_note message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def contact_message_handler(self, update, user_record, language=None):
+    async def contact_message_handler(self, update, user_record):
         """Handle `contact` message update."""
         logging.info(
             "A contact message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def location_message_handler(self, update, user_record, language=None):
+    async def location_message_handler(self, update, user_record):
         """Handle `location` message update."""
-        replier, reply = None, None
-        user_id = update['from']['id'] if 'from' in update else None
-        if user_id in self.individual_location_handlers:
-            replier = self.individual_location_handlers[user_id]
-            del self.individual_location_handlers[user_id]
-        if replier:
-            reply = await replier(
-                bot=self,
-                **{
-                    name: argument
-                    for name, argument in locals().items()
-                    if name in inspect.signature(
-                        replier
-                    ).parameters
-                }
-            )
-        if reply:
-            if type(reply) is str:
-                reply = dict(text=reply)
-            try:
-                return await self.reply(update=update, **reply)
-            except Exception as e:
-                logging.error(
-                    f"Failed to handle location message:\n{e}",
-                    exc_info=True
-                )
-        return
+        logging.info(
+            "A location message update was received, "
+            "but this handler does nothing yet."
+        )
 
-    async def venue_message_handler(self, update, user_record, language=None):
+    async def venue_message_handler(self, update, user_record):
         """Handle `venue` message update."""
         logging.info(
             "A venue message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def poll_message_handler(self, update, user_record, language=None):
+    async def poll_message_handler(self, update, user_record):
         """Handle `poll` message update."""
         logging.info(
             "A poll message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def new_chat_members_message_handler(self, update, user_record, language=None):
+    async def new_chat_members_message_handler(self, update, user_record):
         """Handle `new_chat_members` message update."""
         logging.info(
             "A new_chat_members message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def left_chat_member_message_handler(self, update, user_record, language=None):
+    async def left_chat_member_message_handler(self, update, user_record):
         """Handle `left_chat_member` message update."""
         logging.info(
             "A left_chat_member message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def new_chat_title_message_handler(self, update, user_record, language=None):
+    async def new_chat_title_message_handler(self, update, user_record):
         """Handle `new_chat_title` message update."""
         logging.info(
             "A new_chat_title message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def new_chat_photo_message_handler(self, update, user_record, language=None):
+    async def new_chat_photo_message_handler(self, update, user_record):
         """Handle `new_chat_photo` message update."""
         logging.info(
             "A new_chat_photo message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def delete_chat_photo_message_handler(self, update, user_record, language=None):
+    async def delete_chat_photo_message_handler(self, update, user_record):
         """Handle `delete_chat_photo` message update."""
         logging.info(
             "A delete_chat_photo message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def group_chat_created_message_handler(self, update, user_record, language=None):
+    async def group_chat_created_message_handler(self, update, user_record):
         """Handle `group_chat_created` message update."""
         logging.info(
             "A group_chat_created message update was received, "
@@ -1040,70 +733,62 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             "but this handler does nothing yet."
         )
 
-    async def channel_chat_created_message_handler(self, update, user_record, language=None):
+    async def channel_chat_created_message_handler(self, update, user_record):
         """Handle `channel_chat_created` message update."""
         logging.info(
             "A channel_chat_created message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def migrate_to_chat_id_message_handler(self, update, user_record, language=None):
+    async def migrate_to_chat_id_message_handler(self, update, user_record):
         """Handle `migrate_to_chat_id` message update."""
         logging.info(
             "A migrate_to_chat_id message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def migrate_from_chat_id_message_handler(self, update, user_record, language=None):
+    async def migrate_from_chat_id_message_handler(self, update, user_record):
         """Handle `migrate_from_chat_id` message update."""
         logging.info(
             "A migrate_from_chat_id message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def pinned_message_message_handler(self, update, user_record, language=None):
+    async def pinned_message_message_handler(self, update, user_record):
         """Handle `pinned_message` message update."""
         logging.info(
             "A pinned_message message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def invoice_message_handler(self, update, user_record, language=None):
+    async def invoice_message_handler(self, update, user_record):
         """Handle `invoice` message update."""
         logging.info(
             "A invoice message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def successful_payment_message_handler(self, update, user_record, language=None):
+    async def successful_payment_message_handler(self, update, user_record):
         """Handle `successful_payment` message update."""
         logging.info(
             "A successful_payment message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def connected_website_message_handler(self, update, user_record, language=None):
+    async def connected_website_message_handler(self, update, user_record):
         """Handle `connected_website` message update."""
         logging.info(
             "A connected_website message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def passport_data_message_handler(self, update, user_record, language=None):
+    async def passport_data_message_handler(self, update, user_record):
         """Handle `passport_data` message update."""
         logging.info(
             "A passport_data message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def dice_handler(self, update, user_record, language=None):
-        """Handle `dice` message update."""
-        logging.info(
-            "A dice message update was received, "
-            "but this handler does nothing yet."
-        )
-
-    # noinspection SpellCheckingInspection
     @staticmethod
     def split_message_text(text, limit=None, parse_mode='HTML'):
         r"""Split text if it hits telegram limits for text messages.
@@ -1154,34 +839,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             yield (prefix + text_chunk + suffix), is_last
         return
 
-    async def reply(self, update=None, *args, **kwargs):
-        """Reply to `update` with proper method according to `kwargs`."""
-        method = None
-        if 'text' in kwargs:
-            if 'message_id' in kwargs:
-                method = self.edit_message_text
-            else:
-                method = self.send_message
-        elif 'photo' in kwargs:
-            method = self.send_photo
-        elif 'audio' in kwargs:
-            method = self.send_audio
-        elif 'voice' in kwargs:
-            method = self.send_voice
-        if method is not None:
-            return await method(update=update, *args, **kwargs)
-        raise Exception("Unsupported keyword arguments for `Bot().reply`.")
-
     async def send_message(self, chat_id=None, text=None,
                            parse_mode='HTML',
                            disable_web_page_preview=None,
                            disable_notification=None,
                            reply_to_message_id=None,
                            reply_markup=None,
-                           update=None,
+                           update=dict(),
                            reply_to_update=False,
-                           send_default_keyboard=True,
-                           user_record=None):
+                           send_default_keyboard=True):
         """Send text via message(s).
 
         This method wraps lower-level `TelegramBot.sendMessage` method.
@@ -1191,15 +857,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             as reply_markup (only those messages can be edited, which were
             sent with no reply markup or with an inline keyboard).
         """
-        sent_message_update = None
-        if update is None:
-            update = dict()
         if 'message' in update:
             update = update['message']
         if chat_id is None and 'chat' in update:
             chat_id = self.get_chat_id(update)
-        if user_record is None:
-            user_record = self.db['users'].find_one(telegram_id=chat_id)
         if reply_to_update and 'message_id' in update:
             reply_to_message_id = update['message_id']
         if (
@@ -1209,37 +870,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             and chat_id > 0
             and text != self.authorization_denied_message
         ):
-            reply_markup = self.get_keyboard(
-                update=update,
-                telegram_id=chat_id
-            )
+            reply_markup = self.default_keyboard
         if not text:
             return
         parse_mode = str(parse_mode)
-        if isinstance(text, dict):
-            text = self.get_message(
-                update=update,
-                user_record=user_record,
-                messages=text
-            )
-        if len(text) > self.max_message_length:
-            message_file = io.StringIO(text)
-            message_file.name = self.get_message(
-                'davtelepot', 'long_message', 'file_name',
-                update=update,
-                user_record=user_record,
-            )
-            return await self.send_document(
-                chat_id=chat_id,
-                document=message_file,
-                caption=self.get_message(
-                    'davtelepot', 'long_message', 'caption',
-                    update=update,
-                    user_record=user_record,
-                ),
-                use_stored_file_id=False,
-                parse_mode='HTML'
-            )
         text_chunks = self.split_message_text(
             text=text,
             limit=self.__class__.TELEGRAM_MESSAGES_MAX_LEN - 100,
@@ -1258,18 +892,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
         return sent_message_update
 
-    async def send_disposable_message(self, *args, interval=60, **kwargs):
-        sent_message = await self.reply(*args, **kwargs)
-        if sent_message is None:
-            return
-        task = self.delete_message(update=sent_message)
-        self.final_tasks.append(task)
-        await asyncio.sleep(interval)
-        await task
-        if task in self.final_tasks:
-            self.final_tasks.remove(task)
-        return
-
     async def edit_message_text(self, text,
                                 chat_id=None, message_id=None,
                                 inline_message_id=None,
@@ -1282,8 +904,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         This method wraps lower-level `TelegramBot.editMessageText` method.
         Pass an `update` to extract a message identifier from it.
         """
-        updates = []
-        edited_message = None
         if update is not None:
             message_identifier = self.get_message_identifier(update)
             if 'chat_id' in message_identifier:
@@ -1291,14 +911,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 message_id = message_identifier['message_id']
             if 'inline_message_id' in message_identifier:
                 inline_message_id = message_identifier['inline_message_id']
-        if isinstance(text, dict):
-            user_record = self.db['users'].find_one(telegram_id=chat_id)
-            text = self.get_message(
-                update=update,
-                user_record=user_record,
-                messages=text
-            )
-        for i, (text_chunk, is_last) in enumerate(
+        for i, text_chunk in enumerate(
             self.split_message_text(
                 text=text,
                 limit=self.__class__.TELEGRAM_MESSAGES_MAX_LEN - 200,
@@ -1313,98 +926,25 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                     inline_message_id=inline_message_id,
                     parse_mode=parse_mode,
                     disable_web_page_preview=disable_web_page_preview,
-                    reply_markup=(reply_markup if is_last else None)
+                    reply_markup=reply_markup
                 )
                 if chat_id is None:
                     # Cannot send messages without a chat_id
                     # Inline keyboards attached to inline query results may be
                     # in chats the bot cannot reach.
                     break
-                updates = [update]
             else:
-                updates.append(
-                    await self.send_message(
-                        text=text_chunk,
-                        chat_id=chat_id,
-                        parse_mode=parse_mode,
-                        disable_web_page_preview=disable_web_page_preview,
-                        reply_markup=(reply_markup if is_last else None),
-                        update=updates[-1],
-                        reply_to_update=True,
-                        send_default_keyboard=False
-                    )
+                await self.send_message(
+                    text=text,
+                    chat_id=chat_id,
+                    parse_mode=parse_mode,
+                    disable_web_page_preview=disable_web_page_preview,
+                    reply_markup=reply_markup,
+                    update=update,
+                    reply_to_update=True,
+                    send_default_keyboard=False
                 )
         return edited_message
-
-    async def edit_message_media(self,
-                                 chat_id=None, message_id=None,
-                                 inline_message_id=None,
-                                 media=None,
-                                 reply_markup=None,
-                                 caption=None,
-                                 parse_mode=None,
-                                 photo=None,
-                                 update=None):
-        if update is not None:
-            message_identifier = self.get_message_identifier(update)
-            if 'chat_id' in message_identifier:
-                chat_id = message_identifier['chat_id']
-                message_id = message_identifier['message_id']
-            if 'inline_message_id' in message_identifier:
-                inline_message_id = message_identifier['inline_message_id']
-        if media is None:
-            media = {}
-        if caption is not None:
-            media['caption'] = caption
-        if parse_mode is not None:
-            media['parse_mode'] = parse_mode
-        if photo is not None:
-            media['type'] = 'photo'
-            media['media'] = photo
-        return await self.editMessageMedia(chat_id=chat_id,
-                                           message_id=message_id,
-                                           inline_message_id=inline_message_id,
-                                           media=media,
-                                           reply_markup=reply_markup)
-
-    async def forward_message(self, chat_id, update=None, from_chat_id=None,
-                              message_id=None, disable_notification=False):
-        """Forward message from `from_chat_id` to `chat_id`.
-
-        Set `disable_notification` to True to avoid disturbing recipient.
-        Pass the `update` to be forwarded or its identifier (`from_chat_id` and
-            `message_id`).
-        """
-        if from_chat_id is None or message_id is None:
-            message_identifier = self.get_message_identifier(update)
-            from_chat_id = message_identifier['chat_id']
-            message_id = message_identifier['message_id']
-        return await self.forwardMessage(
-            chat_id=chat_id,
-            from_chat_id=from_chat_id,
-            message_id=message_id,
-            disable_notification=disable_notification,
-        )
-
-    async def delete_message(self, update=None, chat_id=None,
-                             message_id=None):
-        """Delete given update with given *args and **kwargs.
-
-        Please note, that a bot can delete only messages sent by itself
-        or sent in a group which it is administrator of.
-        """
-        if update is None:
-            update = dict()
-        if chat_id is None or message_id is None:
-            message_identifier = self.get_message_identifier(update)
-        else:
-            message_identifier = dict(
-                chat_id=chat_id,
-                message_id=message_id
-            )
-        return await self.deleteMessage(
-            **message_identifier
-        )
 
     async def send_photo(self, chat_id=None, photo=None,
                          caption=None,
@@ -1412,7 +952,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                          disable_notification=None,
                          reply_to_message_id=None,
                          reply_markup=None,
-                         update=None,
+                         update=dict(),
                          reply_to_update=False,
                          send_default_keyboard=True,
                          use_stored_file_id=True):
@@ -1427,10 +967,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         If photo was already sent by this bot and `use_stored_file_id` is set
             to True, use file_id (it is faster and recommended).
         """
-        already_sent = False
-        photo_path = None
-        if update is None:
-            update = dict()
         if 'message' in update:
             update = update['message']
         if chat_id is None and 'chat' in update:
@@ -1444,10 +980,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             and chat_id > 0
             and caption != self.authorization_denied_message
         ):
-            reply_markup = self.get_keyboard(
-                update=update,
-                telegram_id=chat_id
-            )
+            reply_markup = self.default_keyboard
         if type(photo) is str:
             photo_path = photo
             with self.db as db:
@@ -1523,482 +1056,24 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return sent_update
 
-    async def send_audio(self, chat_id=None, audio=None,
-                         caption=None,
-                         duration=None,
-                         performer=None,
-                         title=None,
-                         thumb=None,
-                         parse_mode=None,
-                         disable_notification=None,
-                         reply_to_message_id=None,
-                         reply_markup=None,
-                         update=None,
-                         reply_to_update=False,
-                         send_default_keyboard=True,
-                         use_stored_file_id=True):
-        """Send audio files.
-
-        This method wraps lower-level `TelegramBot.sendAudio` method.
-        Pass an `update` to extract `chat_id` and `message_id` from it.
-        Set `reply_to_update` = True to reply to `update['message_id']`.
-        Set `send_default_keyboard` = False to avoid sending default keyboard
-            as reply_markup (only those messages can be edited, which were
-            sent with no reply markup or with an inline keyboard).
-        If photo was already sent by this bot and `use_stored_file_id` is set
-            to True, use file_id (it is faster and recommended).
-        """
-        already_sent = False
-        audio_path = None
-        if update is None:
-            update = dict()
-        if 'message' in update:
-            update = update['message']
-        if chat_id is None and 'chat' in update:
-            chat_id = self.get_chat_id(update)
-        if reply_to_update and 'message_id' in update:
-            reply_to_message_id = update['message_id']
-        if (
-            send_default_keyboard
-            and reply_markup is None
-            and type(chat_id) is int
-            and chat_id > 0
-            and caption != self.authorization_denied_message
-        ):
-            reply_markup = self.get_keyboard(
-                update=update,
-                telegram_id=chat_id
-            )
-        if type(audio) is str:
-            audio_path = audio
-            with self.db as db:
-                already_sent = db['sent_audio_files'].find_one(
-                    path=audio_path,
-                    errors=False
-                )
-            if already_sent and use_stored_file_id:
-                audio = already_sent['file_id']
-                already_sent = True
-            else:
-                already_sent = False
-                if not any(
-                    [
-                            audio.startswith(url_starter)
-                            for url_starter in ('http', 'www',)
-                        ]
-                ):  # If `audio` is not a url but a local file path
-                    try:
-                        with io.BytesIO() as buffered_picture:
-                            with open(
-                                os.path.join(self.path, audio_path),
-                                'rb'  # Read bytes
-                            ) as audio_file:
-                                buffered_picture.write(audio_file.read())
-                            audio = buffered_picture.getvalue()
-                    except FileNotFoundError:
-                        audio = None
-        else:
-            use_stored_file_id = False
-        if audio is None:
-            logging.error("Audio is None, `send_audio` returning...")
-            return
-        sent_update = None
-        try:
-            sent_update = await self.sendAudio(
-                chat_id=chat_id,
-                audio=audio,
-                caption=caption,
-                duration=duration,
-                performer=performer,
-                title=title,
-                thumb=thumb,
-                parse_mode=parse_mode,
-                disable_notification=disable_notification,
-                reply_to_message_id=reply_to_message_id,
-                reply_markup=reply_markup
-            )
-            if isinstance(sent_update, Exception):
-                raise Exception("sendAudio API call failed!")
-        except Exception as e:
-            logging.error(f"Error sending audio\n{e}")
-            if already_sent:
-                with self.db as db:
-                    db['sent_audio_files'].update(
-                        dict(
-                            path=audio_path,
-                            errors=True
-                        ),
-                        ['path']
-                    )
-        if (
-            type(sent_update) is dict
-            and 'audio' in sent_update
-            and 'file_id' in sent_update['audio']
-            and (not already_sent)
-            and use_stored_file_id
-        ):
-            with self.db as db:
-                db['sent_audio_files'].insert(
-                    dict(
-                        path=audio_path,
-                        file_id=sent_update['audio']['file_id'],
-                        errors=False
-                    )
-                )
-        return sent_update
-
-    async def send_voice(self, chat_id=None, voice=None,
-                         caption=None,
-                         duration=None,
-                         parse_mode=None,
-                         disable_notification=None,
-                         reply_to_message_id=None,
-                         reply_markup=None,
-                         update=None,
-                         reply_to_update=False,
-                         send_default_keyboard=True,
-                         use_stored_file_id=True):
-        """Send voice messages.
-
-        This method wraps lower-level `TelegramBot.sendVoice` method.
-        Pass an `update` to extract `chat_id` and `message_id` from it.
-        Set `reply_to_update` = True to reply to `update['message_id']`.
-        Set `send_default_keyboard` = False to avoid sending default keyboard
-            as reply_markup (only those messages can be edited, which were
-            sent with no reply markup or with an inline keyboard).
-        If photo was already sent by this bot and `use_stored_file_id` is set
-            to True, use file_id (it is faster and recommended).
-        """
-        already_sent = False
-        voice_path = None
-        if update is None:
-            update = dict()
-        if 'message' in update:
-            update = update['message']
-        if chat_id is None and 'chat' in update:
-            chat_id = self.get_chat_id(update)
-        if reply_to_update and 'message_id' in update:
-            reply_to_message_id = update['message_id']
-        if (
-            send_default_keyboard
-            and reply_markup is None
-            and type(chat_id) is int
-            and chat_id > 0
-            and caption != self.authorization_denied_message
-        ):
-            reply_markup = self.get_keyboard(
-                update=update,
-                telegram_id=chat_id
-            )
-        if type(voice) is str:
-            voice_path = voice
-            with self.db as db:
-                already_sent = db['sent_voice_messages'].find_one(
-                    path=voice_path,
-                    errors=False
-                )
-            if already_sent and use_stored_file_id:
-                voice = already_sent['file_id']
-                already_sent = True
-            else:
-                already_sent = False
-                if not any(
-                    [
-                            voice.startswith(url_starter)
-                            for url_starter in ('http', 'www',)
-                        ]
-                ):  # If `voice` is not a url but a local file path
-                    try:
-                        with io.BytesIO() as buffered_picture:
-                            with open(
-                                os.path.join(self.path, voice_path),
-                                'rb'  # Read bytes
-                            ) as voice_file:
-                                buffered_picture.write(voice_file.read())
-                            voice = buffered_picture.getvalue()
-                    except FileNotFoundError:
-                        voice = None
-        else:
-            use_stored_file_id = False
-        if voice is None:
-            logging.error("Voice is None, `send_voice` returning...")
-            return
-        sent_update = None
-        try:
-            sent_update = await self.sendVoice(
-                chat_id=chat_id,
-                voice=voice,
-                caption=caption,
-                duration=duration,
-                parse_mode=parse_mode,
-                disable_notification=disable_notification,
-                reply_to_message_id=reply_to_message_id,
-                reply_markup=reply_markup
-            )
-            if isinstance(sent_update, Exception):
-                raise Exception("sendVoice API call failed!")
-        except Exception as e:
-            logging.error(f"Error sending voice\n{e}")
-            if already_sent:
-                with self.db as db:
-                    db['sent_voice_messages'].update(
-                        dict(
-                            path=voice_path,
-                            errors=True
-                        ),
-                        ['path']
-                    )
-        if (
-            type(sent_update) is dict
-            and 'voice' in sent_update
-            and 'file_id' in sent_update['voice']
-            and (not already_sent)
-            and use_stored_file_id
-        ):
-            with self.db as db:
-                db['sent_voice_messages'].insert(
-                    dict(
-                        path=voice_path,
-                        file_id=sent_update['voice']['file_id'],
-                        errors=False
-                    )
-                )
-        return sent_update
-
-    async def send_document(self, chat_id=None, document=None, thumb=None,
-                            caption=None, parse_mode=None,
-                            disable_notification=None,
-                            reply_to_message_id=None, reply_markup=None,
-                            document_path=None,
-                            document_name=None,
-                            update=None,
-                            reply_to_update=False,
-                            send_default_keyboard=True,
-                            use_stored_file_id=False):
-        """Send a document.
-
-        This method wraps lower-level `TelegramBot.sendDocument` method.
-        Pass an `update` to extract `chat_id` and `message_id` from it.
-        Set `reply_to_update` = True to reply to `update['message_id']`.
-        Set `send_default_keyboard` = False to avoid sending default keyboard
-            as reply_markup (only those messages can be edited, which were
-            sent with no reply markup or with an inline keyboard).
-        If document was already sent by this bot and `use_stored_file_id` is
-            set to True, use file_id (it is faster and recommended).
-        `document_path` may contain `{path}`: it will be replaced by
-            `self.path`.
-        `document_name` displayed to Telegram may differ from actual document
-            name if this parameter is set.
-        """
-        already_sent = False
-        if update is None:
-            update = dict()
-        # This buffered_file trick is necessary for two reasons
-        # 1. File operations must be blocking, but sendDocument is a coroutine
-        # 2. A `with` statement is not possible here
-        # `buffered_file` must be closed at all costs!
-        buffered_file = None
-        if 'message' in update:
-            update = update['message']
-        if chat_id is None and 'chat' in update:
-            chat_id = self.get_chat_id(update)
-        if reply_to_update and 'message_id' in update:
-            reply_to_message_id = update['message_id']
-        if (
-            send_default_keyboard
-            and reply_markup is None
-            and type(chat_id) is int
-            and chat_id > 0
-            and caption != self.authorization_denied_message
-        ):
-            reply_markup = self.get_keyboard(
-                update=update,
-                telegram_id=chat_id,
-            )
-        if document_path is not None:
-            with self.db as db:
-                already_sent = db['sent_documents'].find_one(
-                    path=document_path,
-                    errors=False
-                )
-            if already_sent and use_stored_file_id:
-                document = already_sent['file_id']
-                already_sent = True
-            else:
-                already_sent = False
-                if not any(
-                    [
-                            document_path.startswith(url_starter)
-                            for url_starter in ('http', 'www',)
-                        ]
-                ):  # If `document_path` is not a url but a local file path
-                    try:
-                        with open(
-                            document_path.format(
-                                path=self.path
-                            ),
-                            'rb'  # Read bytes
-                        ) as file_:
-                            buffered_file = io.BytesIO(file_.read())
-                            buffered_file.name = (
-                                document_name
-                                or file_.name
-                                or 'Document'
-                            )
-                            document = buffered_file
-                    except FileNotFoundError as e:
-                        if buffered_file:
-                            buffered_file.close()
-                        return e
-        else:
-            use_stored_file_id = False
-        if document is None:
-            logging.error(
-                "`document` is None, `send_document` returning..."
-            )
-            return Exception("No `document` provided")
-        sent_update = None
-        try:
-            sent_update = await self.sendDocument(
-                chat_id=chat_id,
-                document=document,
-                thumb=thumb,
-                caption=caption,
-                parse_mode=parse_mode,
-                disable_notification=disable_notification,
-                reply_to_message_id=reply_to_message_id,
-                reply_markup=reply_markup
-            )
-            if isinstance(sent_update, Exception):
-                raise Exception("sendDocument API call failed!")
-        except Exception as e:
-            logging.error(f"Error sending document\n{e}")
-            if already_sent:
-                with self.db as db:
-                    db['sent_documents'].update(
-                        dict(
-                            path=document_path,
-                            errors=True
-                        ),
-                        ['path']
-                    )
-        finally:
-            if buffered_file:
-                buffered_file.close()
-        if (
-            type(sent_update) is dict
-            and 'document' in sent_update
-            and 'file_id' in sent_update['document']
-            and (not already_sent)
-            and use_stored_file_id
-        ):
-            with self.db as db:
-                db['sent_documents'].insert(
-                    dict(
-                        path=document_path,
-                        file_id=sent_update['document']['file_id'],
-                        errors=False
-                    )
-                )
-        return sent_update
-
-    async def download_file(self, file_id,
-                            file_name=None, path=None):
-        """Given a telegram `file_id`, download the related file.
-
-        Telegram may not preserve the original file name and MIME type: the
-            file's MIME type and name (if available) should be stored when the
-            File object is received.
-        """
-        file = await self.getFile(file_id=file_id)
-        if file is None or isinstance(file, Exception):
-            logging.error(f"{file}")
-            return
-        file_bytes = await async_get(
-            url=(
-                f"https://api.telegram.org/file/"
-                f"bot{self.token}/"
-                f"{file['file_path']}"
-            ),
-            mode='raw'
-        )
-        path = path or self.path
-        while file_name is None:
-            file_name = get_secure_key(length=10)
-            if os.path.exists(f"{path}/{file_name}"):
-                file_name = None
-        try:
-            with open(f"{path}/{file_name}", 'wb') as local_file:
-                local_file.write(file_bytes)
-        except Exception as e:
-            logging.error(f"File download failed due to {e}")
-        return
-
-    def translate_inline_query_answer_result(self, record,
-                                             update=None, user_record=None):
-        """Translate title and message text fields of inline query result.
-
-        This method does not alter original `record`. This way, default
-        inline query result is kept multilingual although single results
-        sent to users are translated.
-        """
-        result = dict()
-        for key, val in record.items():
-            if key == 'title' and isinstance(record[key], dict):
-                result[key] = self.get_message(
-                    update=update,
-                    user_record=user_record,
-                    messages=record[key]
-                )
-            elif (
-                    key == 'input_message_content'
-                    and isinstance(record[key], dict)
-            ):
-                result[key] = self.translate_inline_query_answer_result(
-                    record[key],
-                    update=update,
-                    user_record=user_record
-                )
-            elif key == 'message_text' and isinstance(record[key], dict):
-                result[key] = self.get_message(
-                    update=update,
-                    user_record=user_record,
-                    messages=record[key]
-                )
-            else:
-                result[key] = val
-        return result
-
     async def answer_inline_query(self,
                                   inline_query_id=None,
-                                  results=None,
+                                  results=[],
                                   cache_time=None,
                                   is_personal=None,
                                   next_offset=None,
                                   switch_pm_text=None,
                                   switch_pm_parameter=None,
-                                  update=None,
-                                  user_record=None):
+                                  update=None):
         """Answer inline queries.
 
         This method wraps lower-level `answerInlineQuery` method.
         If `results` is a string, cast it to proper type (list of dicts having
             certain keys). See utilities.make_inline_query_answer for details.
         """
-        if results is None:
-            results = []
-        if (
-            inline_query_id is None
-            and isinstance(update, dict)
-            and 'id' in update
-        ):
-            inline_query_id = update['id']
-        results = [
-            self.translate_inline_query_answer_result(record=result,
-                                                      update=update,
-                                                      user_record=user_record)
-            for result in make_inline_query_answer(results)
-        ]
+        if inline_query_id is None and isinstance(update, dict):
+            inline_query_id = self.get_message_identifier(update)
+        results = make_inline_query_answer(results)
         return await self.answerInlineQuery(
             inline_query_id=inline_query_id,
             results=results,
@@ -2067,7 +1142,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         self._allowed_during_maintenance.append(criterion)
 
-    async def handle_update_during_maintenance(self, update, user_record=None, language=None):
+    async def handle_update_during_maintenance(self, update):
         """Handle an update while bot is under maintenance.
 
         Handle all types of updates.
@@ -2093,18 +1168,16 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 self.maintenance_message,
                 cache_time=30,
                 is_personal=False,
-                update=update,
-                user_record=user_record
             )
         return
 
     @classmethod
-    def set_class_authorization_denied_message(cls, message):
+    def set_class_authorization_denied_message(csl, message):
         """Set class authorization denied message.
 
         It will be returned if user is unauthorized to make a request.
         """
-        cls._authorization_denied_message = message
+        csl._authorization_denied_message = message
 
     def set_authorization_denied_message(self, message):
         """Set instance authorization denied message.
@@ -2139,160 +1212,75 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         self._unknown_command_message = unknown_command_message
 
-    def add_help_section(self, help_section):
-        """Add `help_section`."""
-        assert (
-            isinstance(help_section, dict)
-            and 'name' in help_section
-            and 'label' in help_section
-            and 'description' in help_section
-        ), "Invalid help section!"
-        if 'authorization_level' not in help_section:
-            help_section['authorization_level'] = 'admin'
-        self.messages['help_sections'][help_section['name']] = help_section
-
-    def command(self,
-                command: Union[str, Dict[str, str]],
-                aliases=None,
-                reply_keyboard_button=None,
-                show_in_keyboard=False, description="",
-                help_section=None,
-                authorization_level='admin',
-                language_labelled_commands: Dict[str, str] = None):
+    def command(self, command, aliases=None, show_in_keyboard=False,
+                description="", authorization_level='admin'):
         """Associate a bot command with a custom handler function.
 
         Decorate command handlers like this:
             ```
-            @bot.command('/my_command', ['Button'], True, "My command", 'user')
-            async def command_handler(bot, update, user_record, language):
+            @bot.command('/mycommand', ['Button'], True, "My command", 'user')
+            async def command_handler(bot, update, user_record):
                 return "Result"
             ```
         When a message text starts with `/command[@bot_name]`, or with an
             alias, it gets passed to the decorated function.
-        `command` is the command name (with or without /). Language-labeled
-            commands are supported in the form of {'en': 'command', ...}
+        `command` is the command name (with or without /).
         `aliases` is a list of aliases; each will call the command handler
             function; the first alias will appear as button in
-            reply keyboard if `reply_keyboard_button` is not set.
-        `reply_keyboard_button` is a str or better dict of language-specific
-            strings to be shown in default keyboard.
-        `show_in_keyboard`, if True, makes a button for this command appear in
-            default keyboard.
+            default_keyboard.
+        `show_in_keyboard`, if True, makes first alias appear in
+            default_keyboard.
         `description` can be used to help users understand what `/command`
             does.
-        `help_section` is a dict on which the corresponding help section is
-            built. It may provide multilanguage support and should be
-            structured as follows:
-            {
-              "label": {  # It will be displayed as button label
-                'en': "Label",
-                ...
-              },
-              "name": "section_name",
-              # If missing, `authorization_level` is used
-              "authorization_level": "everybody",
-              "description": {
-                'en': "Description in English",
-                ...
-              },
-          }
         `authorization_level` is the lowest authorization level needed to run
             the command.
-
-        For advanced examples see `davtelepot.helper` or other modules
-            (suggestions, administration_tools, ...).
         """
-        if language_labelled_commands is None:
-            language_labelled_commands = dict()
-        language_labelled_commands = {
-            key: val.strip('/').lower()
-            for key, val in language_labelled_commands.items()
-        }
-        # Handle language-labelled commands:
-        #   choose one main command and add others to `aliases`
-        if isinstance(command, dict) and len(command) > 0:
-            language_labelled_commands = command.copy()
-            if 'main' in language_labelled_commands:
-                command = language_labelled_commands['main']
-            elif self.default_language in language_labelled_commands:
-                command = language_labelled_commands[self.default_language]
-            else:
-                for command in language_labelled_commands.values():
-                    break
-        if aliases is None:
-            aliases = []
         if not isinstance(command, str):
             raise TypeError(f'Command `{command}` is not a string')
-        if isinstance(reply_keyboard_button, dict):
-            for button in reply_keyboard_button.values():
-                if button not in aliases:
-                    aliases.append(button)
-        if not isinstance(aliases, list):
-            raise TypeError(f'Aliases is not a list: `{aliases}`')
-        if not all(
-            [
-                isinstance(alias, str)
-                for alias in aliases
-            ]
-        ):
-            raise TypeError(
-                f'Aliases {aliases} is not a list of strings'
-            )
-        if isinstance(help_section, dict):
-            if 'authorization_level' not in help_section:
-                help_section['authorization_level'] = authorization_level
-            self.add_help_section(help_section)
+        if aliases:
+            if not isinstance(aliases, list):
+                raise TypeError(f'Aliases is not a list: `{aliases}`')
+            if not all(
+                [
+                    isinstance(alias, str)
+                    for alias in aliases
+                ]
+            ):
+                raise TypeError(
+                    f'Aliases {aliases} is not a list of strings string'
+                )
         command = command.strip('/ ').lower()
 
         def command_decorator(command_handler):
-            async def decorated_command_handler(bot, update, user_record, language=None):
+            async def decorated_command_handler(bot, update, user_record):
                 logging.info(
                     f"Command `{command}@{bot.name}` called by "
-                    f"`{update['from'] if 'from' in update else update['chat']}`"
+                    "`{from_}`".format(
+                        from_=(
+                            update['from']
+                            if 'from' in update
+                            else update['chat']
+                        )
+                    )
                 )
                 if bot.authorization_function(
                     update=update,
                     user_record=user_record,
                     authorization_level=authorization_level
                 ):
-                    # Pass supported arguments from locals() to command_handler
-                    return await command_handler(
-                        **{
-                            name: argument
-                            for name, argument in locals().items()
-                            if name in inspect.signature(
-                                command_handler
-                            ).parameters
-                        }
-                    )
-                return dict(text=self.authorization_denied_message)
+                    return await command_handler(bot=bot, update=update,
+                                                 user_record=user_record)
+                return self.unauthorized_message
             self.commands[command] = dict(
                 handler=decorated_command_handler,
                 description=description,
-                authorization_level=authorization_level,
-                language_labelled_commands=language_labelled_commands,
-                aliases=aliases
+                authorization_level=authorization_level
             )
-            if type(description) is dict:
-                self.messages['commands'][command] = dict(
-                    description=description
-                )
             if aliases:
                 for alias in aliases:
-                    if alias.startswith('/'):
-                        self.commands[alias.strip('/ ').lower()] = dict(
-                            handler=decorated_command_handler,
-                            authorization_level=authorization_level
-                        )
-                    else:
-                        self.command_aliases[alias] = decorated_command_handler
-            if show_in_keyboard and (aliases or reply_keyboard_button):
-                _reply_keyboard_button = reply_keyboard_button or aliases[0]
-                self.messages[
-                    'reply_keyboard_buttons'][
-                    command] = _reply_keyboard_button
-                self.commands[command][
-                    'reply_keyboard_button'] = _reply_keyboard_button
+                    self.command_aliases[alias] = decorated_command_handler
+                if show_in_keyboard:
+                    self.default_reply_keyboard_elements.append(aliases[0])
         return command_decorator
 
     def parser(self, condition, description='', authorization_level='admin',
@@ -2305,7 +1293,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 return 'from' in update
 
             @bot.parser(custom_criteria, authorization_level='user')
-            async def text_parser(bot, update, user_record, language):
+            async def text_parser(bot, update, user_record):
                 return "Result"
             ```
         If condition evaluates True when run on a message text
@@ -2323,26 +1311,25 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
 
         def parser_decorator(parser):
-            async def decorated_parser(bot, update, user_record, language=None):
+            async def decorated_parser(bot, message, user_record):
                 logging.info(
                     f"Text message update matching condition "
                     f"`{condition.__name__}@{bot.name}` from "
-                    f"`{update['from'] if 'from' in update else update['chat']}`"
+                    "`{user}`".format(
+                        user=(
+                            message['from']
+                            if 'from' in message
+                            else message['chat']
+                        )
+                    )
                 )
                 if bot.authorization_function(
-                    update=update,
+                    update=message,
                     user_record=user_record,
                     authorization_level=authorization_level
                 ):
-                    # Pass supported arguments from locals() to parser
-                    return await parser(
-                        **{
-                            name: arg
-                            for name, arg in locals().items()
-                            if name in inspect.signature(parser).parameters
-                        }
-                    )
-                return dict(text=bot.authorization_denied_message)
+                    return await parser(bot, message, user_record)
+                return bot.unauthorized_message
             self.text_message_parsers[condition] = dict(
                 handler=decorated_parser,
                 description=description,
@@ -2352,8 +1339,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         return parser_decorator
 
     def set_command(self, command, handler, aliases=None,
-                    reply_keyboard_button=None, show_in_keyboard=False,
-                    description="",
+                    show_in_keyboard=False, description="",
                     authorization_level='admin'):
         """Associate a `command` with a `handler`.
 
@@ -2363,11 +1349,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         `handler` is the function to be called on update objects.
         `aliases` is a list of aliases; each will call the command handler
             function; the first alias will appear as button in
-            reply keyboard if `reply_keyboard_button` is not set.
-        `reply_keyboard_button` is a str or better dict of language-specific
-            strings to be shown in default keyboard.
-        `show_in_keyboard`, if True, makes a button for this command appear in
-            default keyboard.
+            default_keyboard.
+        `show_in_keyboard`, if True, makes first alias appear in
+            default_keyboard.
         `description` is a description and can be used to help users understand
             what `/command` does.
         `authorization_level` is the lowest authorization level needed to run
@@ -2377,37 +1361,32 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             raise TypeError(f'Handler `{handler}` is not callable.')
         return self.command(
             command=command, aliases=aliases,
-            reply_keyboard_button=reply_keyboard_button,
             show_in_keyboard=show_in_keyboard, description=description,
             authorization_level=authorization_level
         )(handler)
 
-    def button(self, prefix, separator=None, description='',
-               authorization_level='admin'):
-        """Associate a bot button `prefix` with a handler.
+    def button(self, data, description='', authorization_level='admin'):
+        """Associate a bot button prefix (`data`) with a handler.
 
-        When a callback data text starts with `prefix`, the associated handler
-            is called upon the update.
+        When a callback data text starts with <data>, the associated handler is
+            called upon the update.
         Decorate button handlers like this:
             ```
-            @bot.button('a_prefix:///', description="A button",
-                        authorization_level='user')
-            async def button_handler(bot, update, user_record, language, data):
+            @bot.button('a_prefix:///', "A button", 'user')
+            async def button_handler(bot, update, user_record):
                 return "Result"
             ```
-        `separator` will be used to parse callback data received when a button
-            starting with `prefix` will be pressed.
         `description` contains information about the button.
         `authorization_level` is the lowest authorization level needed to
             be allowed to push the button.
         """
-        if not isinstance(prefix, str):
+        if not isinstance(data, str):
             raise TypeError(
-                f'Inline button callback_data {prefix} is not a string'
+                f'Inline button callback_data {data} is not a string'
             )
 
         def button_decorator(handler):
-            async def decorated_button_handler(bot, update, user_record, language=None):
+            async def decorated_button_handler(bot, update, user_record):
                 logging.info(
                     f"Button `{update['data']}`@{bot.name} pressed by "
                     f"`{update['from']}`"
@@ -2417,28 +1396,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                     user_record=user_record,
                     authorization_level=authorization_level
                 ):
-                    # Remove `prefix` from `data`
-                    data = extract(update['data'], prefix)
-                    # If a specific separator or default separator is set,
-                    #   use it to split `data` string in a list.
-                    #   Cast numeric `data` elements to `int`.
-                    _separator = separator or self.callback_data_separator
-                    if _separator:
-                        data = [
-                            int(element) if element.isnumeric()
-                            else element
-                            for element in data.split(_separator)
-                        ]
-                    # Pass supported arguments from locals() to handler
-                    return await handler(
-                        **{
-                            name: argument
-                            for name, argument in locals().items()
-                            if name in inspect.signature(handler).parameters
-                        }
-                    )
-                return bot.authorization_denied_message
-            self.callback_handlers[prefix] = dict(
+                    return await handler(bot, update, user_record)
+                return bot.unauthorized_message
+            self.callback_handlers[data] = dict(
                 handler=decorated_button_handler,
                 description=description,
                 authorization_level=authorization_level
@@ -2520,18 +1480,16 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         if isinstance(identifier, dict) and 'from' in identifier:
             identifier = identifier['from']['id']
         assert type(identifier) is int, (
-            f"Unable to find a user identifier. Got `{identifier}`"
+            "Unable to find a user identifier."
         )
         return identifier
 
     @staticmethod
-    def get_message_identifier(update=None):
+    def get_message_identifier(update=dict()):
         """Get a message identifier dictionary to edit `update`.
 
         Pass the result as keyword arguments to `edit...` API methods.
         """
-        if update is None:
-            update = dict()
         if 'message' in update:
             update = update['message']
         if 'chat' in update and 'message_id' in update:
@@ -2578,123 +1536,31 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             del self.individual_text_message_handlers[identifier]
         return
 
-    def set_individual_location_handler(self, handler,
-                                        update=None, user_id=None):
-        """Set a custom location handler for the user.
+    def set_default_keyboard(self, keyboard='set_default'):
+        """Set a default keyboard for the bot.
 
-        Any location update from the user will be handled by this custom
-            handler instead of default handlers for locations.
-        Custom handlers last one single use, but they can call this method and
-            set themselves as next custom handler.
+        If a keyboard is not passed as argument, a default one is generated,
+            based on aliases of commands.
         """
-        identifier = self.get_user_identifier(
-            user_id=user_id,
-            update=update
-        )
-        assert callable(handler), (f"Handler `{handler.name}` is not "
-                                   "callable. Custom location handler "
-                                   "could not be set.")
-        self.individual_location_handlers[identifier] = handler
-        return
-
-    def remove_individual_location_handler(self,
-                                           update=None, user_id=None):
-        """Remove a custom location handler for the user.
-
-        Any location message update from the user will be handled by default
-            handlers for locations.
-        """
-        identifier = self.get_user_identifier(
-            user_id=user_id,
-            update=update
-        )
-        if identifier in self.individual_location_handlers:
-            del self.individual_location_handlers[identifier]
-        return
-
-    def set_individual_voice_handler(self, handler,
-                                     update=None, user_id=None):
-        """Set a custom voice message handler for the user.
-
-        Any voice message update from the user will be handled by this custom
-            handler instead of default handlers for voice messages.
-        Custom handlers last one single use, but they can call this method and
-            set themselves as next custom handler.
-        """
-        identifier = self.get_user_identifier(
-            user_id=user_id,
-            update=update
-        )
-        assert callable(handler), (f"Handler `{handler.name}` is not "
-                                   "callable. Custom voice handler "
-                                   "could not be set.")
-        self.individual_voice_handlers[identifier] = handler
-        return
-
-    def remove_individual_voice_handler(self,
-                                        update=None, user_id=None):
-        """Remove a custom voice handler for the user.
-
-        Any voice message update from the user will be handled by default
-            handlers for voice messages.
-        """
-        identifier = self.get_user_identifier(
-            user_id=user_id,
-            update=update
-        )
-        if identifier in self.individual_voice_handlers:
-            del self.individual_voice_handlers[identifier]
-        return
-
-    def set_placeholder(self, chat_id,
-                        text=None, sent_message=None, timeout=1):
-        """Set a placeholder chat action or text message.
-
-        If it takes the bot more than `timeout` to answer, send a placeholder
-            message or a `is typing` chat action.
-        `timeout` may be expressed in seconds (int) or datetime.timedelta
-
-        This method returns a `request_id`. When the calling function has
-            performed its task, it must set to 1 the value of
-            `self.placeholder_requests[request_id]`.
-        If this value is still 0 at `timeout`, the placeholder is sent.
-        Otherwise, no action is performed.
-        """
-        request_id = len(self.placeholder_requests)
-        self.placeholder_requests[request_id] = 0
-        asyncio.ensure_future(
-            self.placeholder_effector(
-                request_id=request_id,
-                timeout=timeout,
-                chat_id=chat_id,
-                sent_message=sent_message,
-                text=text
-            )
-        )
-        return request_id
-
-    async def placeholder_effector(self, request_id, timeout, chat_id,
-                                   sent_message=None, text=None):
-        """Send a placeholder chat action or text message if needed.
-
-        If it takes the bot more than `timeout` to answer, send a placeholder
-            message or a `is typing` chat action.
-        `timeout` may be expressed in seconds (int) or datetime.timedelta
-        """
-        if type(timeout) is datetime.timedelta:
-            timeout = timeout.total_seconds()
-        await asyncio.sleep(timeout)
-        if not self.placeholder_requests[request_id]:
-            if sent_message and text:
-                await self.edit_message_text(
-                    update=sent_message,
-                    text=text,
+        if keyboard == 'set_default':
+            buttons = [
+                dict(
+                    text=x
                 )
+                for x in self.default_reply_keyboard_elements
+            ]
+            if len(buttons) == 0:
+                self._default_keyboard = None
             else:
-                await self.sendChatAction(
-                    chat_id=chat_id,
-                    action='typing'
+                self._default_keyboard = dict(
+                    keyboard=make_lines_of_buttons(
+                        buttons,
+                        (2 if len(buttons) < 4 else 3)  # Row length
+                    ),
+                    resize_keyboard=True
                 )
+        else:
+            self._default_keyboard = keyboard
         return
 
     async def webhook_feeder(self, request):
@@ -2731,13 +1597,14 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
             await asyncio.sleep(5*60)
             self.__class__.stop(
-                message="Information about this bot could not be retrieved.\n"
-                        "Restarting...",
-                final_state=65
+                65,
+                f"Information aformation about this bot could "
+                f"not be retrieved. Restarting..."
             )
 
     def setup(self):
         """Make bot ask for updates and handle responses."""
+        self.set_default_keyboard()
         if not self.webhook_url:
             asyncio.ensure_future(self.get_updates())
         else:
@@ -2745,7 +1612,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             self.__class__.app.router.add_route(
                 'POST', self.webhook_local_address, self.webhook_feeder
             )
-        asyncio.ensure_future(self.update_users())
 
     async def close_sessions(self):
         """Close open sessions."""
@@ -2760,14 +1626,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         await self.get_me()
         if self.name is None:
             return
-        if allowed_updates is None:
-            allowed_updates = []
-        if certificate is None:
-            certificate = self.certificate
-        if max_connections is None:
-            max_connections = self.max_connections
-        if url is None:
-            url = self.webhook_url
         webhook_was_set = await self.setWebhook(
             url=url, certificate=certificate, max_connections=max_connections,
             allowed_updates=allowed_updates
@@ -2827,122 +1685,12 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
                 await asyncio.sleep(error_cooldown)
                 continue
-            elif isinstance(updates, Exception):
-                logging.error(
-                    "Unexpected exception. "
-                    f"Waiting {error_cooldown} seconds before trying again..."
-                )
-                await asyncio.sleep(error_cooldown)
-                continue
             for update in updates:
                 asyncio.ensure_future(self.route_update(update))
             if update is not None:
                 self._offset = update['update_id'] + 1
 
-    async def update_users(self, interval=60):
-        """Every `interval` seconds, store news about bot users.
-
-        Compare `update['from']` data with records in `users` table and keep
-            track of differences in `users_history` table.
-        """
-        while 1:
-            await asyncio.sleep(interval)
-            # Iterate through a copy since asyncio.sleep(0) is awaited at each
-            # cycle iteration.
-            for telegram_id, user in self.recent_users.copy().items():
-                new_record = dict()
-                with self.db as db:
-                    user_record = db['users'].find_one(telegram_id=telegram_id)
-                    for key in [
-                        'first_name',
-                        'last_name',
-                        'username',
-                        'language_code'
-                    ]:
-                        new_record[key] = (user[key] if key in user else None)
-                        if (
-                            (
-                                key not in user_record
-                                or new_record[key] != user_record[key]
-                            )
-                            # Exclude fake updates
-                            and 'notes' not in user
-                        ):
-                            db['users_history'].insert(
-                                dict(
-                                    until=datetime.datetime.now(),
-                                    user_id=user_record['id'],
-                                    field=key,
-                                    value=(
-                                        user_record[key]
-                                        if key in user_record
-                                        else None
-                                    )
-                                )
-                            )
-                            db['users'].update(
-                                {
-                                    'id': user_record['id'],
-                                    key: new_record[key]
-                                },
-                                ['id'],
-                                ensure=True
-                            )
-                if telegram_id in self.recent_users:
-                    del self.recent_users[telegram_id]
-                await asyncio.sleep(0)
-
-    def get_user_record(self, update):
-        """Get user_record of update sender.
-
-        If user is unknown add them.
-        If update has no `from` field, return None.
-        If user data changed, ensure that this event gets stored.
-        """
-        if 'from' not in update or 'id' not in update['from']:
-            return
-        telegram_id = update['from']['id']
-        with self.db as db:
-            user_record = db['users'].find_one(
-                telegram_id=telegram_id
-            )
-            if user_record is None:
-                new_user = dict(
-                    telegram_id=telegram_id,
-                    privileges=100,
-                    selected_language_code=None
-                )
-                for key in [
-                    'first_name',
-                    'last_name',
-                    'username',
-                    'language_code'
-                ]:
-                    new_user[key] = (
-                        update['from'][key]
-                        if key in update['from']
-                        else None
-                    )
-                db['users'].insert(new_user)
-                user_record = db['users'].find_one(
-                    telegram_id=telegram_id
-                )
-            elif (
-                telegram_id not in self.recent_users
-                and 'notes' not in update['from']  # Exclude fake updates
-            ):
-                self.recent_users[telegram_id] = update['from']
-        return user_record
-
-    def set_router(self, event, handler):
-        """Set `handler` as router for `event`."""
-        self.routing_table[event] = handler
-
-    def set_message_handler(self, message_type: str, handler: Callable):
-        """Set `handler` for `message_type`."""
-        self.message_handlers[message_type] = handler
-
-    async def route_update(self, raw_update):
+    async def route_update(self, update):
         """Pass `update` to proper method.
 
         Update objects have two keys:
@@ -2961,25 +1709,19 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         if (
             self.under_maintenance
-            and not self.is_allowed_during_maintenance(raw_update)
+            and not self.is_allowed_during_maintenance(update)
         ):
-            return await self.handle_update_during_maintenance(raw_update)
-        for key in self.routing_table:
-            if key in raw_update:
-                update = raw_update[key]
-                update['update_id'] = raw_update['update_id']
-                user_record = self.get_user_record(update=update)
-                language = self.get_language(update=update,
-                                             user_record=user_record)
-                bot = self
-                return await self.routing_table[key](**{
-                    name: argument
-                    for name, argument in locals().items()
-                    if name in inspect.signature(
-                        self.routing_table[key]
-                    ).parameters
-                })
-        logging.error(f"Unknown type of update.\n{raw_update}")
+            return await self.handle_update_during_maintenance(update)
+        for key, value in update.items():
+            if key in self.routing_table:
+                with self.db as db:
+                    user_record = db['users'].find_one(
+                        telegram_id=self.get_user_identifier(
+                            update=value
+                        )
+                    )
+                return await self.routing_table[key](value, user_record)
+        logging.error(f"Unknown type of update.\n{update}")
 
     def additional_task(self, when='BEFORE', *args, **kwargs):
         """Add a task before at app start or cleanup.
@@ -3007,11 +1749,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         cls.runner = web.AppRunner(cls.app)
         await cls.runner.setup()
         cls.server = web.TCPSite(cls.runner, cls.local_host, cls.port)
-        try:
-            await cls.server.start()
-        except OSError as e:
-            logging.error(e)
-            raise KeyboardInterrupt("Unable to start web app.")
+        await cls.server.start()
         logging.info(f"App running at http://{cls.local_host}:{cls.port}")
 
     @classmethod
@@ -3074,10 +1812,3 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         finally:
             cls.loop.run_until_complete(cls.stop_app())
         return cls.final_state
-
-    def set_role_class(self, role):
-        """Set a Role class for bot.
-
-        `role` must be an instance of `authorization.Role`.
-        """
-        self.Role = role
