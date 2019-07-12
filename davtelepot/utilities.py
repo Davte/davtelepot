@@ -432,11 +432,32 @@ def wrapper(func, *args, **kwargs):
     return wrapped
 
 
-async def async_wrapper(func, *args, **kwargs):
-    """Wrap a coroutine so that it can be later awaited with one argument."""
-    async def wrapped(update):
-        return await func(update, *args, **kwargs)
-    return wrapped
+async def async_wrapper(coroutine, *args1, **kwargs1):
+    """Wrap a `coroutine` so that it can be later awaited with more arguments.
+
+    Set some of the arguments, let the coroutine be awaited with the rest of
+        them later.
+    Example:
+    ```
+        import asyncio
+        from davtelepot.utilities import async_wrapper
+        async def printer(a, b, c, d):
+            print(a, a+b, b+c, c+d)
+            return
+
+        async def main():
+            my_coroutine = await async_wrapper(
+                printer,
+                c=3, d=2
+            )
+            await my_coroutine(a=1, b=5)
+
+        asyncio.get_event_loop().run_until_complete(main())
+    ```
+    """
+    async def wrapped_coroutine(*args2, **kwargs2):
+        return await coroutine(*args1, *args2, **kwargs1, **kwargs2)
+    return wrapped_coroutine
 
 
 def forwarded(by=None):
