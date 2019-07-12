@@ -195,7 +195,7 @@ async def async_request(url, type='get', mode='json', encoding='utf-8',
             result = json.loads(
                 result
             )
-        except Exception as e:
+        except json.decoder.JSONDecodeError:
             result = {}
     elif mode == 'html':
         result = BeautifulSoup(result, "html.parser")
