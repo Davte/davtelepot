@@ -1201,6 +1201,257 @@ class Bot(TelegramBot, ObjectWithDatabase):
         """
         self._unknown_command_message = unknown_command_message
 
+    def command(self, command, aliases=None, show_in_keyboard=False,
+                description="", authorization_level='admin'):
+        """Associate a bot command with a custom handler function.
+
+        Decorate command handlers like this:
+            ```
+            @bot.command('/mycommand', ['Button'], True, "My command", 'user')
+            async def command_handler(bot, update, user_record):
+                return "Result"
+            ```
+        When a message text starts with `/command[@bot_name]`, or with an
+            alias, it gets passed to the decorated function.
+        `command` is the command name (with or without /).
+        `aliases` is a list of aliases; each will call the command handler
+            function; the first alias will appear as button in
+            default_keyboard.
+        `show_in_keyboard`, if True, makes first alias appear in
+            default_keyboard.
+        `description` can be used to help users understand what `/command`
+            does.
+        `authorization_level` is the lowest authorization level needed to run
+            the command.
+        """
+        if not isinstance(command, str):
+            raise TypeError(f'Command `{command}` is not a string')
+        if aliases:
+            if not isinstance(aliases, list):
+                raise TypeError(f'Aliases is not a list: `{aliases}`')
+            if not all(
+                [
+                    isinstance(alias, str)
+                    for alias in aliases
+                ]
+            ):
+                raise TypeError(
+                    f'Aliases {aliases} is not a list of strings string'
+                )
+        command = command.strip('/ ').lower()
+
+        def command_decorator(command_handler):
+            async def decorated_command_handler(bot, update, user_record):
+                logging.info(
+                    f"Command `{command}@{bot.name}` called by "
+                    "`{from_}`".format(
+                        from_=(
+                            update['from']
+                            if 'from' in update
+                            else update['chat']
+                        )
+                    )
+                )
+                if bot.authorization_function(
+                    update=update,
+                    user_record=user_record,
+                    authorization_level=authorization_level
+                ):
+                    return await command_handler(bot=bot, update=update,
+                                                 user_record=user_record)
+                return self.unauthorized_message
+            self.commands[command] = dict(
+                handler=decorated_command_handler,
+                description=description,
+                authorization_level=authorization_level
+            )
+            if aliases:
+                for alias in aliases:
+                    self.command_aliases[alias] = decorated_command_handler
+                if show_in_keyboard:
+                    self.default_reply_keyboard_elements.append(aliases[0])
+        return command_decorator
+
+    def parser(self, condition, description='', authorization_level='admin',
+               argument='text'):
+        """Define a text message parser.
+
+        Decorate command handlers like this:
+            ```
+            def custom_criteria(update):
+                return 'from' in update
+
+            @bot.parser(custom_criteria, authorization_level='user')
+            async def text_parser(bot, update, user_record):
+                return "Result"
+            ```
+        If condition evaluates True when run on a message text
+            (not starting with '/'), such decorated function gets
+            called on update.
+        Conditions of parsers are evaluated in order; when one is True,
+            others will be skipped.
+        `description` provides information about the parser.
+        `authorization_level` is the lowest authorization level needed to call
+            the parser.
+        """
+        if not callable(condition):
+            raise TypeError(
+                f'Condition {condition.__name__} is not a callable'
+            )
+
+        def parser_decorator(parser):
+            async def decorated_parser(bot, message, user_record):
+                logging.info(
+                    f"Text message update matching condition "
+                    f"`{condition.__name__}@{bot.name}` from "
+                    "`{user}`".format(
+                        user=(
+                            message['from']
+                            if 'from' in message
+                            else message['chat']
+                        )
+                    )
+                )
+                if bot.authorization_function(
+                    update=message,
+                    user_record=user_record,
+                    authorization_level=authorization_level
+                ):
+                    return await parser(bot, message, user_record)
+                return bot.unauthorized_message
+            self.text_message_parsers[condition] = dict(
+                handler=decorated_parser,
+                description=description,
+                authorization_level=authorization_level,
+                argument=argument
+            )
+        return parser_decorator
+
+    def set_command(self, command, handler, aliases=None,
+                    show_in_keyboard=False, description="",
+                    authorization_level='admin'):
+        """Associate a `command` with a `handler`.
+
+        When a message text starts with `/command[@bot_name]`, or with an
+            alias, it gets passed to the decorated function.
+        `command` is the command name (with or without /)
+        `handler` is the function to be called on update objects.
+        `aliases` is a list of aliases; each will call the command handler
+            function; the first alias will appear as button in
+            default_keyboard.
+        `show_in_keyboard`, if True, makes first alias appear in
+            default_keyboard.
+        `description` is a description and can be used to help users understand
+            what `/command` does.
+        `authorization_level` is the lowest authorization level needed to run
+            the command.
+        """
+        if not callable(handler):
+            raise TypeError(f'Handler `{handler}` is not callable.')
+        return self.command(
+            command=command, aliases=aliases,
+            show_in_keyboard=show_in_keyboard, description=description,
+            authorization_level=authorization_level
+        )(handler)
+
+    def button(self, data, description='', authorization_level='admin'):
+        """Associate a bot button prefix (`data`) with a handler.
+
+        When a callback data text starts with <data>, the associated handler is
+            called upon the update.
+        Decorate button handlers like this:
+            ```
+            @bot.button('a_prefix:///', "A button", 'user')
+            async def button_handler(bot, update, user_record):
+                return "Result"
+            ```
+        `description` contains information about the button.
+        `authorization_level` is the lowest authorization level needed to
+            be allowed to push the button.
+        """
+        if not isinstance(data, str):
+            raise TypeError(
+                f'Inline button callback_data {data} is not a string'
+            )
+
+        def button_decorator(handler):
+            async def decorated_button_handler(bot, update, user_record):
+                logging.info(
+                    f"Button `{update['data']}`@{bot.name} pressed by "
+                    f"`{update['from']}`"
+                )
+                if bot.authorization_function(
+                    update=update,
+                    user_record=user_record,
+                    authorization_level=authorization_level
+                ):
+                    return await handler(bot, update, user_record)
+                return bot.unauthorized_message
+            self.callback_handlers[data] = dict(
+                handler=decorated_button_handler,
+                description=description,
+                authorization_level=authorization_level
+            )
+        return button_decorator
+
+    def query(self, condition, description='', authorization_level='admin'):
+        """Define an inline query.
+
+        Decorator: `@bot.query(example)`
+        When an inline query matches the `condition` function,
+            decorated function is called and passed the query update object
+            as argument.
+        `description` is a description
+        `authorization_level` is the lowest authorization level needed to run
+            the command
+        """
+        if not callable(condition):
+            raise TypeError(
+                'Condition {c} is not a callable'.format(
+                    c=condition.__name__
+                )
+            )
+
+        def decorator(func):
+            if asyncio.iscoroutinefunction(func):
+                async def decorated(message, user_record, bot):
+                    logging.info(
+                        "QUERY MATCHING CONDITION({c}) @{n} FROM({f})".format(
+                            c=condition.__name__,
+                            n=self.name,
+                            f=message['from']
+                        )
+                    )
+                    if self.authorization_function(
+                        update=message,
+                        user_record=user_record,
+                        authorization_level=authorization_level
+                    ):
+                        return await func(message)
+                    return self.unauthorized_message
+            else:
+                def decorated(message, user_record, bot):
+                    logging.info(
+                        "QUERY MATCHING CONDITION({c}) @{n} FROM({f})".format(
+                            c=condition.__name__,
+                            n=self.name,
+                            f=message['from']
+                        )
+                    )
+                    if self.authorization_function(
+                        update=message,
+                        user_record=user_record,
+                        authorization_level=authorization_level
+                    ):
+                        return func(message)
+                    return self.unauthorized_message
+            self.inline_query_handlers[condition] = dict(
+                function=decorated,
+                description=description,
+                authorization_level=authorization_level
+            )
+        return decorator
+
     def set_chat_id_getter(self, getter):
         """Set chat_id getter.
 
