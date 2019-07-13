@@ -698,7 +698,7 @@ class Confirmable():
 
 
 class HasBot():
-    """Objects having a telepot.Bot subclass object as `.bot` attribute.
+    """Objects having a Bot subclass object as `.bot` attribute.
 
     HasBot objects have a .bot and .db properties for faster access.
     """

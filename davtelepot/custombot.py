@@ -1,4 +1,12 @@
-"""Subclass of third party telepot.aio.Bot, providing the following features.
+"""WARNING: this is only a legacy module.
+
+For newer versions use `bot.py`.
+This module relies on third party `telepot` library by Nick Lee (@Nickoala).
+The `telepot` repository was archived in may 2019 and will no longer be listed
+    in requirements. For legacy code, install telepot manually.
+    `pip install telepot`
+
+Subclass of third party telepot.aio.Bot, providing the following features.
 
 - It prevents hitting Telegram flood limits by waiting
     between text and photo messages.

@@ -1,7 +1,7 @@
 # davtelepot
-This project conveniently subclasses third party telepot.aio.Bot, providing many interesting features.
+This project conveniently mirrors the Telegram bot API with the class `Bot`.
 
-Please note that you need Python3.5+ to run async code
+Please note that you need Python3.5+ to run async code.
 
 Check requirements.txt for third party dependencies.
 

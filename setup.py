@@ -45,8 +45,8 @@ setuptools.setup(
     author=find_information("author", "davtelepot", "__init__.py"),
     author_email=find_information("email", "davtelepot", "__init__.py"),
     description=(
-        "telepot.aio.Bot convenient subclass, featuring dataset-powered "
-        "SQLite."
+        "Telegram bot API mirroring class, featuring dataset-powered "
+        "SQLite databases."
     ),
     license=find_information("license", "davtelepot", "__init__.py"),
     long_description=long_description,
@@ -58,7 +58,6 @@ setuptools.setup(
         'aiohttp>=3.4.4',
         'bs4>=0.0.1',
         'dataset>=1.1.0',
-        'telepot>=12.7'
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -73,6 +72,6 @@ setuptools.setup(
         "Programming Language :: Python :: 3 :: Only",
         "Topic :: Communications :: Chat",
     ],
-    keywords='telepot telegram bot python wrapper',
+    keywords='telegram bot python asyncio async aiohttp',
     include_package_data=True,
 )
