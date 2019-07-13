@@ -22,20 +22,24 @@ my_other_token = 'token_of_bot2'
 
 ## Usage
 ```
-from davtelepot import Bot
+import sys
+from davtelepot.bot import Bot
 from data.passwords import my_token, my_other_token
 
-my_bot = Bot.get(token=my_token, db_name='my_db')
-my_other_bot = Bot.get(token=my_other_token, db_name='my_other_db')
+long_polling_bot = Bot(token=my_token, database_url='my_db')
+webhook_bot = Bot(token=my_other_token, hostname='example.com',
+                  certificate='path/to/certificate.pem',
+                  database_url='my_other_db')
 
-@my_bot.command('/foo')
-async def foo_command(update):
+@long_polling_bot.command('/foo')
+async def foo_command(bot, update, user_record):
   return "Bar!"
 
-@my_other_bot.command('/bar')
-async def bar_command(update):
+@webhook_bot.command('/bar')
+async def bar_command(bot, update, user_record):
   return "Foo!"
 
-Bot.run()
+exit_state = Bot.run()
+sys.exit(exit_state)
 ```
 Check out `help(Bot)` for detailed information.
