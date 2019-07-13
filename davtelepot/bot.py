@@ -1683,6 +1683,10 @@ class Bot(TelegramBot, ObjectWithDatabase):
             if update is not None:
                 self._offset = update['update_id'] + 1
 
+    def set_router(self, event, handler):
+        """Set `handler` as router for `event`."""
+        self.routing_table[event] = handler
+
     async def route_update(self, update):
         """Pass `update` to proper method.
 
