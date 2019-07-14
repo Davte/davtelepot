@@ -1881,6 +1881,25 @@ class Bot(telepot.aio.Bot, Gettable):
             error=None
         )
 
+    async def get_me(self):
+        """Get bot information.
+
+        Restart bots if bot can't be got.
+        """
+        try:
+            me = await self.getMe()
+            self.bot_name = me["username"]
+            self.telegram_id = me['id']
+        except Exception as e:
+            logging.error(
+                "Could not get bot\n{e}".format(
+                    e=e
+                )
+            )
+            await asyncio.sleep(5*60)
+            self.restart_bots()
+            return
+
     async def continue_running(self):
         """Get updates.
 
