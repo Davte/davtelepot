@@ -42,7 +42,7 @@ from aiohttp import web
 from davtelepot.api import TelegramBot, TelegramError
 from davtelepot.database import ObjectWithDatabase
 from davtelepot.utilities import (
-    escape_html_chars, get_secure_key, make_inline_query_answer,
+    escape_html_chars, extract, get_secure_key, make_inline_query_answer,
     make_lines_of_buttons, remove_html_tags
 )
 
@@ -168,6 +168,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         self.text_message_parsers = OrderedDict()
         # Callback query-related properties
         self.callback_handlers = OrderedDict()
+        self._callback_data_separator = None
         # Inline query-related properties
         self.inline_query_handlers = OrderedDict()
         self._default_inline_query_answer = None
@@ -347,6 +348,25 @@ class Bot(TelegramBot, ObjectWithDatabase):
         if self._unknown_command_message:
             return self._unknown_command_message
         return self.__class__._unknown_command_message
+
+    @property
+    def callback_data_separator(self):
+        """Separator between callback data elements.
+
+        Example of callback_data: 'my_button_prefix:///1|4|test'
+            Prefix: `my_button_prefix:///`
+            Separator: `|` <--- this is returned
+            Data: `['1', '4', 'test']`
+        """
+        return self._callback_data_separator
+
+    def set_callback_data_separator(self, separator):
+        """Set a callback_data separator.
+
+        See property `callback_data_separator` for details.
+        """
+        assert type(separator) is str, "Separator must be a string!"
+        self._callback_data_separator = separator
 
     @property
     def default_inline_query_answer(self):
@@ -1387,24 +1407,28 @@ class Bot(TelegramBot, ObjectWithDatabase):
             authorization_level=authorization_level
         )(handler)
 
-    def button(self, data, description='', authorization_level='admin'):
-        """Associate a bot button prefix (`data`) with a handler.
+    def button(self, prefix, separator=None, description='',
+               authorization_level='admin'):
+        """Associate a bot button `prefix` with a handler.
 
-        When a callback data text starts with <data>, the associated handler is
-            called upon the update.
+        When a callback data text starts with `prefix`, the associated handler
+            is called upon the update.
         Decorate button handlers like this:
             ```
-            @bot.button('a_prefix:///', "A button", 'user')
-            async def button_handler(bot, update, user_record):
+            @bot.button('a_prefix:///', description="A button",
+                        authorization_level='user')
+            async def button_handler(bot, update, user_record, data):
                 return "Result"
             ```
+        `separator` will be used to parse callback data received when a button
+            starting with `prefix` will be pressed.
         `description` contains information about the button.
         `authorization_level` is the lowest authorization level needed to
             be allowed to push the button.
         """
-        if not isinstance(data, str):
+        if not isinstance(prefix, str):
             raise TypeError(
-                f'Inline button callback_data {data} is not a string'
+                f'Inline button callback_data {prefix} is not a string'
             )
 
         def button_decorator(handler):
@@ -1419,8 +1443,20 @@ class Bot(TelegramBot, ObjectWithDatabase):
                     authorization_level=authorization_level
                 ):
                     return await handler(bot, update, user_record)
+                    # Remove `prefix` from `ðata`
+                    data = extract(update['data'], prefix)
+                    # If a specific separator or default separator is set,
+                    #   use it to split `data` string in a list.
+                    #   Cast numeric `data` elements to `int`.
+                    _separator = separator or self.callback_data_separator
+                    if _separator:
+                        data = [
+                            int(element) if element.isnumeric()
+                            else element
+                            for element in data.split(_separator)
+                        ]
                 return bot.unauthorized_message
-            self.callback_handlers[data] = dict(
+            self.callback_handlers[prefix] = dict(
                 handler=decorated_button_handler,
                 description=description,
                 authorization_level=authorization_level
