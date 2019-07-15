@@ -347,8 +347,10 @@ class Bot(TelegramBot, ObjectWithDatabase):
         If instance message is not set, class message is returned.
         """
         if self._unknown_command_message:
-            return self._unknown_command_message
-        return self.__class__._unknown_command_message
+            message = self._unknown_command_message
+        else:
+            message = self.__class__._unknown_command_message
+        return message.format(bot=self)
 
     @property
     def callback_data_separator(self):
