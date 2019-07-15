@@ -538,7 +538,7 @@ def init(bot):
     async def talk_command(update):
         return await _talk_command(update, bot)
 
-    @bot.button(data='talk:///', authorization_level='admin')
+    @bot.button(prefix='talk:///', authorization_level='admin')
     async def talk_button(update):
         return await _talk_button(update, bot)
     return
