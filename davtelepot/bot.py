@@ -31,6 +31,7 @@ Usage
 import asyncio
 from collections import OrderedDict
 import io
+import inspect
 import logging
 import os
 import re
@@ -1310,8 +1311,16 @@ class Bot(TelegramBot, ObjectWithDatabase):
                     user_record=user_record,
                     authorization_level=authorization_level
                 ):
-                    return await command_handler(bot=bot, update=update,
-                                                 user_record=user_record)
+                    # Pass supported arguments from locals() to command_handler
+                    return await command_handler(
+                        **{
+                            name: argument
+                            for name, argument in locals().items()
+                            if name in inspect.signature(
+                                command_handler
+                            ).parameters
+                        }
+                    )
                 return self.unauthorized_message
             self.commands[command] = dict(
                 handler=decorated_command_handler,
@@ -1370,7 +1379,14 @@ class Bot(TelegramBot, ObjectWithDatabase):
                     user_record=user_record,
                     authorization_level=authorization_level
                 ):
-                    return await parser(bot, message, user_record)
+                    # Pass supported arguments from locals() to parser
+                    return await parser(
+                        **{
+                            name: argument
+                            for name, argument in locals().items()
+                            if name in inspect.signature(parser).parameters
+                        }
+                    )
                 return bot.unauthorized_message
             self.text_message_parsers[condition] = dict(
                 handler=decorated_parser,
@@ -1442,8 +1458,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                     user_record=user_record,
                     authorization_level=authorization_level
                 ):
-                    return await handler(bot, update, user_record)
-                    # Remove `prefix` from `ðata`
+                    # Remove `prefix` from `data`
                     data = extract(update['data'], prefix)
                     # If a specific separator or default separator is set,
                     #   use it to split `data` string in a list.
@@ -1455,6 +1470,14 @@ class Bot(TelegramBot, ObjectWithDatabase):
                             else element
                             for element in data.split(_separator)
                         ]
+                    # Pass supported arguments from locals() to handler
+                    return await handler(
+                        **{
+                            name: argument
+                            for name, argument in locals().items()
+                            if name in inspect.signature(handler).parameters
+                        }
+                    )
                 return bot.unauthorized_message
             self.callback_handlers[prefix] = dict(
                 handler=decorated_button_handler,
@@ -1493,8 +1516,14 @@ class Bot(TelegramBot, ObjectWithDatabase):
                     user_record=user_record,
                     authorization_level=authorization_level
                 ):
-                    return await handler(bot=self, update=update,
-                                         user_record=user_record)
+                    # Pass supported arguments from locals() to handler
+                    return await handler(
+                        **{
+                            name: argument
+                            for name, argument in locals().items()
+                            if name in inspect.signature(handler).parameters
+                        }
+                    )
                 return self.unauthorized_message
             self.inline_query_handlers[condition] = dict(
                 handler=decorated_query_handler,
