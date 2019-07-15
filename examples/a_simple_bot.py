@@ -166,9 +166,9 @@ def _main():
         simple_bot_token = input("Enter bot token:\t\t")
         with open(
             f'{path}/secrets.py',
-            'w'
+            'a'  # Append to file, create if it does not exist
         ) as secrets_file:
-            secrets_file.write(f'simple_bot_token = "{simple_bot_token}"')
+            secrets_file.write(f'simple_bot_token = "{simple_bot_token}"\n')
 
     # Set logging preferences
     log_formatter = logging.Formatter(
