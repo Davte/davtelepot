@@ -43,3 +43,37 @@ exit_state = Bot.run()
 sys.exit(exit_state)
 ```
 Check out `help(Bot)` for detailed information.
+
+## Webhook additional information
+To run a bot in webhook modality, you have to provide a `hostname` and `certificate` at bot instantiation and a `local_host` and `port` when calling `Bot.run` method.
+* Telegram will send POST requests at `https://{hostname}/webhook/{tokens}/` using `certificate` for encryption
+* `aiohttp.web.Application` server will listen `http://{local_host}:{port}` for updates
+
+It is therefore required a reverse proxy passing incoming requests to local_host.
+
+**Example of nginx reverse proxy serving this purpose**
+```nginx
+server {
+  listen 8553 ssl;
+  listen [::]:8553 ssl;
+
+  server_name example.com www.example.com;
+
+  location /telegram/ {
+     proxy_pass http://127.0.0.5:8552/;
+  }
+
+  ssl_certificate /path/to/fullchain.pem;
+  ssl_certificate_key /path/to/privkey.pem;
+}
+
+```
+
+**Example of python configuration file in this situation**
+```python
+# File config.py, gitignored and imported in main script
+hostname = "https://www.example.com:8553/telegram"
+certificate = "/path/to/fullchain.pem"
+local_host = "127.0.0.5"
+port = 8552
+```
