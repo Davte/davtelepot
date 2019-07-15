@@ -611,7 +611,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                     parser['argument'] == 'update'
                     and check_function(update)
                 ):
-                    replier = parser['function']
+                    replier = parser['handler']
                     break
         if replier:
             reply = await replier(
@@ -1362,20 +1362,20 @@ class Bot(TelegramBot, ObjectWithDatabase):
             )
 
         def parser_decorator(parser):
-            async def decorated_parser(bot, message, user_record):
+            async def decorated_parser(bot, update, user_record):
                 logging.info(
                     f"Text message update matching condition "
                     f"`{condition.__name__}@{bot.name}` from "
                     "`{user}`".format(
                         user=(
-                            message['from']
-                            if 'from' in message
-                            else message['chat']
+                            update['from']
+                            if 'from' in update
+                            else update['chat']
                         )
                     )
                 )
                 if bot.authorization_function(
-                    update=message,
+                    update=update,
                     user_record=user_record,
                     authorization_level=authorization_level
                 ):
