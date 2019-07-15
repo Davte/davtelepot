@@ -449,15 +449,15 @@ class Bot(TelegramBot, ObjectWithDatabase):
                 break
         if not results:
             results = self.default_inline_query_answer
-        if type(results) is dict:
+        if type(results) is dict and 'answer' in results:
             if 'switch_pm_text' in results:
                 switch_pm_text = results['switch_pm_text']
             if 'switch_pm_parameter' in results:
                 switch_pm_parameter = results['switch_pm_parameter']
             results = results['answer']
         try:
-            await self.answerInlineQuery(
-                update['id'],
+            await self.answer_inline_query(
+                update=update,
                 results=results,
                 cache_time=10,
                 is_personal=True,
@@ -1114,8 +1114,12 @@ class Bot(TelegramBot, ObjectWithDatabase):
         If `results` is a string, cast it to proper type (list of dicts having
             certain keys). See utilities.make_inline_query_answer for details.
         """
-        if inline_query_id is None and isinstance(update, dict):
-            inline_query_id = self.get_message_identifier(update)
+        if (
+            inline_query_id is None
+            and isinstance(update, dict)
+            and 'id' in update
+        ):
+            inline_query_id = update['id']
         results = make_inline_query_answer(results)
         return await self.answerInlineQuery(
             inline_query_id=inline_query_id,
