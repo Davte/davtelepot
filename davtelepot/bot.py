@@ -6,7 +6,9 @@ camelCase methods mirror API directly, while snake_case ones act as middlewares
 Usage
     ```
     import sys
+
     from davtelepot.bot import Bot
+
     from data.passwords import my_token, my_other_token
 
     long_polling_bot = Bot(token=my_token, database_url='my_db')
@@ -16,13 +18,16 @@ Usage
 
     @long_polling_bot.command('/foo')
     async def foo_command(bot, update, user_record):
-      return "Bar!"
+        return "Bar!"
 
     @webhook_bot.command('/bar')
     async def bar_command(bot, update, user_record):
-      return "Foo!"
+        return "Foo!"
 
-    exit_state = Bot.run()
+    exit_state = Bot.run(
+        local_host='127.0.0.5',
+        port=8552
+    )
     sys.exit(exit_state)
     ```
 """
