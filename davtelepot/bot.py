@@ -1738,8 +1738,8 @@ class Bot(TelegramBot, ObjectWithDatabase):
             await asyncio.sleep(5*60)
             self.__class__.stop(
                 65,
-                f"Information aformation about this bot could "
-                f"not be retrieved. Restarting..."
+                "Information about this bot could not be retrieved.\n"
+                "Restarting..."
             )
 
     def setup(self):
