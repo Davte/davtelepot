@@ -1380,7 +1380,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                             ).parameters
                         }
                     )
-                return self.unauthorized_message
+                return self.authorization_denied_message
             self.commands[command] = dict(
                 handler=decorated_command_handler,
                 description=description,
@@ -1446,7 +1446,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                             if name in inspect.signature(parser).parameters
                         }
                     )
-                return bot.unauthorized_message
+                return bot.authorization_denied_message
             self.text_message_parsers[condition] = dict(
                 handler=decorated_parser,
                 description=description,
@@ -1537,7 +1537,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                             if name in inspect.signature(handler).parameters
                         }
                     )
-                return bot.unauthorized_message
+                return bot.authorization_denied_message
             self.callback_handlers[prefix] = dict(
                 handler=decorated_button_handler,
                 description=description,
@@ -1583,7 +1583,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                             if name in inspect.signature(handler).parameters
                         }
                     )
-                return self.unauthorized_message
+                return self.authorization_denied_message
             self.inline_query_handlers[condition] = dict(
                 handler=decorated_query_handler,
                 description=description,
