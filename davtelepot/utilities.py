@@ -6,6 +6,7 @@ import collections
 import csv
 import datetime
 from difflib import SequenceMatcher
+import inspect
 import json
 import logging
 import os
@@ -437,6 +438,8 @@ async def async_wrapper(coroutine, *args1, **kwargs1):
 
     Set some of the arguments, let the coroutine be awaited with the rest of
         them later.
+    The wrapped coroutine will always pass only supported parameters to
+        `coroutine`.
     Example:
     ```
         import asyncio
@@ -456,7 +459,17 @@ async def async_wrapper(coroutine, *args1, **kwargs1):
     ```
     """
     async def wrapped_coroutine(*args2, **kwargs2):
-        return await coroutine(*args1, *args2, **kwargs1, **kwargs2)
+        # Update keyword arguments
+        kwargs1.update(kwargs2)
+        # Pass only supported arguments
+        kwargs = {
+            name: argument
+            for name, argument in kwargs1.items()
+            if name in inspect.signature(
+                coroutine
+            ).parameters
+        }
+        return await coroutine(*args1, *args2, **kwargs)
     return wrapped_coroutine
 
 
