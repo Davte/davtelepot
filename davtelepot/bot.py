@@ -489,33 +489,32 @@ class Bot(TelegramBot, ObjectWithDatabase):
 
     async def chosen_inline_result_handler(self, update, user_record):
         """Handle Telegram `chosen_inline_result` update."""
-        user_id = update['from']['id']
+        if user_record is not None:
+            user_id = user_record['telegram_id']
+        else:
+            user_id = update['from']['id']
         if user_id in self.chosen_inline_result_handlers:
             result_id = update['result_id']
             handlers = self.chosen_inline_result_handlers[user_id]
             if result_id in handlers:
-                func = handlers[result_id]
-                if asyncio.iscoroutinefunction(func):
-                    await func(update)
-                else:
-                    func(update)
+                await handlers[result_id](update)
         return
 
-    def set_inline_result_handler(self, user_id, result_id, func):
-        """Associate a func to a result_id.
+    def set_chosen_inline_result_handler(self, user_id, result_id, handler):
+        """Associate a `handler` to a `result_id` for `user_id`.
 
-        When an inline result is chosen having that id, function will
-            be passed the update as argument.
+        When an inline result is chosen having that id, `handler` will
+            be called and passed the update as argument.
         """
         if type(user_id) is dict:
             user_id = user_id['from']['id']
         assert type(user_id) is int, "user_id must be int!"
         # Query result ids are parsed as str by telegram
         result_id = str(result_id)
-        assert callable(func), "func must be a callable"
+        assert callable(handler), "Handler must be callable"
         if user_id not in self.chosen_inline_result_handlers:
             self.chosen_inline_result_handlers[user_id] = {}
-        self.chosen_inline_result_handlers[user_id][result_id] = func
+        self.chosen_inline_result_handlers[user_id][result_id] = handler
         return
 
     async def callback_query_handler(self, update, user_record):
