@@ -541,6 +541,8 @@ class Bot(TelegramBot, ObjectWithDatabase):
                     user_record=user_record
                 )
                 break
+        if type(answer) is None:
+            answer = ''
         if type(answer) is str:
             answer = dict(text=answer)
         assert type(answer) is dict, "Invalid callback query answer."
