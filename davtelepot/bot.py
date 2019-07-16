@@ -1007,6 +1007,43 @@ class Bot(TelegramBot, ObjectWithDatabase):
                 )
         return edited_message
 
+    async def forward_message(self, chat_id, update=None, from_chat_id=None,
+                              message_id=None, disable_notification=False):
+        """Forward message from `from_chat_id` to `chat_id`.
+
+        Set `disable_notification` to True to avoid disturbing recipient.
+        Pass the `update` to be forwarded or its identifier (`from_chat_id` and
+            `message_id`).
+        """
+        if from_chat_id is None or message_id is None:
+            message_identifier = self.get_message_identifier(update)
+            from_chat_id = message_identifier['chat_id']
+            message_id = message_identifier['message_id']
+        return await self.forwardMessage(
+            chat_id=chat_id,
+            from_chat_id=from_chat_id,
+            message_id=message_id,
+            disable_notification=disable_notification,
+        )
+
+    async def delete_message(self, update=dict(), chat_id=None,
+                             message_id=None):
+        """Delete given update with given *args and **kwargs.
+
+        Please note, that a bot can delete only messages sent by itself
+        or sent in a group which it is administrator of.
+        """
+        if chat_id is None or message_id is None:
+            message_identifier = self.get_message_identifier(update)
+        else:
+            message_identifier = dict(
+                chat_id=chat_id,
+                message_id=message_id
+            )
+        return await self.deleteMessage(
+            **message_identifier
+        )
+
     async def send_photo(self, chat_id=None, photo=None,
                          caption=None,
                          parse_mode=None,
