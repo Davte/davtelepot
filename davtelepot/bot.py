@@ -218,6 +218,18 @@ class Bot(TelegramBot, ObjectWithDatabase):
         """Set instance path attribute."""
         self._path = path
 
+    @classmethod
+    def get(cls, token, *args, **kwargs):
+        """Given a `token`, return class instance with that token.
+
+        If no instance is found, instantiate it.
+        Positional and keyword arguments may be passed as well.
+        """
+        for bot in cls.bots:
+            if bot.token == token:
+                return bot
+        return cls(token, *args, **kwargs)
+
     @property
     def hostname(self):
         """Hostname for the webhook URL.
