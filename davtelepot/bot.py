@@ -973,7 +973,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                 message_id = message_identifier['message_id']
             if 'inline_message_id' in message_identifier:
                 inline_message_id = message_identifier['inline_message_id']
-        for i, text_chunk in enumerate(
+        for i, (text_chunk, is_last) in enumerate(
             self.split_message_text(
                 text=text,
                 limit=self.__class__.TELEGRAM_MESSAGES_MAX_LEN - 200,
@@ -995,16 +995,19 @@ class Bot(TelegramBot, ObjectWithDatabase):
                     # Inline keyboards attached to inline query results may be
                     # in chats the bot cannot reach.
                     break
+                updates = [update]
             else:
-                await self.send_message(
-                    text=text_chunk,
-                    chat_id=chat_id,
-                    parse_mode=parse_mode,
-                    disable_web_page_preview=disable_web_page_preview,
-                    reply_markup=reply_markup,
-                    update=update,
-                    reply_to_update=True,
-                    send_default_keyboard=False
+                updates.append(
+                    await self.send_message(
+                        text=text_chunk,
+                        chat_id=chat_id,
+                        parse_mode=parse_mode,
+                        disable_web_page_preview=disable_web_page_preview,
+                        reply_markup=(reply_markup if is_last else None),
+                        update=updates[-1],
+                        reply_to_update=True,
+                        send_default_keyboard=False
+                    )
                 )
         return edited_message
 
