@@ -537,8 +537,9 @@ class Bot(davtelepot.bot.Bot):
             )
         return decorator
 
-    def button(self, data, descr='', auth='admin', authorization_level=None,
-               prefix=None, description=None, separator=None):
+    def button(self, data=None, descr='', auth='admin',
+               authorization_level=None, prefix=None, description=None,
+               separator=None):
         """Define a bot button.
 
         `descr` and `auth` parameters are deprecated: use `description` and
