@@ -997,7 +997,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                     break
             else:
                 await self.send_message(
-                    text=text,
+                    text=text_chunk,
                     chat_id=chat_id,
                     parse_mode=parse_mode,
                     disable_web_page_preview=disable_web_page_preview,
