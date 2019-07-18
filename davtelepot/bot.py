@@ -643,10 +643,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
             if type(reply) is str:
                 reply = dict(text=reply)
             try:
-                if 'text' in reply:
-                    return await self.send_message(update=update, **reply)
-                if 'photo' in reply:
-                    return await self.send_photo(update=update, **reply)
+                return await self.reply(update=update, **reply)
             except Exception as e:
                 logging.error(
                     f"Failed to handle text message:\n{e}",
@@ -900,6 +897,17 @@ class Bot(TelegramBot, ObjectWithDatabase):
                 suffix = f"\n{tags[0]}[...]{tags[1]}"
             yield (prefix + text_chunk + suffix), is_last
         return
+
+    async def reply(self, update=None, *args, **kwargs):
+        """Reply to `update` with proper method according to `kwargs`."""
+        method = None
+        if 'text' in kwargs:
+            method = self.send_message
+        elif 'photo' in kwargs:
+            method = self.send_photo
+        if method is not None:
+            return await method(update=update, *args, **kwargs)
+        raise Exception("Unsopported keyword arguments for `Bot().reply`.")
 
     async def send_message(self, chat_id=None, text=None,
                            parse_mode='HTML',
