@@ -922,7 +922,10 @@ class Bot(TelegramBot, ObjectWithDatabase):
         """Reply to `update` with proper method according to `kwargs`."""
         method = None
         if 'text' in kwargs:
-            method = self.send_message
+            if 'message_id' in kwargs:
+                method = self.edit_message_text
+            else:
+                method = self.send_message
         elif 'photo' in kwargs:
             method = self.send_photo
         if method is not None:
