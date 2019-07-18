@@ -246,10 +246,15 @@ class Bot(davtelepot.bot.Bot):
         This method is deprecated: use `set_chosen_inline_result_handler`
             instead.
         """
+        if not asyncio.iscoroutinefunction(func):
+            async def _func(update):
+                return func(update)
+        else:
+            _func = func
         return self.set_chosen_inline_result_handler(
             user_id=user_id,
             result_id=result_id,
-            handler=func
+            handler=_func
         )
 
     async def handle_pinned_message(self, update, user_record=None):
