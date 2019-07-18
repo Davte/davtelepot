@@ -172,6 +172,8 @@ class Bot(TelegramBot, ObjectWithDatabase):
         self.command_aliases = OrderedDict()
         self._unknown_command_message = None
         self.text_message_parsers = OrderedDict()
+        # Handle location messages
+        self.individual_location_handlers = dict()
         # Callback query-related properties
         self.callback_handlers = OrderedDict()
         self._callback_data_separator = None
@@ -723,10 +725,28 @@ class Bot(TelegramBot, ObjectWithDatabase):
 
     async def location_message_handler(self, update, user_record):
         """Handle `location` message update."""
-        logging.info(
-            "A location message update was received, "
-            "but this handler does nothing yet."
-        )
+        replier, reply = None, None
+        user_id = update['from']['id'] if 'from' in update else None
+        if user_id in self.individual_location_handlers:
+            replier = self.individual_location_handlers[user_id]
+            del self.individual_location_handlers[user_id]
+        if replier:
+            reply = await replier(
+                bot=self,
+                update=update,
+                user_record=user_record
+            )
+        if reply:
+            if type(reply) is str:
+                reply = dict(text=reply)
+            try:
+                return await self.reply(update=update, **reply)
+            except Exception as e:
+                logging.error(
+                    f"Failed to handle text message:\n{e}",
+                    exc_info=True
+                )
+        return
 
     async def venue_message_handler(self, update, user_record):
         """Handle `venue` message update."""
@@ -1687,6 +1707,40 @@ class Bot(TelegramBot, ObjectWithDatabase):
         )
         if identifier in self.individual_text_message_handlers:
             del self.individual_text_message_handlers[identifier]
+        return
+
+    def set_individual_location_handler(self, handler,
+                                        update=None, user_id=None):
+        """Set a custom location handler for the user.
+
+        Any location update from the user will be handled by this custom
+            handler instead of default handlers for commands, aliases and text.
+        Custom handlers last one single use, but they can call this method and
+            set themselves as next custom handler.
+        """
+        identifier = self.get_user_identifier(
+            user_id=user_id,
+            update=update
+        )
+        assert callable(handler), (f"Handler `{handler.name}` is not "
+                                   "callable. Custom location handler "
+                                   "could not be set.")
+        self.individual_location_handlers[identifier] = handler
+        return
+
+    def remove_individual_location_handler(self,
+                                           update=None, user_id=None):
+        """Remove a custom location handler for the user.
+
+        Any location message update from the user will be handled by default
+            handlers for commands, aliases and text.
+        """
+        identifier = self.get_user_identifier(
+            user_id=user_id,
+            update=update
+        )
+        if identifier in self.individual_location_handlers:
+            del self.individual_location_handlers[identifier]
         return
 
     def set_default_keyboard(self, keyboard='set_default'):
