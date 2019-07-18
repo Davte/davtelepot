@@ -369,7 +369,9 @@ class Bot(TelegramBot, ObjectWithDatabase):
             message = self._unknown_command_message
         else:
             message = self.__class__._unknown_command_message
-        return message.format(bot=self)
+        if message is not None:
+            message = message.format(bot=self)
+        return message
 
     @property
     def callback_data_separator(self):
