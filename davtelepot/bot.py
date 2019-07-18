@@ -743,7 +743,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
                 return await self.reply(update=update, **reply)
             except Exception as e:
                 logging.error(
-                    f"Failed to handle text message:\n{e}",
+                    f"Failed to handle location message:\n{e}",
                     exc_info=True
                 )
         return
