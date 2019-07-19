@@ -47,6 +47,7 @@ from aiohttp import web
 # Project modules
 from .api import TelegramBot, TelegramError
 from .database import ObjectWithDatabase
+from .languages import MultiLanguageObject
 from .utilities import (
     escape_html_chars, extract, get_secure_key, make_inline_query_answer,
     make_lines_of_buttons, remove_html_tags
@@ -56,7 +57,7 @@ from .utilities import (
 logging.getLogger('aiohttp').setLevel(logging.WARNING)
 
 
-class Bot(TelegramBot, ObjectWithDatabase):
+class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     """Simple Bot object, providing methods corresponding to Telegram bot API.
 
     Multiple Bot() instances may be run together, along with a aiohttp web app.
@@ -107,6 +108,7 @@ class Bot(TelegramBot, ObjectWithDatabase):
         # Call superclasses constructors with proper arguments
         TelegramBot.__init__(self, token)
         ObjectWithDatabase.__init__(self, database_url=database_url)
+        MultiLanguageObject.__init__(self)
         self._path = None
         self.preliminary_tasks = []
         self.final_tasks = []
