@@ -15,5 +15,9 @@ fi
 
 # Merge, push, build and publish package to pypi.org
 bash merge_and_push.sh;
-$packenv/python setup.py sdist bdist_wheel;
+rm -rf "$this_script_directory/build";
+rm -rf "$this_script_directory/dist";
+rm -rf "$this_script_directory/davtelepot.egg-info";
+$packenv/python setup.py sdist;
+$packenv/pip wheel --no-index --no-deps --wheel-dir dist dist/*.tar.gz;
 $packenv/twine upload --skip-existing dist/*;
