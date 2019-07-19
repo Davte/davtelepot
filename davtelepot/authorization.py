@@ -61,6 +61,7 @@ class Role():
     """Authorization level for users of a bot."""
 
     roles = OrderedDict()
+    default_role_code = 100
 
     def __init__(self, code, name, symbol, singular, plural,
                  can_appoint, can_be_appointed_by):
@@ -136,23 +137,37 @@ class Role():
         raise IndexError(f"Unknown role id: {role_id}")
 
     @classmethod
-    def get_user_role(cls, user_record=None, role_id=None):
+    def get_user_role(cls, user_record=None, user_role_id=None):
         """Given a `user_record`, return its `Role`.
 
         `role_id` may be passed as keyword argument or as user_record.
         """
-        if isinstance(user_record, dict) and 'privileges' in user_record:
-            user_role_id = user_record['privileges']
-        elif type(user_record) is int:
-            user_role_id = user_record
+        if user_role_id is None:
+            if isinstance(user_record, dict) and 'privileges' in user_record:
+                user_role_id = user_record['privileges']
+            elif type(user_record) is int:
+                user_role_id = user_record
         if type(user_role_id) is not int:
-            user_role_id = 100
-        return cls.get_by_role_id(role_id=role_id)
+            for code, role in cls.roles:
+                if role.name == user_role_id:
+                    user_role_id = code
+                    break
+            else:
+                user_role_id = cls.default_role_code
+        return cls.get_by_role_id(role_id=user_role_id)
+
+    @classmethod
+    def set_default_role_code(cls, role):
+        """Set class default role code.
+
+        It will be returned if a specific role code cannot be evaluated.
+        """
+        cls.default_role_code = role
 
     @classmethod
     def get_user_role_panel(cls, user_record):
         """Get text and buttons for user role panel."""
-        user_role = cls.get_user_role(user_record)
+        user_role = cls.get_user_role(user_record=user_record)
         text = (
             """👤 <a href="tg://user?id={u[telegram_id]}">{u[username]}</a>\n"""
             f"🔑 <i>{user_role.singular.capitalize()}</i> {user_role.symbol}"
@@ -200,7 +215,70 @@ class Role():
         return f"<Role object: {self.symbol} {self.singular.capitalize()}>"
 
 
-def init(bot, roles=None):
+def get_authorization_function(bot):
+    """Take a `bot` and return its authorization_function."""
+    def is_authorized(update, user_record=None, authorization_level=2):
+        """Return True if user role is at least at `authorization_level`."""
+        user_role = bot.Roles.get_user_role(user_record=user_record)
+        if user_role.code == 0:
+            return False
+        needed_role = bot.Roles.get_user_role(user_role_id=authorization_level)
+        if needed_role.code < user_role.code:
+            return False
+        return True
+    return is_authorized
+
+
+AUTHORIZATION_MESSAGES = {
+    'command': {
+        'auth': {
+            {
+                'description': {
+                    'en': "Edit user permissions. To select a user, reply to "
+                          "a message of theirs or write their username",
+                    'it': "Cambia il grado di autorizzazione di un utente "
+                          "(in risposta o scrivendone lo username)"
+                }
+            }
+        },
+        'ban': {
+            {
+                'description': {
+                    'en': "Reply to a user with /ban to ban them",
+                    'it': "Banna l'utente (da usare in risposta)"
+                }
+            }
+        },
+    },
+    'button': {
+        'auth': {
+            {
+                'description': {
+                    'en': "Edit user permissions",
+                    'it': "Cambia il grado di autorizzazione di un utente"
+                }
+            }
+        },
+    }
+}
+
+
+async def _authorization_command(bot, update, user_record):
+    # TODO define this function!
+    return
+
+
+async def _authorization_button(bot, update, user_record):
+    # TODO define this function!
+    return
+
+
+async def _ban_command(bot, update, user_record):
+    # TODO define this function!
+    return
+
+
+def init(bot, roles=None, language='en'):
     """Set bot roles and assign role-related commands.
 
     Pass an OrderedDict of `roles` to get them set.
@@ -208,6 +286,7 @@ def init(bot, roles=None):
     class _Role(Role):
         roles = OrderedDict()
 
+    bot.Role = _Role
     if roles is None:
         roles = DEFAULT_ROLES
     # Cast roles to OrderedDict
@@ -221,4 +300,35 @@ def init(bot, roles=None):
     for id, role in roles.items():
         if 'code' not in role:
             role['code'] = id
-        Role(**role)
+        bot.Role(**role)
+
+    bot.set_authorization_function(
+        get_authorization_function(bot)
+    )
+    bot.messages['authorization'] = AUTHORIZATION_MESSAGES
+
+    @bot.command(command='/auth', aliases=[], show_in_keyboard=False,
+                 description=bot.get_message(
+                    'authorization', 'command', 'auth', 'description',
+                    language=language
+                 ),
+                 authorization_level='moderator')
+    async def authorization_command(bot, update, user_record):
+        return await _authorization_command(bot, update, user_record)
+
+    @bot.button('auth:///',
+                description=bot.get_message(
+                    'authorization', 'button', 'auth', 'description',
+                    language=language
+                ), authorization_level='moderator')
+    async def authorization_button(bot, update, user_record):
+        return await _authorization_button(bot, update, user_record)
+
+    @bot.command('/ban', aliases=[], show_in_keyboard=False,
+                 description=bot.get_message(
+                     'authorization', 'command', 'ban', 'description',
+                     language=language
+                 ),
+                 authorization_level='admin')
+    async def ban_command(bot, update, user_record):
+        return await _ban_command(bot, update, user_record)
