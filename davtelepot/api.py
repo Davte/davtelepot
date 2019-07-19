@@ -45,7 +45,7 @@ class TelegramBot(object):
     """
 
     loop = asyncio.get_event_loop()
-    app = web.Application(loop=loop)
+    app = web.Application()
     sessions_timeouts = {
         'getUpdates': dict(
             timeout=35,
