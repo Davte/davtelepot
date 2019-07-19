@@ -8,8 +8,9 @@ venv/
 *.db
 *.json
 
-# Data folders
-data/
+# Data folder
+davtelepot/data/*
+!davtelepot/data/__init__.py
 
 *.txt
 !requirements.txt

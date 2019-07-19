@@ -1,1 +1,4 @@
 include davtelepot/ietf_language_tags.csv
+exclude davtelepot/test*.py
+exclude davtelepot/data/*
+include davtelepot/data/__init__.py
