@@ -853,7 +853,7 @@ def get_cleaned_text(update, bot=None, replace=[], strip='/ @'):
     return text.strip(strip)
 
 
-def get_user(record):
+def get_user(record, link_profile=True):
     """Get an HTML Telegram tag for user `record`."""
     if not record:
         return
@@ -864,6 +864,7 @@ def get_user(record):
     if (
         'id' in from_
         and from_['id'] is not None
+        and link_profile
     ):
         result = f"""<a href="tg://user?id={from_['id']}">{{name}}</a>"""
     if 'username' in from_ and from_['username']:
