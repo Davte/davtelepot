@@ -35,7 +35,7 @@ import os
 import davtelepot.bot
 
 # Project modules
-from davtelepot.utilities import (
+from .utilities import (
     get_secure_key, extract, sleep_until
 )
 
