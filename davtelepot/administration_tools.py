@@ -139,10 +139,9 @@ async def _forward_to(update, bot, sender, addressee, is_admin=False):
             admin_record=admin_record
         )
     else:
-        bot.set_custom_parser(
+        bot.set_individual_text_message_handler(
             await async_wrapper(
                 _forward_to,
-                bot=bot,
                 sender=sender,
                 addressee=addressee,
                 is_admin=is_admin
@@ -353,20 +352,18 @@ async def start_session(bot, user_record, admin_record):
             ]
         )
     )
-    bot.set_custom_parser(
+    bot.set_individual_text_message_handler(
         await async_wrapper(
             _forward_to,
-            bot=bot,
             sender=user_record['telegram_id'],
             addressee=admin_record['telegram_id'],
             is_admin=False
         ),
         user_record['telegram_id']
     )
-    bot.set_custom_parser(
+    bot.set_individual_text_message_handler(
         await async_wrapper(
             _forward_to,
-            bot=bot,
             sender=admin_record['telegram_id'],
             addressee=user_record['telegram_id'],
             is_admin=True
@@ -408,9 +405,7 @@ async def end_session(bot, user_record, admin_record):
         ),
     )
     for record in (admin_record, user_record, ):
-        telegram_id = record['telegram_id']
-        if telegram_id in bot.custom_parsers:
-            del bot.custom_parsers[telegram_id]
+        bot.remove_individual_text_message_handler(record['telegram_id'])
     return
 
 
@@ -419,10 +414,9 @@ async def _talk_button(update, bot):
     command, *arguments = extract(update['data'], '///').split('|')
     result, text, reply_markup = '', '', None
     if command == 'search':
-        bot.set_custom_parser(
+        bot.set_individual_text_message_handler(
             await async_wrapper(
                 _talk_command,
-                bot=bot
             ),
             update
         )
