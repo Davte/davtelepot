@@ -60,13 +60,11 @@ setuptools.setup(
         'dataset',
     ],
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Console",
         "Framework :: AsyncIO",
         "Intended Audience :: Developers",
-        (
-            "License :: OSI Approved :: GNU Lesser General Public License "
-            "v3 (LGPLv3)"
-        ),
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3 :: Only",
