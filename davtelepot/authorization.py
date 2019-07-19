@@ -4,7 +4,9 @@
 from collections import OrderedDict
 
 # Project modules
-from .utilities import make_button
+from .utilities import (
+    Confirmator, get_cleaned_text, get_user, make_button, make_inline_keyboard
+)
 
 DEFAULT_ROLES = OrderedDict()
 DEFAULT_ROLES[0] = {
@@ -148,7 +150,7 @@ class Role():
             elif type(user_record) is int:
                 user_role_id = user_record
         if type(user_role_id) is not int:
-            for code, role in cls.roles:
+            for code, role in cls.roles.items():
                 if role.name == user_role_id:
                     user_role_id = code
                     break
@@ -177,7 +179,8 @@ class Role():
         buttons = [
             make_button(
                 f"{role.symbol} {role.singular.capitalize()}",
-                f"auth:///set|{user_record['id']}_{code}"
+                prefix='auth:///',
+                data=['set', user_record['id'], code]
             )
             for code, role in cls.roles.items()
         ]
@@ -190,7 +193,10 @@ class Role():
     def __gt__(self, other):
         """Return True if self can appoint other."""
         return (
-            self.code < other.code
+            (
+                self.code < other.code
+                or other.code == 0
+            )
             and self.code in other.can_be_appointed_by
         )
 
@@ -219,10 +225,10 @@ def get_authorization_function(bot):
     """Take a `bot` and return its authorization_function."""
     def is_authorized(update, user_record=None, authorization_level=2):
         """Return True if user role is at least at `authorization_level`."""
-        user_role = bot.Roles.get_user_role(user_record=user_record)
+        user_role = bot.Role.get_user_role(user_record=user_record)
         if user_role.code == 0:
             return False
-        needed_role = bot.Roles.get_user_role(user_role_id=authorization_level)
+        needed_role = bot.Role.get_user_role(user_role_id=authorization_level)
         if needed_role.code < user_role.code:
             return False
         return True
@@ -230,47 +236,251 @@ def get_authorization_function(bot):
 
 
 AUTHORIZATION_MESSAGES = {
-    'command': {
-        'auth': {
-            {
-                'description': {
-                    'en': "Edit user permissions. To select a user, reply to "
-                          "a message of theirs or write their username",
-                    'it': "Cambia il grado di autorizzazione di un utente "
-                          "(in risposta o scrivendone lo username)"
-                }
-            }
+    'auth_command': {
+        'description': {
+            'en': "Edit user permissions. To select a user, reply to "
+                  "a message of theirs or write their username",
+            'it': "Cambia il grado di autorizzazione di un utente "
+                  "(in risposta o scrivendone lo username)"
         },
-        'ban': {
-            {
-                'description': {
-                    'en': "Reply to a user with /ban to ban them",
-                    'it': "Banna l'utente (da usare in risposta)"
-                }
-            }
+        'unhandled_case': {
+            'en': "<code>Unhandled case :/</code>",
+            'it': "<code>Caso non previsto :/</code>"
         },
+        'instructions': {
+            'en': "Reply with this command to a user or write "
+                  "<code>/auth username</code> to edit their permissions.",
+            'it': "Usa questo comando in risposta a un utente "
+                  "oppure scrivi <code>/auth username</code> per "
+                  "cambiarne il grado di autorizzazione."
+        },
+        'unknown_user': {
+            'en': "Unknown user.",
+            'it': "Utente sconosciuto."
+        },
+        'choose_user': {
+            'en': "{n} users match your query. Please select one.",
+            'it': "Ho trovato {n} utenti che soddisfano questi criteri.\n"
+                  "Per procedere selezionane uno."
+        },
+        'no_match': {
+            'en': "No user matches your query. Please try again.",
+            'it': "Non ho trovato utenti che soddisfino questi criteri.\n"
+                  "Prova di nuovo."
+        }
     },
-    'button': {
-        'auth': {
-            {
-                'description': {
-                    'en': "Edit user permissions",
-                    'it': "Cambia il grado di autorizzazione di un utente"
-                }
+    'ban_command': {
+        'description': {
+            'en': "Reply to a user with /ban to ban them",
+            'it': "Banna l'utente (da usare in risposta)"
+        }
+    },
+    'auth_button': {
+        'description': {
+            'en': "Edit user permissions",
+            'it': "Cambia il grado di autorizzazione di un utente"
+        },
+        'confirm': {
+            'en': "Are you sure?",
+            'it': "Sicuro sicuro?"
+        },
+        'back_to_user': {
+            'en': "Back to user",
+            'it': "Torna all'utente"
+        },
+        'permission_denied': {
+            'user': {
+                'en': "You cannot appoint this user!",
+                'it': "Non hai l'autorità di modificare i permessi di questo "
+                      "utente!"
+            },
+            'role': {
+                'en': "You're not allowed to appoint someone to this role!",
+                'it': "Non hai l'autorità di conferire questo permesso!"
             }
         },
-    }
+        'no_change': {
+            'en': "No change suggested!",
+            'it': "È già così!"
+        },
+        'appointed': {
+            'en': "Permission granted",
+            'it': "Permesso conferito"
+        }
+    },
 }
 
 
 async def _authorization_command(bot, update, user_record):
-    # TODO define this function!
-    return
+    text = get_cleaned_text(bot=bot, update=update, replace=['auth'])
+    reply_markup = None
+    result = bot.get_message(
+        'authorization', 'auth_command', 'unhandled_case',
+        update=update, user_record=user_record
+    )
+    if not text:
+        if 'reply_to_message' not in update:
+            result = bot.get_message(
+                'authorization', 'auth_command', 'instructions',
+                update=update, user_record=user_record
+            )
+        else:
+            with bot.db as db:
+                user_record = db['users'].find_one(
+                    telegram_id=update['reply_to_message']['from']['id']
+                )
+    else:
+        with bot.db as db:
+            user_record = list(
+                db.query(
+                    "SELECT * "
+                    "FROM users "
+                    "WHERE COALESCE("
+                    "   first_name || last_name || username,"
+                    "   last_name || username,"
+                    "   first_name || username,"
+                    "   username,"
+                    "   first_name || last_name,"
+                    "   last_name,"
+                    "   first_name"
+                    f") LIKE '%{text}%'"
+                )
+            )
+    if user_record is None:
+        result = bot.get_message(
+            'authorization', 'auth_command', 'unknown_user',
+            update=update, user_record=user_record
+        )
+    elif type(user_record) is list and len(user_record) > 1:
+        result = bot.get_message(
+            'authorization', 'auth_command', 'choose_user',
+            update=update, user_record=user_record,
+            n=len(user_record)
+        )
+        reply_markup = make_inline_keyboard(
+            [
+                make_button(
+                    f"👤 {get_user(user, link_profile=False)}",
+                    prefix='auth:///',
+                    data=['show', user['id']]
+                )
+                for user in user_record[:30]
+            ],
+            3
+        )
+    elif type(user_record) is list and len(user_record) == 0:
+        result = bot.get_message(
+            'authorization', 'auth_command', 'no_match',
+            update=update, user_record=user_record,
+        )
+    else:
+        if type(user_record) is list:
+            user_record = user_record[0]
+        result, buttons = bot.Role.get_user_role_panel(user_record)
+        reply_markup = make_inline_keyboard(buttons, 1)
+    return dict(
+        text=result,
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
 
 
-async def _authorization_button(bot, update, user_record):
-    # TODO define this function!
-    return
+async def _authorization_button(bot, update, user_record, data):
+    if len(data) == 0:
+        data = ['']
+    command, *arguments = data
+    user_id = user_record['telegram_id']
+    if len(arguments) > 0:
+        other_user_id = arguments[0]
+    else:
+        other_user_id = None
+    result, text, reply_markup = '', '', None
+    if command in ['show']:
+        with bot.db as db:
+            other_user_record = db['users'].find_one(id=other_user_id)
+        text, buttons = bot.Role.get_user_role_panel(other_user_record)
+        reply_markup = make_inline_keyboard(buttons, 1)
+    elif command in ['set'] and len(arguments) > 1:
+        other_user_id, new_privileges, *_ = arguments
+        if not Confirmator.get(
+            key=f'{user_id}_set_{other_user_id}',
+            confirm_timedelta=5
+        ).confirm:
+            return bot.get_message(
+                'authorization', 'auth_button', 'confirm',
+                update=update, user_record=user_record,
+            )
+        with bot.db as db:
+            other_user_record = db['users'].find_one(id=other_user_id)
+        user_role = bot.Role.get_user_role(user_record=user_record)
+        other_user_role = bot.Role.get_user_role(user_record=other_user_record)
+        if other_user_role.code == new_privileges:
+            return bot.get_message(
+                'authorization', 'auth_button', 'no_change',
+                update=update, user_record=user_record
+            )
+        if not user_role > other_user_role:
+            text = bot.get_message(
+                'authorization', 'auth_button', 'permission_denied', 'user',
+                update=update, user_record=user_record
+            )
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        bot.get_message(
+                            'authorization', 'auth_button', 'back_to_user',
+                            update=update, user_record=user_record
+                        ),
+                        prefix='auth:///',
+                        data=['show', other_user_id]
+                    )
+                ],
+                1
+            )
+        elif new_privileges not in user_role.can_appoint:
+            text = bot.get_message(
+                'authorization', 'auth_button', 'permission_denied', 'role',
+                update=update, user_record=user_record
+            )
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        bot.get_message(
+                            'authorization', 'auth_button', 'back_to_user',
+                            update=update, user_record=user_record
+                        ),
+                        prefix='auth:///',
+                        data=['show', other_user_id]
+                    )
+                ],
+                1
+            )
+        else:
+            with bot.db as db:
+                db['users'].update(
+                    dict(
+                        id=other_user_id,
+                        privileges=new_privileges
+                    ),
+                    ['id']
+                )
+                other_user_record = db['users'].find_one(id=other_user_id)
+            result = bot.get_message(
+                'authorization', 'auth_button', 'appointed',
+                update=update, user_record=user_record
+            )
+            text, buttons = bot.Role.get_user_role_panel(other_user_record)
+            reply_markup = make_inline_keyboard(buttons, 1)
+    if text:
+        return dict(
+            text=result,
+            edit=dict(
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode='HTML'
+            )
+        )
+    return result
 
 
 async def _ban_command(bot, update, user_record):
@@ -309,7 +519,7 @@ def init(bot, roles=None, language='en'):
 
     @bot.command(command='/auth', aliases=[], show_in_keyboard=False,
                  description=bot.get_message(
-                    'authorization', 'command', 'auth', 'description',
+                    'authorization', 'auth_command', 'description',
                     language=language
                  ),
                  authorization_level='moderator')
@@ -318,15 +528,17 @@ def init(bot, roles=None, language='en'):
 
     @bot.button('auth:///',
                 description=bot.get_message(
-                    'authorization', 'button', 'auth', 'description',
+                    'authorization', 'auth_button', 'description',
                     language=language
-                ), authorization_level='moderator')
-    async def authorization_button(bot, update, user_record):
-        return await _authorization_button(bot, update, user_record)
+                ),
+                separator='|',
+                authorization_level='moderator')
+    async def authorization_button(bot, update, user_record, data):
+        return await _authorization_button(bot, update, user_record, data)
 
     @bot.command('/ban', aliases=[], show_in_keyboard=False,
                  description=bot.get_message(
-                     'authorization', 'command', 'ban', 'description',
+                     'authorization', 'ban_command', 'description',
                      language=language
                  ),
                  authorization_level='admin')
