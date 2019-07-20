@@ -320,7 +320,7 @@ async def _authorization_command(bot, update, user_record):
     )
     if not text:
         if 'reply_to_message' not in update:
-            result = bot.get_message(
+            return bot.get_message(
                 'authorization', 'auth_command', 'instructions',
                 update=update, user_record=user_record
             )
