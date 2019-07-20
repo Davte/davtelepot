@@ -502,6 +502,12 @@ default_admin_messages = {
             'en': "<i>Restart was successful.</i>",
             'it': "<i>Restart avvenuto con successo.</i>"
         }
+    },
+    'stop_command': {
+        'description': {
+            'en': "Stop bots",
+            'it': "Ferma i bot"
+        }
     }
 }
 
@@ -528,6 +534,11 @@ async def _restart_command(bot, update, user_record):
         )
     )
     bot.__class__.stop(message='=== RESTART ===', final_state=65)
+    return
+
+
+async def _stop_command(bot, update, user_record):
+    bot.__class__.stop(message='=== STOP ===', final_state=0)
     return
 
 
@@ -626,3 +637,14 @@ def init(bot, talk_messages=None, admin_messages=None, language='en'):
                     ensure=True
                 )
         return
+
+    stop_command_description = bot.get_message(
+        'admin', 'stop_command', 'description',
+        language=language
+    )
+
+    @bot.command(command='/stop', aliases=[], show_in_keyboard=False,
+                 description=stop_command_description,
+                 authorization_level='admin')
+    async def stop_command(bot, update, user_record):
+        return await _stop_command(bot, update, user_record)
