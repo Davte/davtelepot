@@ -1662,7 +1662,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         if isinstance(identifier, dict) and 'from' in identifier:
             identifier = identifier['from']['id']
         assert type(identifier) is int, (
-            "Unable to find a user identifier."
+            f"Unable to find a user identifier. Got `{identifier}`"
         )
         return identifier
 
