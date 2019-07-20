@@ -223,8 +223,8 @@ async def _language_button(bot, update, user_record, data):
             return
         # If database-stored information is not updated, update it
         if (
-            'selected_language_code' in user_record
-            and data[1] != user_record['selected_language_code']
+            'selected_language_code' not in user_record
+            or data[1] != user_record['selected_language_code']
         ):
             with bot.db as db:
                 db['users'].update(
