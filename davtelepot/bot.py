@@ -1975,7 +1975,11 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 telegram_id=telegram_id
             )
             if user_record is None:
-                new_user = dict(telegram_id=telegram_id, privileges=100)
+                new_user = dict(
+                    telegram_id=telegram_id,
+                    privileges=100,
+                    selected_language_code=None
+                )
                 for key in [
                     'first_name',
                     'last_name',
