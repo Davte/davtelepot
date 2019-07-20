@@ -232,7 +232,8 @@ async def _language_button(bot, update, user_record, data):
                         selected_language_code=data[1],
                         id=user_record['id']
                     ),
-                    ['id']
+                    ['id'],
+                    ensure=True
                 )
                 user_record['selected_language_code'] = data[1]
     if len(data) == 0 or data[0] in ('show', 'set'):
