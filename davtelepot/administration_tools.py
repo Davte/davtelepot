@@ -507,6 +507,41 @@ default_admin_messages = {
         'description': {
             'en': "Stop bots",
             'it': "Ferma i bot"
+        },
+        'text': {
+            'en': "Are you sure you want to stop all bots?\n"
+                  "To make them start again you will have to ssh-log "
+                  "in server.\n\n"
+                  "To restart the bots remotely use the /restart command "
+                  "instead (before starting over, a <code>git pull</code> "
+                  "is performed).",
+            'it': "Sei sicuro di voler fermare i bot?\n"
+                  "Per farli ripartire dovrai accedere al server.\n\n"
+                  "Per far ripartire i bot da remoto usa invece il comando "
+                  "/restart (prima di ripartire farò un "
+                  "<code>git pull</code>)."
+        }
+    },
+    'stop_button': {
+        'stop_text': {
+            'en': "Stop bots",
+            'it': "Ferma i bot"
+        },
+        'cancel': {
+            'en': "Cancel",
+            'it': "Annulla"
+        },
+        'confirm': {
+            'en': "Do you really want to stop all bots?",
+            'it': "Vuoi davvero fermare tutti i bot?"
+        },
+        'stopping': {
+            'en': "Stopping bots...",
+            'it': "Arresto in corso..."
+        },
+        'cancelled': {
+            'en': "Operation was cancelled",
+            'it': "Operazione annullata"
         }
     }
 }
@@ -538,8 +573,80 @@ async def _restart_command(bot, update, user_record):
 
 
 async def _stop_command(bot, update, user_record):
+    text = bot.get_message(
+        'admin', 'stop_command', 'text',
+        update=update, user_record=user_record
+    )
+    reply_markup = make_inline_keyboard(
+        [
+            make_button(
+                text=bot.get_message(
+                    'admin', 'stop_button', 'stop_text',
+                    update=update, user_record=user_record
+                ),
+                prefix='stop:///',
+                data=['stop']
+            ),
+            make_button(
+                text=bot.get_message(
+                    'admin', 'stop_button', 'cancel',
+                    update=update, user_record=user_record
+                ),
+                prefix='stop:///',
+                data=['cancel']
+            )
+        ],
+        1
+    )
+    return dict(
+        text=text,
+        parse_mode='HTML',
+        reply_markup=reply_markup
+    )
+
+
+async def stop_bots(bot):
+    """Stop bots in `bot` class."""
+    await asyncio.sleep(2)
     bot.__class__.stop(message='=== STOP ===', final_state=0)
     return
+
+
+async def _stop_button(bot, update, user_record, data):
+    result, text, reply_markup = '', '', None
+    telegram_id = user_record['telegram_id']
+    command = data[0] if len(data) > 0 else 'None'
+    if command == 'stop':
+        if not Confirmator.get('stop_bots').confirm(telegram_id):
+            return bot.get_message(
+                    'admin', 'stop_button', 'confirm',
+                    update=update, user_record=user_record
+                )
+        text = bot.get_message(
+                'admin', 'stop_button', 'stopping',
+                update=update, user_record=user_record
+            )
+        result = text
+        # Do not stop bots immediately, otherwise callback query
+        # will never be answered
+        asyncio.ensure_future(stop_bots(bot))
+    elif command == 'cancel':
+        text = bot.get_message(
+                'admin', 'stop_button', 'cancelled',
+                update=update, user_record=user_record
+            )
+        result = text
+    if text:
+        return dict(
+            text=result,
+            edit=dict(
+                text=text,
+                parse_mode='HTML',
+                reply_markup=reply_markup,
+                disable_web_page_preview=True
+            )
+        )
+    return result
 
 
 def init(bot, talk_messages=None, admin_messages=None, language='en'):
@@ -648,3 +755,9 @@ def init(bot, talk_messages=None, admin_messages=None, language='en'):
                  authorization_level='admin')
     async def stop_command(bot, update, user_record):
         return await _stop_command(bot, update, user_record)
+
+    @bot.button(prefix='stop:///', separator='|',
+                description=stop_command_description,
+                authorization_level='admin')
+    async def stop_button(bot, update, user_record, data):
+        return await _stop_button(bot, update, user_record, data)
