@@ -679,10 +679,9 @@ async def _send_bot_database(bot, update, user_record):
             update=update, user_record=user_record,
             db_type=bot.db_url.partition(':///')[0]
         )
-    database_name = extract(bot.db_url, starter='data/')
     await bot.send_document(
         chat_id=user_record['telegram_id'],
-        document_path=f'{{path}}/data/{database_name}',
+        document_path=extract(bot.db.url, starter='sqlite:///'),
         caption=bot.get_message(
             'admin', 'db_command', 'file_caption',
             update=update, user_record=user_record
