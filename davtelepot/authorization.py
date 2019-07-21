@@ -235,7 +235,7 @@ def get_authorization_function(bot):
     return is_authorized
 
 
-AUTHORIZATION_MESSAGES = {
+deafult_authorization_messages = {
     'auth_command': {
         'description': {
             'en': "Edit user permissions. To select a user, reply to "
@@ -488,7 +488,7 @@ async def _ban_command(bot, update, user_record):
     return
 
 
-def init(bot, roles=None, language='en'):
+def init(bot, roles=None, authorization_messages=None):
     """Set bot roles and assign role-related commands.
 
     Pass an OrderedDict of `roles` to get them set.
@@ -515,21 +515,21 @@ def init(bot, roles=None, language='en'):
     bot.set_authorization_function(
         get_authorization_function(bot)
     )
-    bot.messages['authorization'] = AUTHORIZATION_MESSAGES
+    if authorization_messages is None:
+        authorization_messages = deafult_authorization_messages
+    bot.messages['authorization'] = authorization_messages
 
     @bot.command(command='/auth', aliases=[], show_in_keyboard=False,
-                 description=bot.get_message(
-                    'authorization', 'auth_command', 'description',
-                    language=language
+                 description=(
+                    authorization_messages['auth_command']['description']
                  ),
                  authorization_level='moderator')
     async def authorization_command(bot, update, user_record):
         return await _authorization_command(bot, update, user_record)
 
     @bot.button('auth:///',
-                description=bot.get_message(
-                    'authorization', 'auth_button', 'description',
-                    language=language
+                description=(
+                   authorization_messages['auth_button']['description']
                 ),
                 separator='|',
                 authorization_level='moderator')
@@ -537,9 +537,8 @@ def init(bot, roles=None, language='en'):
         return await _authorization_button(bot, update, user_record, data)
 
     @bot.command('/ban', aliases=[], show_in_keyboard=False,
-                 description=bot.get_message(
-                     'authorization', 'ban_command', 'description',
-                     language=language
+                 description=(
+                    authorization_messages['ban_command']['description']
                  ),
                  authorization_level='admin')
     async def ban_command(bot, update, user_record):

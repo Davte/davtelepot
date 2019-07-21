@@ -488,6 +488,14 @@ async def _talk_button(bot, update, user_record, data):
 
 
 default_admin_messages = {
+    'talk_command': {
+        'description': {
+            'en': "Choose a user and forward messages to each other",
+            'it': "Scegli un utente e il bot farà da tramite inoltrando a "
+                  "ognuno i messaggi dell'altro finché non terminerai la "
+                  "sessione"
+        }
+    },
     'restart_command': {
         'description': {
             'en': "Restart bots",
@@ -545,6 +553,10 @@ default_admin_messages = {
         }
     },
     'db_command': {
+        'description': {
+            'en': "Ask for bot database via Telegram",
+            'it': "Ricevi il database del bot via Telegram"
+        },
         'not_sqlite': {
             'en': "Only SQLite databases may be sent via Telegram, since they "
                   "are single-file databases.\n"
@@ -693,7 +705,7 @@ async def _send_bot_database(bot, update, user_record):
     )
 
 
-def init(bot, talk_messages=None, admin_messages=None, language='en'):
+def init(bot, talk_messages=None, admin_messages=None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if talk_messages is None:
         talk_messages = default_talk_messages
@@ -739,8 +751,7 @@ def init(bot, talk_messages=None, admin_messages=None, language='en'):
                 )
 
     @bot.command(command='/talk', aliases=[], show_in_keyboard=False,
-                 description="Choose a user and forward messages to each "
-                             "other.",
+                 description=admin_messages['talk_command']['description'],
                  authorization_level='admin')
     async def talk_command(update):
         return await _talk_command(update, bot)
@@ -750,10 +761,7 @@ def init(bot, talk_messages=None, admin_messages=None, language='en'):
         return await _talk_button(bot, update, user_record, data)
 
     @bot.command(command='/restart', aliases=[], show_in_keyboard=False,
-                 description=bot.get_message(
-                     'admin', 'restart_command', 'description',
-                     language=language, default_message=''
-                 ),
+                 description=admin_messages['restart_command']['description'],
                  authorization_level='admin')
     async def restart_command(bot, update, user_record):
         return await _restart_command(bot, update, user_record)
@@ -787,25 +795,20 @@ def init(bot, talk_messages=None, admin_messages=None, language='en'):
                 )
         return
 
-    stop_command_description = bot.get_message(
-        'admin', 'stop_command', 'description',
-        language=language
-    )
-
     @bot.command(command='/stop', aliases=[], show_in_keyboard=False,
-                 description=stop_command_description,
+                 description=admin_messages['stop_command']['description'],
                  authorization_level='admin')
     async def stop_command(bot, update, user_record):
         return await _stop_command(bot, update, user_record)
 
     @bot.button(prefix='stop:///', separator='|',
-                description=stop_command_description,
+                description=admin_messages['stop_command']['description'],
                 authorization_level='admin')
     async def stop_button(bot, update, user_record, data):
         return await _stop_button(bot, update, user_record, data)
 
     @bot.command(command='/db', aliases=[], show_in_keyboard=False,
-                 description="Ask for bot database via Telegram",
+                 description=admin_messages['db_command']['description'],
                  authorization_level='admin')
     async def send_bot_database(bot, update, user_record):
         return await _send_bot_database(bot, update, user_record)

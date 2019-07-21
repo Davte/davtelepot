@@ -173,6 +173,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.individual_text_message_handlers = dict()
         self.commands = OrderedDict()
         self.command_aliases = OrderedDict()
+        self.messages['commands'] = dict()
         self._unknown_command_message = None
         self.text_message_parsers = OrderedDict()
         # Handle location messages
@@ -1559,6 +1560,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 description=description,
                 authorization_level=authorization_level
             )
+            if type(description) is dict:
+                self.messages['commands'][command] = dict(
+                    description=description
+                )
             if aliases:
                 for alias in aliases:
                     self.command_aliases[alias] = decorated_command_handler
