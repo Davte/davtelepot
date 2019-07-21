@@ -1196,6 +1196,136 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return sent_update
 
+    async def send_document(self, chat_id=None, document=None, thumb=None,
+                            caption=None, parse_mode=None,
+                            disable_notification=None,
+                            reply_to_message_id=None, reply_markup=None,
+                            document_path=None,
+                            document_name=None,
+                            update=dict(),
+                            reply_to_update=False,
+                            send_default_keyboard=True,
+                            use_stored_file_id=False):
+        """Send a document.
+
+        This method wraps lower-level `TelegramBot.sendDocument` method.
+        Pass an `update` to extract `chat_id` and `message_id` from it.
+        Set `reply_to_update` = True to reply to `update['message_id']`.
+        Set `send_default_keyboard` = False to avoid sending default keyboard
+            as reply_markup (only those messages can be edited, which were
+            sent with no reply markup or with an inline keyboard).
+        If document was already sent by this bot and `use_stored_file_id` is
+            set to True, use file_id (it is faster and recommended).
+        `document_path` may contain `{path}`: it will be replaced by
+            `self.path`.
+        `document_name` diplayed to Telegram may differ from actual document
+            name if this parameter is set.
+        """
+        already_sent = False
+        # This buffered_file trick is necessary for two reasons
+        # 1. File operations must be blocking, but sendDocument is a coroutine
+        # 2. A `with` statement is not possible here
+        # `buffered_file` must be closed at all costs!
+        buffered_file = None
+        if 'message' in update:
+            update = update['message']
+        if chat_id is None and 'chat' in update:
+            chat_id = self.get_chat_id(update)
+        if reply_to_update and 'message_id' in update:
+            reply_to_message_id = update['message_id']
+        if (
+            send_default_keyboard
+            and reply_markup is None
+            and type(chat_id) is int
+            and chat_id > 0
+            and caption != self.authorization_denied_message
+        ):
+            reply_markup = self.default_keyboard
+        if document_path is not None:
+            with self.db as db:
+                already_sent = db['sent_documents'].find_one(
+                    path=document_path,
+                    errors=False
+                )
+            if already_sent and use_stored_file_id:
+                document = already_sent['file_id']
+                already_sent = True
+            else:
+                already_sent = False
+                if not any(
+                    [
+                            document_path.startswith(url_starter)
+                            for url_starter in ('http', 'www',)
+                        ]
+                ):  # If `document_path` is not a url but a local file path
+                    try:
+                        with open(
+                            document_path.format(
+                                path=self.path
+                            ),
+                            'rb'  # Read bytes
+                        ) as file_:
+                            buffered_file = io.BytesIO(file_.read())
+                            buffered_file.name = (
+                                document_name
+                                or file_.name
+                                or 'Document'
+                            )
+                            document = buffered_file
+                    except FileNotFoundError:
+                        document = None
+                        buffered_file.close()
+        else:
+            use_stored_file_id = False
+        if document is None:
+            logging.error(
+                "`document` is None, `send_document` returning..."
+            )
+            return
+        sent_update = None
+        try:
+            sent_update = await self.sendDocument(
+                chat_id=chat_id,
+                document=document,
+                thumb=thumb,
+                caption=caption,
+                parse_mode=parse_mode,
+                disable_notification=disable_notification,
+                reply_to_message_id=reply_to_message_id,
+                reply_markup=reply_markup
+            )
+            if isinstance(sent_update, Exception):
+                raise Exception("sendDocument API call failed!")
+        except Exception as e:
+            logging.error(f"Error sending document\n{e}")
+            if already_sent:
+                with self.db as db:
+                    db['sent_documents'].update(
+                        dict(
+                            path=document_path,
+                            errors=True
+                        ),
+                        ['path']
+                    )
+        finally:
+            buffered_file.close()
+        if (
+            type(sent_update) is dict
+            and 'document' in sent_update
+            and 'file_id' in sent_update['document']
+            and (not already_sent)
+            and use_stored_file_id
+        ):
+            with self.db as db:
+                db['sent_documents'].insert(
+                    dict(
+                        path=document_path,
+                        file_id=sent_update['document']['file_id'],
+                        errors=False
+                    )
+                )
+        return sent_update
+
     async def answer_inline_query(self,
                                   inline_query_id=None,
                                   results=[],
