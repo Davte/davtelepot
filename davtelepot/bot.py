@@ -1274,7 +1274,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             document = buffered_file
                     except FileNotFoundError:
                         document = None
-                        buffered_file.close()
+                        if buffered_file:
+                            buffered_file.close()
         else:
             use_stored_file_id = False
         if document is None:
