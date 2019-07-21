@@ -265,33 +265,21 @@ def init(
 
     language_command_name = bot.get_message(
         'language', 'language_command', 'name',
-        language=language
+        language=language, default_message='/language'
     )
-    if language_command_name == bot.missing_message:
-        language_command_name = '/language'
-
     language_command_alias = bot.get_message(
         'language', 'language_command', 'alias',
-        language=language
+        language=language, default_message=None
     )
-    if language_command_alias == bot.missing_message:
+    if language_command_alias is None:
         aliases = []
     else:
         aliases = [language_command_alias]
 
     language_command_description = bot.get_message(
         'language', 'language_command', 'description',
-        language=language
+        language=language, default_message=''
     )
-    if language_command_description == bot.missing_message:
-        language_command_description = ''
-
-    language_button_description = bot.get_message(
-        'language', 'language_button', 'description',
-        language=language
-    )
-    if language_button_description == bot.missing_message:
-        language_button_description = ''
 
     @bot.command(
         command=language_command_name, aliases=aliases,
@@ -301,6 +289,11 @@ def init(
     )
     async def language_command(bot, update, user_record):
         return await _language_command(bot, update, user_record)
+
+    language_button_description = bot.get_message(
+        'language', 'language_button', 'description',
+        language=language, default_message=''
+    )
 
     @bot.button(
         prefix='lang:///',
