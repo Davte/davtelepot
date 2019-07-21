@@ -14,9 +14,9 @@ import datetime
 
 # Third party modules
 from davtelepot.utilities import (
-    async_wrapper, Confirmator, get_cleaned_text, get_user, escape_html_chars,
-    line_drawing_unordered_list, make_button, make_inline_keyboard,
-    remove_html_tags
+    async_wrapper, Confirmator, extract, get_cleaned_text, get_user,
+    escape_html_chars, line_drawing_unordered_list, make_button,
+    make_inline_keyboard, remove_html_tags
 )
 
 
@@ -543,6 +543,24 @@ default_admin_messages = {
             'en': "Operation was cancelled",
             'it': "Operazione annullata"
         }
+    },
+    'db_command': {
+        'not_sqlite': {
+            'en': "Only SQLite databases may be sent via Telegram, since they "
+                  "are single-file databases.\n"
+                  "This bot has a `{db_type}` database.",
+            'it': "Via Telegram possono essere inviati solo database SQLite, "
+                  "in quanto composti di un solo file.\n"
+                  "Questo bot ha invece un database `{db_type}`."
+        },
+        'file_caption': {
+            'en': "Here is bot database.",
+            'it': "Ecco il database!"
+        },
+        'db_sent': {
+            'en': "Database sent.",
+            'it': "Database inviato."
+        }
     }
 }
 
@@ -649,6 +667,33 @@ async def _stop_button(bot, update, user_record, data):
     return result
 
 
+async def _send_bot_database(bot, update, user_record):
+    if not all(
+        [
+            bot.db_url.endswith('.db'),
+            bot.db_url.startswith('sqlite:///')
+        ]
+    ):
+        return bot.get_message(
+            'admin', 'db_command', 'not_sqlite',
+            update=update, user_record=user_record,
+            db_type=bot.db_url.partition(':///')[0]
+        )
+    database_name = extract(bot.db_url, starter='data/')
+    await bot.send_document(
+        chat_id=user_record['telegram_id'],
+        document_path=f'{{path}}/data/{database_name}',
+        caption=bot.get_message(
+            'admin', 'db_command', 'file_caption',
+            update=update, user_record=user_record
+        )
+    )
+    return bot.get_message(
+        'admin', 'db_command', 'db_sent',
+        update=update, user_record=user_record
+    )
+
+
 def init(bot, talk_messages=None, admin_messages=None, language='en'):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if talk_messages is None:
@@ -705,13 +750,11 @@ def init(bot, talk_messages=None, admin_messages=None, language='en'):
     async def talk_button(bot, update, user_record, data):
         return await _talk_button(bot, update, user_record, data)
 
-    restart_command_description = bot.get_message(
-        'admin', 'restart_command', 'description',
-        language=language
-    )
-
     @bot.command(command='/restart', aliases=[], show_in_keyboard=False,
-                 description=restart_command_description,
+                 description=bot.get_message(
+                     'admin', 'restart_command', 'description',
+                     language=language, default_message=''
+                 ),
                  authorization_level='admin')
     async def restart_command(bot, update, user_record):
         return await _restart_command(bot, update, user_record)
@@ -761,3 +804,9 @@ def init(bot, talk_messages=None, admin_messages=None, language='en'):
                 authorization_level='admin')
     async def stop_button(bot, update, user_record, data):
         return await _stop_button(bot, update, user_record, data)
+
+    @bot.command(command='/db', aliases=[], show_in_keyboard=False,
+                 description="Ask for bot database via Telegram",
+                 authorization_level='admin')
+    async def send_bot_database(bot, update, user_record):
+        return await _send_bot_database(bot, update, user_record)
