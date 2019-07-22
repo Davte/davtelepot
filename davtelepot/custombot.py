@@ -314,32 +314,12 @@ class Bot(davtelepot.bot.Bot):
                 )
         return
 
-    async def handle_location(self, update):
-        """Handle location sent by user."""
-        user_id = update['from']['id'] if 'from' in update else None
-        answerer, answer = None, None
-        if self.maintenance:
-            if update['chat']['id'] > 0:
-                answer = self.maintenance_message
-        elif user_id in self.custom_location_parsers:
-            answerer = self.custom_location_parsers[user_id]
-            del self.custom_location_parsers[user_id]
-        if answerer:
-            if asyncio.iscoroutinefunction(answerer):
-                answer = await answerer(update)
-            else:
-                answer = answerer(update)
-        if answer:
-            try:
-                return await self.send_message(answer=answer, chat_id=update)
-            except Exception as e:
-                logging.error(
-                    "Failed to process answer:\n{}".format(
-                        e
-                    ),
-                    exc_info=True
-                )
-        return
+    async def handle_location(self, *args, **kwargs):
+        """Handle location sent by user.
+
+        This method is deprecated: use `location_message_handler` instead.
+        """
+        return await super().location_message_handler(*args, **kwargs)
 
     def set_custom_parser(self, parser, update=None, user=None):
         """Set a custom parser for the user.
