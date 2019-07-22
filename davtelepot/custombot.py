@@ -70,9 +70,14 @@ class Bot(davtelepot.bot.Bot):
     - All uncaught events are ignored.
     """
 
-    def __init__(self, token, db_name=None):
+    def __init__(self, token, db_name=None, **kwargs):
         """Instantiate Bot instance, given a token and a db name."""
-        davtelepot.bot.Bot.__init__(self, token=token, database_url=db_name)
+        davtelepot.bot.Bot.__init__(
+            self,
+            token=token,
+            database_url=db_name,
+            **kwargs
+        )
         self.message_handlers['pinned_message'] = self.handle_pinned_message
         self.message_handlers['photo'] = self.handle_photo_message
         self.message_handlers['location'] = self.handle_location
