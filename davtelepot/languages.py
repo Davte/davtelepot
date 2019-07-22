@@ -7,6 +7,35 @@ import logging
 # Third party modules
 from .utilities import extract, make_button, make_inline_keyboard
 
+default_language_messages = {
+    'language_command': {
+        'name': {
+            'en': "/language",
+            'it': "/lingua"
+        },
+        'alias': {
+            'en': "Language 🗣",
+            'it': "Lingua 🗣"
+        },
+        'description': {
+            'en': "Change language settings",
+            'it': "Cambia le impostazioni della lingua"
+        }
+    },
+    'language_button': {
+        'description': {
+            'en': "Change language settings",
+            'it': "Cambia le impostazioni della lingua"
+        }
+    },
+    'language_panel': {
+        'text': {
+            'en': "<b>Choose a language</b>",
+            'it': "<b>Seleziona una lingua</b>"
+        }
+    }
+}
+
 
 class MultiLanguageObject(object):
     """Make bot inherit from this class to make it support multiple languages.
@@ -250,7 +279,7 @@ async def _language_button(bot, update, user_record, data):
 
 
 def init(
-    bot, language=None, language_messages=dict(), show_in_keyboard=True,
+    bot, language_messages=None, show_in_keyboard=True,
     supported_languages={}
 ):
     """Set language support to `bot`."""
@@ -258,47 +287,34 @@ def init(
         "Bot must be a MultiLanguageObject subclass in order to support "
         "multiple languages."
     )
+    if language_messages is None:
+        language_messages = default_language_messages
     bot.messages['language'] = language_messages
-    if language is None:
-        language = bot.default_language
     bot.add_supported_languages(supported_languages)
 
-    language_command_name = bot.get_message(
-        'language', 'language_command', 'name',
-        language=language, default_message='/language'
-    )
     language_command_alias = bot.get_message(
         'language', 'language_command', 'alias',
-        language=language, default_message=None
+        language='en', default_message=None
     )
     if language_command_alias is None:
         aliases = []
     else:
         aliases = [language_command_alias]
 
-    language_command_description = bot.get_message(
-        'language', 'language_command', 'description',
-        language=language, default_message=''
-    )
-
     @bot.command(
-        command=language_command_name, aliases=aliases,
+        command='/language',
+        aliases=aliases,
         show_in_keyboard=show_in_keyboard,
-        description=language_command_description,
+        description=language_messages['language_command']['description'],
         authorization_level='everybody'
     )
     async def language_command(bot, update, user_record):
         return await _language_command(bot, update, user_record)
 
-    language_button_description = bot.get_message(
-        'language', 'language_button', 'description',
-        language=language, default_message=''
-    )
-
     @bot.button(
         prefix='lang:///',
         separator='|',
-        description=language_button_description,
+        description=language_messages['language_button']['description'],
         authorization_level='everybody'
     )
     async def language_button(bot, update, user_record, data):
