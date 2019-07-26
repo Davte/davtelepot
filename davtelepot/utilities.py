@@ -1576,3 +1576,35 @@ async def send_csv_file(bot, chat_id, query, caption=None,
             document=f,
             caption=caption
         )
+
+
+async def send_part_of_text_file(bot, chat_id, file_path, caption=None,
+                                 file_name='File.txt', user_record=None,
+                                 update=dict(),
+                                 reversed_=True,
+                                 limit=None):
+    """Send `lines` lines of text file via `bot` in `chat_id`.
+
+    If `reversed`, read the file from last line.
+    TODO: do not load whole file in RAM. At the moment this is the easiest
+        way to allow `reversed` files, but it is inefficient and requires a lot
+        of memory.
+    """
+    try:
+        with open(file_path, 'r') as log_file:
+            lines = log_file.readlines()
+            if reversed:
+                lines = lines[::-1]
+            if limit:
+                lines = lines[:limit]
+            with io.BytesIO(
+                ''.join(lines).encode('utf-8')
+            ) as document:
+                document.name = file_name
+                return await bot.send_document(
+                    chat_id=chat_id,
+                    document=document,
+                    caption=caption
+                )
+    except Exception as e:
+        return e
