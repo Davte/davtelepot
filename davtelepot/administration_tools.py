@@ -11,13 +11,15 @@ davtelepot.admin_tools.init(my_bot)
 # Standard library modules
 import asyncio
 import datetime
+import json
 
 # Third party modules
 from davtelepot.utilities import (
     async_wrapper, Confirmator, extract, get_cleaned_text, get_user,
     escape_html_chars, line_drawing_unordered_list, make_button,
-    make_inline_keyboard, remove_html_tags
+    make_inline_keyboard, remove_html_tags, send_csv_file
 )
+from sqlalchemy.exc import ResourceClosedError
 
 
 default_talk_messages = dict(
@@ -573,6 +575,39 @@ default_admin_messages = {
             'en': "Database sent.",
             'it': "Database inviato."
         }
+    },
+    'query_command': {
+        'description': {
+            'en': "Receive the result of a SQL query performed on bot "
+                  "database",
+            'it': "Ricevi il risultato di una query SQL sul database del bot"
+        },
+        'no_iterable': {
+            'en': "No result to show was returned",
+            'it': "La query non ha restituito risultati da mostrare"
+        },
+        'exception': {
+            'en': "The query threw this error:",
+            'it': "La query ha dato questo errore:"
+        },
+        'result': {
+            'en': "Query result",
+            'it': "Risultato della query"
+        }
+    },
+    'query_button': {
+        'error': {
+            'en': "Error!",
+            'it': "Errore!"
+        },
+        'file_name': {
+            'en': "Query result.csv",
+            'it': "Risultato della query.csv"
+        },
+        'empty_file': {
+            'en': "No result to show.",
+            'it': "Nessun risultato da mostrare."
+        }
     }
 }
 
@@ -705,6 +740,112 @@ async def _send_bot_database(bot, update, user_record):
     )
 
 
+async def _query_command(bot, update, user_record):
+    query = get_cleaned_text(
+        update,
+        bot,
+        ['query', ]
+    )
+    try:
+        with bot.db as db:
+            record = db.query(query)
+            try:
+                record = list(record)
+            except ResourceClosedError:
+                record = bot.get_message(
+                    'admin', 'query_command', 'no_iterable',
+                    update=update, user_record=user_record
+                )
+            query_id = db['queries'].upsert(
+                dict(
+                    query=query
+                ),
+                ['query']
+            )
+            if query_id is True:
+                query_id = db['queries'].find_one(
+                    query=query
+                )['id']
+        result = json.dumps(record, indent=2)
+        if len(result) > 500:
+            result = (
+                f"{result[:200]}\n"  # First 200 characters
+                f"[...]\n"  # Interruption symbol
+                f"{result[-200:]}"  # Last 200 characters
+            )
+    except Exception as e:
+        result = "{first_line}\n{e}".format(
+            first_line=bot.get_message(
+                'admin', 'query_command', 'exception',
+                update=update, user_record=user_record
+            ),
+            e=e
+        )
+    result = (
+        "<b>{first_line}</b>\n".format(
+            first_line=bot.get_message(
+                'admin', 'query_command', 'result',
+                update=update, user_record=user_record
+            )
+        )
+        + f"<code>{query}</code>\n\n"
+        f"{result}"
+    )
+    reply_markup = make_inline_keyboard(
+        [
+            make_button(
+                text='CSV',
+                prefix='db_query:///',
+                data=['csv', query_id]
+            )
+        ],
+        1
+    )
+    return dict(
+        chat_id=update['chat']['id'],
+        text=result,
+        parse_mode='HTML',
+        reply_markup=reply_markup
+    )
+
+
+async def _query_button(bot, update, user_record, data):
+    result, text, reply_markup = '', '', None
+    command = data[0] if len(data) else 'default'
+    error_message = bot.get_message(
+        'admin', 'query_button', 'error',
+        user_record=user_record, update=update
+    )
+    if command == 'csv':
+        if not len(data) > 1:
+            return error_message
+        if len(data) > 1:
+            with bot.db as db:
+                query_record = db['queries'].find_one(id=data[1])
+                if query_record is None or 'query' not in query_record:
+                    return error_message
+            await send_csv_file(
+                bot=bot,
+                chat_id=update['from']['id'],
+                query=query_record['query'],
+                file_name=bot.get_message(
+                    'admin', 'query_button', 'file_name',
+                    user_record=user_record, update=update
+                ),
+                update=update,
+                user_record=user_record
+            )
+    if text:
+        return dict(
+            text=result,
+            edit=dict(
+                text=text,
+                reply_markup=reply_markup
+            )
+        )
+    return result
+
+
 def init(bot, talk_messages=None, admin_messages=None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if talk_messages is None:
@@ -812,3 +953,15 @@ def init(bot, talk_messages=None, admin_messages=None):
                  authorization_level='admin')
     async def send_bot_database(bot, update, user_record):
         return await _send_bot_database(bot, update, user_record)
+
+    @bot.command(command='/query', aliases=[], show_in_keyboard=False,
+                 description=admin_messages['query_command']['description'],
+                 authorization_level='admin')
+    async def query_command(bot, update, user_record):
+        return await _query_command(bot, update, user_record)
+
+    @bot.button(prefix='db_query:///', separator='|',
+                description=admin_messages['query_command']['description'],
+                authorization_level='admin')
+    async def query_button(bot, update, user_record, data):
+        return await _query_button(bot, update, user_record, data)
