@@ -17,7 +17,8 @@ import json
 from davtelepot.utilities import (
     async_wrapper, Confirmator, extract, get_cleaned_text, get_user,
     escape_html_chars, line_drawing_unordered_list, make_button,
-    make_inline_keyboard, remove_html_tags, send_csv_file
+    make_inline_keyboard, remove_html_tags, send_part_of_text_file,
+    send_csv_file
 )
 from sqlalchemy.exc import ResourceClosedError
 
@@ -624,6 +625,86 @@ default_admin_messages = {
             'en': "No result to show.",
             'it': "Nessun risultato da mostrare."
         }
+    },
+    'log_command': {
+        'description': {
+            'en': "Receive bot log file, if set",
+            'it': "Ricevi il file di log del bot, se impostato"
+        },
+        'no_log': {
+            'en': "Sorry but no log file is set.\n"
+                  "To set it, use `bot.set_log_file_name` instance method or "
+                  "`Bot.set_class_log_file_name` class method.",
+            'it': "Spiacente ma il file di log non è stato impostato.\n"
+                  "Per impostarlo, usa il metodo d'istanza "
+                  "`bot.set_log_file_name` o il metodo di classe"
+                  "`Bot.set_class_log_file_name`."
+        },
+        'sending_failure': {
+            'en': "Sending log file failed!\n\n"
+                  "<b>Error:</b>\n"
+                  "<code>{e}</code>",
+            'it': "Inviio del messaggio di log fallito!\n\n"
+                  "<b>Errore:</b>\n"
+                  "<code>{e}</code>"
+        },
+        'here_is_log_file': {
+            'en': "Here is the complete log file.",
+            'it': "Ecco il file di log completo."
+        },
+        'log_file_first_lines': {
+            'en': "Here are the first {lines} lines of the log file.",
+            'it': "Ecco le prime {lines} righe del file di log."
+        },
+        'log_file_last_lines': {
+            'en': "Here are the last {lines} lines of the log file.\n"
+                  "Newer lines are at the top of the file.",
+            'it': "Ecco le ultime {lines} righe del file di log.\n"
+                  "L'ordine è cronologico, con i messaggi nuovi in alto."
+        }
+    },
+    'errors_command': {
+        'description': {
+            'en': "Receive bot error log file, if set",
+            'it': "Ricevi il file di log degli errori del bot, se impostato"
+        },
+        'no_log': {
+            'en': "Sorry but no errors log file is set.\n"
+                  "To set it, use `bot.set_errors_file_name` instance method"
+                  "or `Bot.set_class_errors_file_name` class method.",
+            'it': "Spiacente ma il file di log degli errori non è stato "
+                  "impostato.\n"
+                  "Per impostarlo, usa il metodo d'istanza "
+                  "`bot.set_errors_file_name` o il metodo di classe"
+                  "`Bot.set_class_errors_file_name`."
+        },
+        'empty_log': {
+            'en': "Congratulations! Errors log is empty!",
+            'it': "Congratulazioni! Il log degli errori è vuoto!"
+        },
+        'sending_failure': {
+            'en': "Sending errors log file failed!\n\n"
+                  "<b>Error:</b>\n"
+                  "<code>{e}</code>",
+            'it': "Inviio del messaggio di log degli errori fallito!\n\n"
+                  "<b>Errore:</b>\n"
+                  "<code>{e}</code>"
+        },
+        'here_is_log_file': {
+            'en': "Here is the complete errors log file.",
+            'it': "Ecco il file di log degli errori completo."
+        },
+        'log_file_first_lines': {
+            'en': "Here are the first {lines} lines of the errors log file.",
+            'it': "Ecco le prime {lines} righe del file di log degli errori."
+        },
+        'log_file_last_lines': {
+            'en': "Here are the last {lines} lines of the errors log file.\n"
+                  "Newer lines are at the top of the file.",
+            'it': "Ecco le ultime {lines} righe del file di log degli "
+                  "errori.\n"
+                  "L'ordine è cronologico, con i messaggi nuovi in alto."
+        }
     }
 }
 
@@ -867,6 +948,103 @@ async def _query_button(bot, update, user_record, data):
     return result
 
 
+async def _log_command(bot, update, user_record):
+    if bot.log_file_path is None:
+        return bot.get_message(
+            'admin', 'log_command', 'no_log',
+            update=update, user_record=user_record
+        )
+    # Always send log file in private chat
+    chat_id = update['from']['id']
+    text = get_cleaned_text(update, bot, ['log'])
+    reversed_ = 'r' not in text
+    text = text.strip('r')
+    if text.isnumeric():
+        limit = int(text)
+    else:
+        limit = 100
+    if limit is None:
+        sent = await bot.send_document(
+            chat_id=chat_id,
+            document_path=bot.log_file_path,
+            caption=bot.get_message(
+                'admin', 'log_command', 'here_is_log_file',
+                update=update, user_record=user_record
+            )
+        )
+    else:
+        sent = await send_part_of_text_file(
+            bot=bot,
+            update=update,
+            user_record=user_record,
+            chat_id=chat_id,
+            file_path=bot.log_file_path,
+            file_name=bot.log_file_name,
+            caption=bot.get_message(
+                'admin', 'log_command', (
+                    'log_file_last_lines'
+                    if reversed_
+                    else 'log_file_first_lines'
+                ),
+                update=update, user_record=user_record,
+                lines=limit
+            ),
+            reversed_=reversed_,
+            limit=limit
+        )
+    if isinstance(sent, Exception):
+        return bot.get_message(
+            'admin', 'log_command', 'sending_failure',
+            update=update, user_record=user_record,
+            e=sent
+        )
+    return
+
+
+async def _errors_command(bot, update, user_record):
+    # Always send errors log file in private chat
+    chat_id = update['from']['id']
+    if bot.errors_file_path is None:
+        return bot.get_message(
+            'admin', 'errors_command', 'no_log',
+            update=update, user_record=user_record
+        )
+    await bot.sendChatAction(chat_id=chat_id, action='upload_document')
+    try:
+        # Check that error log is not empty
+        with open(bot.errors_file_path, 'r') as errors_file:
+            for line in errors_file:
+                break
+            else:
+                return bot.get_message(
+                    'admin', 'errors_command', 'empty_log',
+                    update=update, user_record=user_record
+                )
+        # Send error log
+        sent = await bot.send_document(
+            # Always send log file in private chat
+            chat_id=chat_id,
+            document_path=bot.errors_file_path,
+            caption=bot.get_message(
+                'admin', 'errors_command', 'here_is_log_file',
+                update=update, user_record=user_record
+            )
+        )
+        # Reset error log
+        with open(bot.errors_file_path, 'w') as errors_file:
+            errors_file.write('')
+    except Exception as e:
+        sent = e
+    # Notify failure
+    if isinstance(sent, Exception):
+        return bot.get_message(
+            'admin', 'errors_command', 'sending_failure',
+            update=update, user_record=user_record,
+            e=sent
+        )
+    return
+
+
 def init(bot, talk_messages=None, admin_messages=None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if talk_messages is None:
@@ -992,3 +1170,15 @@ def init(bot, talk_messages=None, admin_messages=None):
                 authorization_level='admin')
     async def query_button(bot, update, user_record, data):
         return await _query_button(bot, update, user_record, data)
+
+    @bot.command(command='/log', aliases=[], show_in_keyboard=False,
+                 description=admin_messages['log_command']['description'],
+                 authorization_level='admin')
+    async def log_command(bot, update, user_record):
+        return await _log_command(bot, update, user_record)
+
+    @bot.command(command='/errors', aliases=[], show_in_keyboard=False,
+                 description=admin_messages['errors_command']['description'],
+                 authorization_level='admin')
+    async def errors_command(bot, update, user_record):
+        return await _errors_command(bot, update, user_record)

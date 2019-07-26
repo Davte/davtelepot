@@ -86,6 +86,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
         )
     ]
+    _log_file_name = None
+    _errors_file_name = None
 
     def __init__(
         self, token, hostname='', certificate=None, max_connections=40,
@@ -206,6 +208,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.default_reply_keyboard_elements = []
         self._default_keyboard = dict()
         self.recent_users = OrderedDict()
+        self._log_file_name = None
+        self._errors_file_name = None
         return
 
     @property
@@ -224,6 +228,57 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     def set_path(self, path):
         """Set instance path attribute."""
         self._path = path
+
+    @property
+    def log_file_name(self):
+        """Return log file name.
+
+        Fallback to class file name if set, otherwise return None.
+        """
+        return self._log_file_name or self.__class__._log_file_name
+
+    @property
+    def log_file_path(self):
+        """Return log file path basing on self.path and `_log_file_name`.
+
+        Fallback to class file if set, otherwise return None.
+        """
+        return f"{self.path}/data/{self.log_file_name}"
+
+    def set_log_file_name(self, file_name):
+        """Set log file name."""
+        self._log_file_name = file_name
+
+    @classmethod
+    def set_class_log_file_name(cls, file_name):
+        """Set class log file name."""
+        cls._log_file_name = file_name
+
+    @property
+    def errors_file_name(self):
+        """Return errors file name.
+
+        Fallback to class file name if set, otherwise return None.
+        """
+        return self._errors_file_name or self.__class__._errors_file_name
+
+    @property
+    def errors_file_path(self):
+        """Return errors file path basing on self.path and `_errors_file_name`.
+
+        Fallback to class file if set, otherwise return None.
+        """
+        if self.errors_file_name:
+            return f"{self.path}/data/{self.errors_file_name}"
+
+    def set_errors_file_name(self, file_name):
+        """Set errors file name."""
+        self._errors_file_name = file_name
+
+    @classmethod
+    def set_class_errors_file_name(cls, file_name):
+        """Set class errors file name."""
+        cls._errors_file_name = file_name
 
     @classmethod
     def get(cls, token, *args, **kwargs):
