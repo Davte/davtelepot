@@ -7,6 +7,7 @@ import csv
 import datetime
 from difflib import SequenceMatcher
 import inspect
+import io
 import json
 import logging
 import os
@@ -1536,3 +1537,42 @@ def make_inline_query_answer(answer):
 async def dummy_coroutine(*args, **kwargs):
     """Accept everthing as argument and do nothing."""
     return
+
+
+async def send_csv_file(bot, chat_id, query, caption=None,
+                        file_name='File.csv', user_record=None, update=dict()):
+    """Run a query on `bot` database and send result as CSV file to `chat_id`.
+
+    Optional parameters `caption` and `file_name` may be passed to this
+        function.
+    """
+    try:
+        with bot.db as db:
+            record = db.query(
+                query
+            )
+        header_line = []
+        body_lines = []
+        for row in record:
+            if not header_line:
+                header_line.append(get_csv_string(row.keys()))
+            body_lines.append(get_csv_string(row.values()))
+        text = '\n'.join(header_line + body_lines)
+    except Exception as e:
+        text = "{message}\n{e}".format(
+            message=bot.get_message('admin', 'query_button', 'error',
+                                    user_record=user_record, update=update),
+            e=e
+        )
+    for x, y in {'&lt;': '<', '\n': '\r\n'}.items():
+        text = text.replace(x, y)
+    if len(text) == 0:
+        text = bot.get_message('admin', 'query_button', 'empty_file',
+                               user_record=user_record, update=update)
+    with io.BytesIO(text.encode('utf-8')) as f:
+        f.name = file_name
+        return await bot.send_document(
+            chat_id=chat_id,
+            document=f,
+            caption=caption
+        )
