@@ -1601,6 +1601,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         if not isinstance(command, str):
             raise TypeError(f'Command `{command}` is not a string')
+        if isinstance(reply_keyboard_button, dict):
+            for button in reply_keyboard_button.values():
+                if button not in aliases:
+                    aliases.append(button)
         if aliases:
             if not isinstance(aliases, list):
                 raise TypeError(f'Aliases is not a list: `{aliases}`')
