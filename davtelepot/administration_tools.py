@@ -705,6 +705,26 @@ default_admin_messages = {
                   "errori.\n"
                   "L'ordine è cronologico, con i messaggi nuovi in alto."
         }
+    },
+    'maintenance_command': {
+        'description': {
+            'en': "Put the bot under maintenance",
+            'it': "Metti il bot in manutenzione"
+        },
+        'maintenance_started': {
+            'en': "<i>Bot has just been put under maintenance!</i>\n\n"
+                  "Until further notice, it will reply to users "
+                  "with the following message:\n\n"
+                  "{message}",
+            'it': "<i>Il bot è stato messo in manutenzione!</i>\n\n"
+                  "Fino a nuovo ordine, risponderà a tutti i comandi con il "
+                  "seguente messaggio\n\n"
+                  "{message}"
+        },
+        'maintenance_ended': {
+            'en': "<i>Maintenance ended!</i>",
+            'it': "<i>Manutenzione terminata!</i>"
+        }
     }
 }
 
@@ -1045,6 +1065,52 @@ async def _errors_command(bot, update, user_record):
     return
 
 
+async def _maintenance_command(bot, update, user_record):
+    maintenance_status = bot.change_maintenance_status(
+        maintenance_message=get_cleaned_text(update, bot, ['maintenance'])
+    )
+    if maintenance_status:
+        return bot.get_message(
+            'admin', 'maintenance_command', 'maintenance_started',
+            update=update, user_record=user_record,
+            message=bot.maintenance_message
+        )
+    return bot.get_message(
+        'admin', 'maintenance_command', 'maintenance_ended',
+        update=update, user_record=user_record
+    )
+
+
+def get_maintenance_exception_criterion(bot, allowed_command):
+    """Get a criterion to allow a type of updates during maintenance.
+
+    `bot` : davtelepot.bot.Bot() instance
+    `allowed_command` : str (command to be allowed during maintenance)
+    """
+    def criterion(update):
+        if 'message' not in update:
+            return False
+        update = update['message']
+        text = get_cleaned_text(update, bot, [])
+        if (
+            'from' not in update
+            or 'id' not in update['from']
+        ):
+            return False
+        with bot.db as db:
+            user_record = db['users'].find_one(
+                telegram_id=update['from']['id']
+            )
+        if not bot.authorization_function(
+            update=update,
+            user_record=user_record,
+            authorization_level=2
+        ):
+            return False
+        return text == allowed_command.strip('/')
+    return criterion
+
+
 def init(bot, talk_messages=None, admin_messages=None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if talk_messages is None:
@@ -1062,6 +1128,11 @@ def init(bot, talk_messages=None, admin_messages=None):
                     cancelled=1
                 )
             )
+
+    allowed_during_maintenance = [
+        get_maintenance_exception_criterion(bot, command)
+        for command in ['stop', 'restart', 'maintenance']
+    ]
 
     @bot.additional_task(when='BEFORE')
     async def load_talking_sessions():
@@ -1182,3 +1253,13 @@ def init(bot, talk_messages=None, admin_messages=None):
                  authorization_level='admin')
     async def errors_command(bot, update, user_record):
         return await _errors_command(bot, update, user_record)
+
+    for exception in allowed_during_maintenance:
+        bot.allow_during_maintenance(exception)
+
+    @bot.command(command='/maintenance', aliases=[], show_in_keyboard=False,
+                 description=admin_messages[
+                    'maintenance_command']['description'],
+                 authorization_level='admin')
+    async def maintenance_command(bot, update, user_record):
+        return await _maintenance_command(bot, update, user_record)
