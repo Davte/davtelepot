@@ -603,6 +603,14 @@ default_admin_messages = {
             'it': "Risultato della query"
         }
     },
+    'select_command': {
+        'description': {
+            'en': "Receive the result of a SELECT query performed on bot "
+                  "database",
+            'it': "Ricevi il risultato di una query SQL di tipo SELECT "
+                  "sul database del bot"
+        }
+    },
     'query_button': {
         'error': {
             'en': "Error!",
@@ -971,6 +979,12 @@ def init(bot, talk_messages=None, admin_messages=None):
                  description=admin_messages['query_command']['description'],
                  authorization_level='admin')
     async def query_command(bot, update, user_record):
+        return await _query_command(bot, update, user_record)
+
+    @bot.command(command='/select', aliases=[], show_in_keyboard=False,
+                 description=admin_messages['select_command']['description'],
+                 authorization_level='admin')
+    async def select_command(bot, update, user_record):
         return await _query_command(bot, update, user_record)
 
     @bot.button(prefix='db_query:///', separator='|',
