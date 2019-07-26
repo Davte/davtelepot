@@ -159,7 +159,7 @@ async def _forward_to(update, bot, sender, addressee, is_admin=False):
     return
 
 
-def get_talk_panel(update, bot, text=''):
+def get_talk_panel(bot, update, user_record=None, text=''):
     """Return text and reply markup of talk panel.
 
     `text` may be:
@@ -177,32 +177,29 @@ def get_talk_panel(update, bot, text=''):
             else:
                 users = list(
                     db.query(
-                        """SELECT *
-                        FROM users
-                        WHERE COALESCE(
-                            first_name || last_name || username,
-                            last_name || username,
-                            first_name || username,
-                            username,
-                            first_name || last_name,
-                            last_name,
-                            first_name
-                        ) LIKE '%{username}%'
-                        ORDER BY LOWER(
-                            COALESCE(
-                                first_name || last_name || username,
-                                last_name || username,
-                                first_name || username,
-                                username,
-                                first_name || last_name,
-                                last_name,
-                                first_name
-                            )
-                        )
-                        LIMIT 26
-                        """.format(
-                            username=text
-                        )
+                        "SELECT * "
+                        "FROM users "
+                        "WHERE COALESCE( "
+                        "    first_name || last_name || username, "
+                        "    last_name || username, "
+                        "    first_name || username, "
+                        "    username, "
+                        "    first_name || last_name, "
+                        "    last_name, "
+                        "    first_name "
+                        f") LIKE '%{text}%' "
+                        "ORDER BY LOWER( "
+                        "    COALESCE( "
+                        "        first_name || last_name || username, "
+                        "        last_name || username, "
+                        "        first_name || username, "
+                        "        username, "
+                        "        first_name || last_name, "
+                        "        last_name, "
+                        "        first_name "
+                        "    ) "
+                        ") "
+                        "LIMIT 26"
                     )
                 )
     if len(text) == 0:
@@ -211,6 +208,7 @@ def get_talk_panel(update, bot, text=''):
                 'talk',
                 'help_text',
                 update=update,
+                user_record=user_record,
                 q=escape_html_chars(
                     remove_html_tags(text)
                 )
@@ -221,7 +219,7 @@ def get_talk_panel(update, bot, text=''):
                 make_button(
                     bot.get_message(
                         'talk', 'search_button',
-                        update=update
+                        update=update, user_record=user_record
                     ),
                     prefix='talk:///',
                     data=['search']
@@ -235,6 +233,7 @@ def get_talk_panel(update, bot, text=''):
                 'talk',
                 'user_not_found',
                 update=update,
+                user_record=user_record,
                 q=escape_html_chars(
                     remove_html_tags(text)
                 )
@@ -245,7 +244,7 @@ def get_talk_panel(update, bot, text=''):
                 make_button(
                     bot.get_message(
                         'talk', 'search_button',
-                        update=update
+                        update=update, user_record=user_record
                     ),
                     prefix='talk:///',
                     data=['search']
@@ -257,7 +256,7 @@ def get_talk_panel(update, bot, text=''):
         text = "{header}\n\n{u}{etc}".format(
             header=bot.get_message(
                 'talk', 'select_user',
-                update=update
+                update=update, user_record=user_record
             ),
             u=line_drawing_unordered_list(
                 [
@@ -300,13 +299,14 @@ def get_talk_panel(update, bot, text=''):
     return text, reply_markup
 
 
-async def _talk_command(update, bot):
+async def _talk_command(bot, update, user_record):
     text = get_cleaned_text(
         update,
         bot,
         ['talk']
     )
-    text, reply_markup = get_talk_panel(update, bot, text)
+    text, reply_markup = get_talk_panel(bot=bot, update=update,
+                                        user_record=user_record, text=text)
     return dict(
         text=text,
         parse_mode='HTML',
@@ -426,7 +426,7 @@ async def _talk_button(bot, update, user_record, data):
         )
         text = bot.get_message(
             'talk', 'instructions',
-            update=update
+            update=update, user_record=user_record
         )
         reply_markup = None
     elif command == 'select':
@@ -457,7 +457,7 @@ async def _talk_button(bot, update, user_record, data):
         elif not Confirmator.get('stop_bots').confirm(telegram_id):
             result = bot.get_message(
                 'talk', 'end_session',
-                update=update,
+                update=update, user_record=user_record
             )
         else:
             with bot.db as db:
@@ -753,8 +753,8 @@ def init(bot, talk_messages=None, admin_messages=None):
     @bot.command(command='/talk', aliases=[], show_in_keyboard=False,
                  description=admin_messages['talk_command']['description'],
                  authorization_level='admin')
-    async def talk_command(update):
-        return await _talk_command(update, bot)
+    async def talk_command(bot, update, user_record):
+        return await _talk_command(bot, update, user_record)
 
     @bot.button(prefix='talk:///', separator='|', authorization_level='admin')
     async def talk_button(bot, update, user_record, data):
