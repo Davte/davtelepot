@@ -243,7 +243,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
         Fallback to class file if set, otherwise return None.
         """
-        return f"{self.path}/data/{self.log_file_name}"
+        if self.log_file_name:
+            return f"{self.path}/data/{self.log_file_name}"
 
     def set_log_file_name(self, file_name):
         """Set log file name."""
