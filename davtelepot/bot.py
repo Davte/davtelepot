@@ -176,6 +176,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.commands = OrderedDict()
         self.command_aliases = OrderedDict()
         self.messages['commands'] = dict()
+        self.messages['reply_keyboard_buttons'] = dict()
         self._unknown_command_message = None
         self.text_message_parsers = OrderedDict()
         # Handle location messages
@@ -206,7 +207,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             lambda update, user_record=None, authorization_level='user': True
         )
         self.default_reply_keyboard_elements = []
-        self._default_keyboard = dict()
         self.recent_users = OrderedDict()
         self._log_file_name = None
         self._errors_file_name = None
@@ -411,13 +411,32 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             return self._authorization_denied_message
         return self.__class__._authorization_denied_message
 
-    @property
-    def default_keyboard(self):
-        """Get the default keyboard.
-
-        It is sent when reply_markup is left blank and chat is private.
-        """
-        return self._default_keyboard
+    def get_keyboard(self, user_record=dict(), update=dict(),
+                     telegram_id=None):
+        """Return a reply keyboard translated into user language."""
+        if (not user_record) and telegram_id:
+            with self.db as db:
+                user_record = db['users'].find_one(telegram_id=telegram_id)
+        buttons = [
+            dict(
+                text=self.get_message(
+                    'reply_keyboard_buttons', command,
+                    user_record=user_record, update=update,
+                    default_message=element['reply_keyboard_button']
+                )
+            )
+            for command, element in self.commands.items()
+            if 'reply_keyboard_button' in element
+        ]
+        if len(buttons) == 0:
+            return
+        return dict(
+            keyboard=make_lines_of_buttons(
+                buttons,
+                (2 if len(buttons) < 4 else 3)  # Row length
+            ),
+            resize_keyboard=True
+        )
 
     @property
     def unknown_command_message(self):
@@ -1025,7 +1044,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             and chat_id > 0
             and text != self.authorization_denied_message
         ):
-            reply_markup = self.default_keyboard
+            reply_markup = self.get_keyboard(
+                update=update,
+                telegram_id=chat_id
+            )
         if not text:
             return
         parse_mode = str(parse_mode)
@@ -1176,7 +1198,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             and chat_id > 0
             and caption != self.authorization_denied_message
         ):
-            reply_markup = self.default_keyboard
+            reply_markup = self.get_keyboard(
+                update=update,
+                telegram_id=chat_id
+            )
         if type(photo) is str:
             photo_path = photo
             with self.db as db:
@@ -1296,7 +1321,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             and chat_id > 0
             and caption != self.authorization_denied_message
         ):
-            reply_markup = self.default_keyboard
+            reply_markup = self.get_keyboard(
+                update=update,
+                telegram_id=chat_id,
+            )
         if document_path is not None:
             with self.db as db:
                 already_sent = db['sent_documents'].find_one(
@@ -1544,8 +1572,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         self._unknown_command_message = unknown_command_message
 
-    def command(self, command, aliases=None, show_in_keyboard=False,
-                description="", authorization_level='admin'):
+    def command(self, command, aliases=None, reply_keyboard_button=None,
+                show_in_keyboard=False, description="",
+                authorization_level='admin'):
         """Associate a bot command with a custom handler function.
 
         Decorate command handlers like this:
@@ -1559,9 +1588,11 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         `command` is the command name (with or without /).
         `aliases` is a list of aliases; each will call the command handler
             function; the first alias will appear as button in
-            default_keyboard.
-        `show_in_keyboard`, if True, makes first alias appear in
-            default_keyboard.
+            reply keyboard if `reply_keyboard_button` is not set.
+        `reply_keyboard_button` is a str or better dict of language-specific
+            strings to be shown in default keyboard.
+        `show_in_keyboard`, if True, makes a button for this command appear in
+            default keyboard.
         `description` can be used to help users understand what `/command`
             does.
         `authorization_level` is the lowest authorization level needed to run
@@ -1623,8 +1654,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             if aliases:
                 for alias in aliases:
                     self.command_aliases[alias] = decorated_command_handler
-                if show_in_keyboard:
-                    self.default_reply_keyboard_elements.append(aliases[0])
+            if show_in_keyboard and (aliases or reply_keyboard_button):
+                _reply_keyboard_button = reply_keyboard_button or aliases[0]
+                self.messages[
+                    'reply_keyboard_buttons'][
+                    command] = _reply_keyboard_button
+                self.commands[command][
+                    'reply_keyboard_button'] = _reply_keyboard_button
         return command_decorator
 
     def parser(self, condition, description='', authorization_level='admin',
@@ -1690,7 +1726,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         return parser_decorator
 
     def set_command(self, command, handler, aliases=None,
-                    show_in_keyboard=False, description="",
+                    reply_keyboard_button=None, show_in_keyboard=False,
+                    description="",
                     authorization_level='admin'):
         """Associate a `command` with a `handler`.
 
@@ -1700,9 +1737,11 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         `handler` is the function to be called on update objects.
         `aliases` is a list of aliases; each will call the command handler
             function; the first alias will appear as button in
-            default_keyboard.
-        `show_in_keyboard`, if True, makes first alias appear in
-            default_keyboard.
+            reply keyboard if `reply_keyboard_button` is not set.
+        `reply_keyboard_button` is a str or better dict of language-specific
+            strings to be shown in default keyboard.
+        `show_in_keyboard`, if True, makes a button for this command appear in
+            default keyboard.
         `description` is a description and can be used to help users understand
             what `/command` does.
         `authorization_level` is the lowest authorization level needed to run
@@ -1712,6 +1751,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             raise TypeError(f'Handler `{handler}` is not callable.')
         return self.command(
             command=command, aliases=aliases,
+            reply_keyboard_button=reply_keyboard_button,
             show_in_keyboard=show_in_keyboard, description=description,
             authorization_level=authorization_level
         )(handler)
@@ -1944,33 +1984,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             del self.individual_location_handlers[identifier]
         return
 
-    def set_default_keyboard(self, keyboard='set_default'):
-        """Set a default keyboard for the bot.
-
-        If a keyboard is not passed as argument, a default one is generated,
-            based on aliases of commands.
-        """
-        if keyboard == 'set_default':
-            buttons = [
-                dict(
-                    text=x
-                )
-                for x in self.default_reply_keyboard_elements
-            ]
-            if len(buttons) == 0:
-                self._default_keyboard = None
-            else:
-                self._default_keyboard = dict(
-                    keyboard=make_lines_of_buttons(
-                        buttons,
-                        (2 if len(buttons) < 4 else 3)  # Row length
-                    ),
-                    resize_keyboard=True
-                )
-        else:
-            self._default_keyboard = keyboard
-        return
-
     async def webhook_feeder(self, request):
         """Handle incoming HTTP `request`s.
 
@@ -2012,7 +2025,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     def setup(self):
         """Make bot ask for updates and handle responses."""
-        self.set_default_keyboard()
         if not self.webhook_url:
             asyncio.ensure_future(self.get_updates())
         else:

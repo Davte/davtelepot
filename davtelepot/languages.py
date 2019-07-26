@@ -1,6 +1,7 @@
 """Bot support for multiple languages."""
 
 # Standard library modules
+import asyncio
 from collections import OrderedDict
 import logging
 
@@ -17,6 +18,10 @@ default_language_messages = {
             'en': "Language 🗣",
             'it': "Lingua 🗣"
         },
+        'reply_keyboard_button': {
+            'en': "Language 🗣",
+            'it': "Lingua 🗣"
+        },
         'description': {
             'en': "Change language settings",
             'it': "Cambia le impostazioni della lingua"
@@ -26,6 +31,10 @@ default_language_messages = {
         'description': {
             'en': "Change language settings",
             'it': "Cambia le impostazioni della lingua"
+        },
+        'language_set': {
+            'en': "Selected language: English 🇬🇧",
+            'it': "Lingua selezionata: Italiano 🇮🇹"
         }
     },
     'language_panel': {
@@ -265,6 +274,16 @@ async def _language_button(bot, update, user_record, data):
                     ensure=True
                 )
                 user_record['selected_language_code'] = data[1]
+        if 'chat' in update['message'] and update['message']['chat']['id'] > 0:
+            asyncio.ensure_future(
+                bot.send_message(
+                    text=bot.get_message(
+                        'language', 'language_button', 'language_set',
+                        update=update['message'], user_record=user_record
+                    ),
+                    chat_id=update['message']['chat']['id']
+                )
+            )
     if len(data) == 0 or data[0] in ('show', 'set'):
         text, reply_markup = get_language_panel(bot, user_record)
     if text:
@@ -292,18 +311,17 @@ def init(
     bot.messages['language'] = language_messages
     bot.add_supported_languages(supported_languages)
 
-    language_command_alias = bot.get_message(
-        'language', 'language_command', 'alias',
-        language='en', default_message=None
-    )
-    if language_command_alias is None:
-        aliases = []
-    else:
-        aliases = [language_command_alias]
+    aliases = [
+        alias
+        for alias in language_messages[
+            'language_command']['alias'].values()
+    ]
 
     @bot.command(
         command='/language',
         aliases=aliases,
+        reply_keyboard_button=language_messages['language_command'][
+            'reply_keyboard_button'],
         show_in_keyboard=show_in_keyboard,
         description=language_messages['language_command']['description'],
         authorization_level='everybody'
