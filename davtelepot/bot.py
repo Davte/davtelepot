@@ -1273,17 +1273,17 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                                 or 'Document'
                             )
                             document = buffered_file
-                    except FileNotFoundError:
-                        document = None
+                    except FileNotFoundError as e:
                         if buffered_file:
                             buffered_file.close()
+                        return e
         else:
             use_stored_file_id = False
         if document is None:
             logging.error(
                 "`document` is None, `send_document` returning..."
             )
-            return
+            return Exception("No `document` provided")
         sent_update = None
         try:
             sent_update = await self.sendDocument(
