@@ -1310,7 +1310,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                         ['path']
                     )
         finally:
-            buffered_file.close()
+            if buffered_file:
+                buffered_file.close()
         if (
             type(sent_update) is dict
             and 'document' in sent_update
