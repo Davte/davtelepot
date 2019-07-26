@@ -582,6 +582,14 @@ default_admin_messages = {
                   "database",
             'it': "Ricevi il risultato di una query SQL sul database del bot"
         },
+        'help': {
+            'en': "Write a SQL query to be run on bot database.\n\n"
+                  "<b>Example</b>\n"
+                  "<code>/query SELECT * FROM users WHERE 0</code>",
+            'it': "Invia una query SQL da eseguire sul database del bot.\n\n"
+                  "<b>Esempio</b>\n"
+                  "<code>/query SELECT * FROM users WHERE 0</code>"
+        },
         'no_iterable': {
             'en': "No result to show was returned",
             'it': "La query non ha restituito risultati da mostrare"
@@ -746,6 +754,11 @@ async def _query_command(bot, update, user_record):
         bot,
         ['query', ]
     )
+    if len(query) == 0:
+        return bot.get_message(
+            'admin', 'query_command', 'help',
+            update=update, user_record=user_record
+        )
     try:
         with bot.db as db:
             record = db.query(query)
