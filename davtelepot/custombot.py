@@ -78,6 +78,8 @@ class Bot(davtelepot.bot.Bot):
             database_url=db_name,
             **kwargs
         )
+        self.messages['commands'] = dict()
+        self.messages['reply_keyboard_buttons'] = dict()
         self.message_handlers['pinned_message'] = self.handle_pinned_message
         self.message_handlers['photo'] = self.handle_photo_message
         self.message_handlers['location'] = self.handle_location
