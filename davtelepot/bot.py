@@ -2272,7 +2272,11 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         cls.runner = web.AppRunner(cls.app)
         await cls.runner.setup()
         cls.server = web.TCPSite(cls.runner, cls.local_host, cls.port)
-        await cls.server.start()
+        try:
+            await cls.server.start()
+        except OSError as e:
+            logging.error(e)
+            raise KeyboardInterrupt("Unable to start web app.")
         logging.info(f"App running at http://{cls.local_host}:{cls.port}")
 
     @classmethod
