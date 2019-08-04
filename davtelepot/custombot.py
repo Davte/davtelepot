@@ -88,7 +88,6 @@ class Bot(davtelepot.bot.Bot):
         self.chat_actions = dict(
             pinned=OrderedDict()
         )
-        self.messages = dict()
 
     @property
     def unauthorized_message(self):
