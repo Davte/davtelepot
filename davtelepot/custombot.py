@@ -78,8 +78,6 @@ class Bot(davtelepot.bot.Bot):
             database_url=db_name,
             **kwargs
         )
-        self.messages['commands'] = dict()
-        self.messages['reply_keyboard_buttons'] = dict()
         self.message_handlers['pinned_message'] = self.handle_pinned_message
         self.message_handlers['photo'] = self.handle_photo_message
         self.message_handlers['location'] = self.handle_location
@@ -437,7 +435,8 @@ class Bot(davtelepot.bot.Bot):
         return
 
     def command(self, command, aliases=None, show_in_keyboard=False,
-                descr="", auth='admin', description=None,
+                reply_keyboard_button=None, descr="", auth='admin',
+                description=None,
                 authorization_level=None):
         """Define a bot command.
 
@@ -449,6 +448,7 @@ class Bot(davtelepot.bot.Bot):
         return super().command(
             command=command,
             aliases=aliases,
+            reply_keyboard_button=reply_keyboard_button,
             show_in_keyboard=show_in_keyboard,
             description=description,
             authorization_level=authorization_level
