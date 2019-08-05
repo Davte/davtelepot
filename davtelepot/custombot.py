@@ -171,69 +171,6 @@ class Bot(davtelepot.bot.Bot):
         """
         return self.set_chat_id_getter(get_chat_id_function)
 
-    def get_message(self, *fields, update=None, user_record=None,
-                    language=None, **format_kwargs):
-        """Given a list of strings (`fields`), return proper message.
-
-        If `language` is not passed, it is extracted from `update`.
-        If `update` is not passed either, `language` is extracted from
-            `user_record`.
-        Fall back to English message if language is not available.
-        Pass `format_kwargs` to format function.
-        """
-        if (
-            language is None
-            and isinstance(update, dict)
-            and 'from' in update
-            and 'language_code' in update['from']
-        ):
-            language = update['from']['language_code']
-        if (
-            language is None
-            and isinstance(user_record, dict)
-            and 'language_code' in user_record
-        ):
-            language = user_record['language_code']
-        if language is None:
-            language = 'en'
-        result = self.messages
-        for field in fields:
-            if field not in result:
-                logging.error(
-                    "Please define self.message{f}".format(
-                        f=''.join(
-                            '[\'{field}\']'.format(
-                                field=field
-                            )
-                            for field in fields
-                        )
-                    )
-                )
-                return "Invalid message!"
-            result = result[field]
-        if language not in result:
-            language = extract(
-                language,
-                ender='-'
-            )
-            if language not in result:
-                language = 'en'
-                if language not in result:
-                    logging.error(
-                        "Please define self.message{f}['en']".format(
-                            f=''.join(
-                                '[\'{field}\']'.format(
-                                    field=field
-                                )
-                                for field in fields
-                            )
-                        )
-                    )
-                    return "Invalid message!"
-        return result[language].format(
-            **format_kwargs
-        )
-
     async def on_chat_message(self, update, user_record=None):
         """Handle text message.
 
