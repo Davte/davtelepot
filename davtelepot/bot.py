@@ -67,6 +67,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     bots = []
     _path = '.'
     runner = None
+    # TODO: find a way to choose port automatically by default
+    # Setting port to 0 does not work unfortunately
     local_host = 'localhost'
     port = 3000
     final_state = 0
