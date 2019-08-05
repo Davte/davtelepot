@@ -195,6 +195,8 @@ class MultiLanguageObject(object):
                         )
                     )
                     return default_message or self.missing_message
+        if type(result) is str:
+            return result
         return result[language].format(
             **format_kwargs
         )
