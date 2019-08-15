@@ -2113,6 +2113,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
                 await asyncio.sleep(error_cooldown)
                 continue
+            elif isinstance(updates, Exception):
+                logging.error(
+                    "Unexpected exception. "
+                    f"Waiting {error_cooldown} seconds before trying again..."
+                )
+                await asyncio.sleep(error_cooldown)
+                continue
             for update in updates:
                 asyncio.ensure_future(self.route_update(update))
             if update is not None:
