@@ -298,12 +298,15 @@ class TelegramBot(object):
                             "request"
                         )
                         self.set_flood_wait(flood_wait)
-                    return e
+                    response_object = e
                 except Exception as e:
                     logging.error(f"{e}", exc_info=True)
-                    return e
+                    response_object = e
         except asyncio.TimeoutError as e:
             logging.info(f"{e}: {method} API call timed out")
+        except Exception as e:
+            logging.info(f"Unexpected eception:\n{e}")
+            response_object = e
         finally:
             if session_must_be_closed and not session.closed:
                 await session.close()
