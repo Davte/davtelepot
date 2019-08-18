@@ -1577,6 +1577,18 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         self._unknown_command_message = unknown_command_message
 
+    def add_help_section(self, help_section):
+        """Add `help_section`."""
+        assert (
+            isinstance(help_section, dict)
+            and 'name' in help_section
+            and 'label' in help_section
+            and 'description' in help_section
+        ), "Invalid help section!"
+        if 'authorization_level' not in help_section:
+            help_section['authorization_level'] = 'admin'
+        self.messages['help_sections'][help_section['name']] = help_section
+
     def command(self, command, aliases=None, reply_keyboard_button=None,
                 show_in_keyboard=False, description="",
                 help_section=None,
@@ -1641,7 +1653,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         if isinstance(help_section, dict):
             if 'authorization_level' not in help_section:
                 help_section['authorization_level'] = authorization_level
-            self.messages['help_sections'][help_section['name']] = help_section
+            self.add_help_section(help_section)
         command = command.strip('/ ').lower()
 
         def command_decorator(command_handler):
