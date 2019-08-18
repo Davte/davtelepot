@@ -181,6 +181,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.messages['reply_keyboard_buttons'] = dict()
         self._unknown_command_message = None
         self.text_message_parsers = OrderedDict()
+        # Support for /help command
+        self.messages['help_sections'] = OrderedDict()
         # Handle location messages
         self.individual_location_handlers = dict()
         # Callback query-related properties
@@ -1577,6 +1579,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     def command(self, command, aliases=None, reply_keyboard_button=None,
                 show_in_keyboard=False, description="",
+                help_section=None,
                 authorization_level='admin'):
         """Associate a bot command with a custom handler function.
 
@@ -1598,6 +1601,22 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             default keyboard.
         `description` can be used to help users understand what `/command`
             does.
+        `help_section` is a dict on which the corresponding help section is
+            built. It may provide multilanguage support and should be
+            structured as follows:
+            {
+              "label": {  # It will be displayed as button label
+                'en': "Label",
+                ...
+              },
+              "name": "section_name",
+              # If missing, `authorization_level` is used
+              "authorization_level": "everybody",
+              "description": {
+                'en': "Description in English",
+                ...
+              },
+          }
         `authorization_level` is the lowest authorization level needed to run
             the command.
         """
@@ -1619,6 +1638,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 raise TypeError(
                     f'Aliases {aliases} is not a list of strings string'
                 )
+        if isinstance(help_section, dict):
+            if 'authorization_level' not in help_section:
+                help_section['authorization_level'] = authorization_level
+            self.messages['help_sections'][help_section['name']] = help_section
         command = command.strip('/ ').lower()
 
         def command_decorator(command_handler):

@@ -373,6 +373,7 @@ class Bot(davtelepot.bot.Bot):
     def command(self, command, aliases=None, show_in_keyboard=False,
                 reply_keyboard_button=None, descr="", auth='admin',
                 description=None,
+                help_section=None,
                 authorization_level=None):
         """Define a bot command.
 
@@ -387,6 +388,7 @@ class Bot(davtelepot.bot.Bot):
             reply_keyboard_button=reply_keyboard_button,
             show_in_keyboard=show_in_keyboard,
             description=description,
+            help_section=help_section,
             authorization_level=authorization_level
         )
 
