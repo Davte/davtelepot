@@ -914,16 +914,19 @@ async def _query_command(bot, update, user_record):
         + f"<code>{query}</code>\n\n"
         f"{result}"
     )
-    reply_markup = make_inline_keyboard(
-        [
-            make_button(
-                text='CSV',
-                prefix='db_query:///',
-                data=(['csv', query_id] if query_id else [])
-            )
-        ],
-        1
-    )
+    if query_id:
+        reply_markup = make_inline_keyboard(
+            [
+                make_button(
+                    text='CSV',
+                    prefix='db_query:///',
+                    data=['csv', query_id]
+                )
+            ],
+            1
+        )
+    else:
+        reply_markup = None
     return dict(
         chat_id=update['chat']['id'],
         text=result,
