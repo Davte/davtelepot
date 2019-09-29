@@ -863,6 +863,7 @@ async def _query_command(bot, update, user_record):
         bot,
         ['query', ]
     )
+    query_id = None
     if len(query) == 0:
         return bot.get_message(
             'admin', 'query_command', 'help',
@@ -918,7 +919,7 @@ async def _query_command(bot, update, user_record):
             make_button(
                 text='CSV',
                 prefix='db_query:///',
-                data=['csv', query_id]
+                data=(['csv', query_id] if query_id else [])
             )
         ],
         1
