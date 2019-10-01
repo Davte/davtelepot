@@ -171,6 +171,7 @@ async def async_request(url, type='get', mode='json', encoding='utf-8',
         * html
         * json
         * string
+        * picture
 
     Additional **kwargs may be passed.
     """
@@ -182,7 +183,8 @@ async def async_request(url, type='get', mode='json', encoding='utf-8',
                 else s.post(url, timeout=30, data=kwargs)
             ) as r:
                 result = await r.read()
-                result = result.decode(encoding)
+                if mode in ['html', 'json', 'string']:
+                    result = result.decode(encoding)
     except Exception as e:
         logging.error(
             'Error making async request to {}:\n{}'.format(
