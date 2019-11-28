@@ -2064,9 +2064,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         if type(timeout) is datetime.timedelta:
             timeout = timeout.total_seconds()
-        print(timeout)
         await asyncio.sleep(timeout)
-        print("sleep ends")
         if not self.placeholder_requests[request_id]:
             if sent_message and text:
                 await self.edit_message_text(
