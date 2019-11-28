@@ -214,6 +214,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.recent_users = OrderedDict()
         self._log_file_name = None
         self._errors_file_name = None
+        self.placeholder_requests = dict()
         return
 
     @property
@@ -2024,6 +2025,59 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         if identifier in self.individual_location_handlers:
             del self.individual_location_handlers[identifier]
+        return
+
+    def set_placeholder(self, chat_id,
+                        text=None, sent_message=None, timeout=1):
+        """Set a placeholder chat action or text message.
+
+        If it takes the bot more than `timeout` to answer, send a placeholder
+            message or a `is typing` chat action.
+        `timeout` may be expressed in seconds (int) or datetime.timedelta
+
+        This method returns a `request_id`. When the calling function has
+            performed its task, it must set to 1 the value of
+            `self.placeholder_requests[request_id]`.
+        If this value is still 0 at `timeout`, the placeholder is sent.
+        Otherwise, no action is performed.
+        """
+        request_id = len(self.placeholder_requests)
+        self.placeholder_requests[request_id] = 0
+        asyncio.ensure_future(
+            self.placeholder_effector(
+                request_id=request_id,
+                timeout=timeout,
+                chat_id=chat_id,
+                sent_message=sent_message,
+                text=text
+            )
+        )
+        return request_id
+
+    async def placeholder_effector(self, request_id, timeout, chat_id,
+                                   sent_message=None, text=None):
+        """Send a placeholder chat action or text message if needed.
+
+        If it takes the bot more than `timeout` to answer, send a placeholder
+            message or a `is typing` chat action.
+        `timeout` may be expressed in seconds (int) or datetime.timedelta
+        """
+        if type(timeout) is datetime.timedelta:
+            timeout = timeout.total_seconds()
+        print(timeout)
+        await asyncio.sleep(timeout)
+        print("sleep ends")
+        if not self.placeholder_requests[request_id]:
+            if sent_message and text:
+                await self.edit_message_text(
+                    update=sent_message,
+                    text=text,
+                )
+            else:
+                await self.sendChatAction(
+                    chat_id=chat_id,
+                    action='typing'
+                )
         return
 
     async def webhook_feeder(self, request):
