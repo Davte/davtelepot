@@ -5,7 +5,7 @@ import asyncio
 from collections import OrderedDict
 import logging
 
-# Third party modules
+# Project modules
 from .utilities import extract, make_button, make_inline_keyboard
 
 default_language_messages = {
