@@ -15,7 +15,7 @@ try:
 except ImportError:
     logging.error(
         "Please install davtelepot library.\n"
-        "The use if a python virtual environment is advised.\n\n"
+        "Using a python virtual environment is advised.\n\n"
         "```bash\n"
         "pip -m venv env\n"
         "env/bin/pip install davtelepot\n"
