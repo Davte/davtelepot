@@ -1696,7 +1696,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
             if aliases:
                 for alias in aliases:
-                    self.command_aliases[alias] = decorated_command_handler
+                    if alias.startswith('/'):
+                        self.commands[alias.strip('/ ').lower()] = dict(
+                            handler=decorated_command_handler,
+                            authorization_level=authorization_level
+                        )
+                    else:
+                        self.command_aliases[alias] = decorated_command_handler
             if show_in_keyboard and (aliases or reply_keyboard_button):
                 _reply_keyboard_button = reply_keyboard_button or aliases[0]
                 self.messages[
