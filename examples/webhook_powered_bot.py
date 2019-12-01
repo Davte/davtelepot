@@ -35,7 +35,7 @@ def _main():
         webhook_bot_token = input("Enter bot token:\t\t")
         with open(
             f'{path}/secrets.py',
-            'a'  # Append to file, create if it does not exist
+            'a'  # Append to file, create it if it does not exist
         ) as secrets_file:
             secrets_file.write(f'webhook_bot_token = "{webhook_bot_token}"\n')
     try:
@@ -44,7 +44,7 @@ def _main():
         hostname = input("Enter host name:\t\t")
         with open(
             f'{path}/secrets.py',
-            'a'  # Append to file, create if it does not exist
+            'a'  # Append to file, create it if it does not exist
         ) as secrets_file:
             secrets_file.write(f'hostname = "{hostname}"\n')
     try:
@@ -53,7 +53,7 @@ def _main():
         certificate = input("Enter ssl certificate:\t\t")
         with open(
             f'{path}/secrets.py',
-            'a'  # Append to file, create if it does not exist
+            'a'  # Append to file, create it if it does not exist
         ) as secrets_file:
             secrets_file.write(f'certificate = "{certificate}"\n')
     try:
@@ -62,7 +62,7 @@ def _main():
         local_host = input("Enter local host:\t\t")
         with open(
             f'{path}/secrets.py',
-            'a'  # Append to file, create if it does not exist
+            'a'  # Append to file, create it if it does not exist
         ) as secrets_file:
             secrets_file.write(f'local_host = "{local_host}"\n')
     try:
@@ -71,7 +71,7 @@ def _main():
         port = input("Enter local port:\t\t")
         with open(
             f'{path}/secrets.py',
-            'a'  # Append to file, create if it does not exist
+            'a'  # Append to file, create it if it does not exist
         ) as secrets_file:
             secrets_file.write(f'port = "{port}"\n')
 
