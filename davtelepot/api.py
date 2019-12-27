@@ -146,7 +146,8 @@ class TelegramBot(object):
         Cast integers to string to avoid TypeError during json serialization.
         """
         exclude.append('self')
-        data = aiohttp.FormData()
+        # quote_fields must be set to False, otherwise filenames cause troubles
+        data = aiohttp.FormData(quote_fields=False)
         for key, value in parameters.items():
             if not (key in exclude or value is None):
                 if (
