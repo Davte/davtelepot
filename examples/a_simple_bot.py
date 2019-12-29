@@ -61,7 +61,7 @@ except ImportError:
     sys.exit(1)
 
 # Get path of current script
-path = os.path.dirname(__file__)
+path = os.path.dirname(os.path.abspath(__file__))
 
 
 def initialize_bot(bot):

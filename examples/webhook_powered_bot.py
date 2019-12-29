@@ -24,7 +24,7 @@ except ImportError:
 from a_simple_bot import initialize_bot
 
 # Get path of current script
-path = os.path.dirname(__file__)
+os.path.dirname(os.path.abspath(__file__))
 
 
 def _main():
