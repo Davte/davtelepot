@@ -1015,6 +1015,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 method = self.send_message
         elif 'photo' in kwargs:
             method = self.send_photo
+        elif 'audio' in kwargs:
+            method = self.send_audio
+        elif 'voice' in kwargs:
+            method = self.send_voice
         if method is not None:
             return await method(update=update, *args, **kwargs)
         raise Exception("Unsopported keyword arguments for `Bot().reply`.")
@@ -1399,6 +1403,121 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                     dict(
                         path=audio_path,
                         file_id=sent_update['audio']['file_id'],
+                        errors=False
+                    )
+                )
+        return sent_update
+
+    async def send_voice(self, chat_id=None, voice=None,
+                         caption=None,
+                         duration=None,
+                         parse_mode=None,
+                         disable_notification=None,
+                         reply_to_message_id=None,
+                         reply_markup=None,
+                         update=dict(),
+                         reply_to_update=False,
+                         send_default_keyboard=True,
+                         use_stored_file_id=True):
+        """Send voice messages.
+
+        This method wraps lower-level `TelegramBot.sendVoice` method.
+        Pass an `update` to extract `chat_id` and `message_id` from it.
+        Set `reply_to_update` = True to reply to `update['message_id']`.
+        Set `send_default_keyboard` = False to avoid sending default keyboard
+            as reply_markup (only those messages can be edited, which were
+            sent with no reply markup or with an inline keyboard).
+        If photo was already sent by this bot and `use_stored_file_id` is set
+            to True, use file_id (it is faster and recommended).
+        """
+        already_sent = False
+        if 'message' in update:
+            update = update['message']
+        if chat_id is None and 'chat' in update:
+            chat_id = self.get_chat_id(update)
+        if reply_to_update and 'message_id' in update:
+            reply_to_message_id = update['message_id']
+        if (
+            send_default_keyboard
+            and reply_markup is None
+            and type(chat_id) is int
+            and chat_id > 0
+            and caption != self.authorization_denied_message
+        ):
+            reply_markup = self.get_keyboard(
+                update=update,
+                telegram_id=chat_id
+            )
+        if type(voice) is str:
+            voice_path = voice
+            with self.db as db:
+                already_sent = db['sent_voice_messages'].find_one(
+                    path=voice_path,
+                    errors=False
+                )
+            if already_sent and use_stored_file_id:
+                voice = already_sent['file_id']
+                already_sent = True
+            else:
+                already_sent = False
+                if not any(
+                    [
+                            voice.startswith(url_starter)
+                            for url_starter in ('http', 'www',)
+                        ]
+                ):  # If `voice` is not a url but a local file path
+                    try:
+                        with io.BytesIO() as buffered_picture:
+                            with open(
+                                os.path.join(self.path, voice_path),
+                                'rb'  # Read bytes
+                            ) as voice_file:
+                                buffered_picture.write(voice_file.read())
+                            voice = buffered_picture.getvalue()
+                    except FileNotFoundError:
+                        voice = None
+        else:
+            use_stored_file_id = False
+        if voice is None:
+            logging.error("Voice is None, `send_voice` returning...")
+            return
+        sent_update = None
+        try:
+            sent_update = await self.sendVoice(
+                chat_id=chat_id,
+                voice=voice,
+                caption=caption,
+                duration=duration,
+                parse_mode=parse_mode,
+                disable_notification=disable_notification,
+                reply_to_message_id=reply_to_message_id,
+                reply_markup=reply_markup
+            )
+            if isinstance(sent_update, Exception):
+                raise Exception("sendVoice API call failed!")
+        except Exception as e:
+            logging.error(f"Error sending voice\n{e}")
+            if already_sent:
+                with self.db as db:
+                    db['sent_voice_messages'].update(
+                        dict(
+                            path=voice_path,
+                            errors=True
+                        ),
+                        ['path']
+                    )
+        if (
+            type(sent_update) is dict
+            and 'voice' in sent_update
+            and 'file_id' in sent_update['voice']
+            and (not already_sent)
+            and use_stored_file_id
+        ):
+            with self.db as db:
+                db['sent_voice_messages'].insert(
+                    dict(
+                        path=voice_path,
+                        file_id=sent_update['voice']['file_id'],
                         errors=False
                     )
                 )
