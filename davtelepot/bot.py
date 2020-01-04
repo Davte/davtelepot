@@ -142,7 +142,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         # Different message update types need different handlers
         self.message_handlers = {
             'text': self.text_message_handler,
-            'audio': self.audio_message_handler,
+            'audio': self.audio_file_handler,
             'document': self.document_message_handler,
             'animation': self.animation_message_handler,
             'game': self.game_message_handler,
@@ -740,10 +740,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return
 
-    async def audio_message_handler(self, update, user_record):
-        """Handle `audio` message update."""
+    async def audio_file_handler(self, update, user_record):
+        """Handle `audio` file update."""
         logging.info(
-            "A audio message update was received, "
+            "A audio file update was received, "
             "but this handler does nothing yet."
         )
 
@@ -1278,6 +1278,127 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                     dict(
                         path=photo_path,
                         file_id=sent_update['photo'][0]['file_id'],
+                        errors=False
+                    )
+                )
+        return sent_update
+
+    async def send_audio(self, chat_id=None, audio=None,
+                         caption=None,
+                         duration=None,
+                         performer=None,
+                         title=None,
+                         thumb=None,
+                         parse_mode=None,
+                         disable_notification=None,
+                         reply_to_message_id=None,
+                         reply_markup=None,
+                         update=dict(),
+                         reply_to_update=False,
+                         send_default_keyboard=True,
+                         use_stored_file_id=True):
+        """Send audio files.
+
+        This method wraps lower-level `TelegramBot.sendAudio` method.
+        Pass an `update` to extract `chat_id` and `message_id` from it.
+        Set `reply_to_update` = True to reply to `update['message_id']`.
+        Set `send_default_keyboard` = False to avoid sending default keyboard
+            as reply_markup (only those messages can be edited, which were
+            sent with no reply markup or with an inline keyboard).
+        If photo was already sent by this bot and `use_stored_file_id` is set
+            to True, use file_id (it is faster and recommended).
+        """
+        already_sent = False
+        if 'message' in update:
+            update = update['message']
+        if chat_id is None and 'chat' in update:
+            chat_id = self.get_chat_id(update)
+        if reply_to_update and 'message_id' in update:
+            reply_to_message_id = update['message_id']
+        if (
+            send_default_keyboard
+            and reply_markup is None
+            and type(chat_id) is int
+            and chat_id > 0
+            and caption != self.authorization_denied_message
+        ):
+            reply_markup = self.get_keyboard(
+                update=update,
+                telegram_id=chat_id
+            )
+        if type(audio) is str:
+            audio_path = audio
+            with self.db as db:
+                already_sent = db['sent_audio_files'].find_one(
+                    path=audio_path,
+                    errors=False
+                )
+            if already_sent and use_stored_file_id:
+                audio = already_sent['file_id']
+                already_sent = True
+            else:
+                already_sent = False
+                if not any(
+                    [
+                            audio.startswith(url_starter)
+                            for url_starter in ('http', 'www',)
+                        ]
+                ):  # If `audio` is not a url but a local file path
+                    try:
+                        with io.BytesIO() as buffered_picture:
+                            with open(
+                                os.path.join(self.path, audio_path),
+                                'rb'  # Read bytes
+                            ) as audio_file:
+                                buffered_picture.write(audio_file.read())
+                            audio = buffered_picture.getvalue()
+                    except FileNotFoundError:
+                        audio = None
+        else:
+            use_stored_file_id = False
+        if audio is None:
+            logging.error("Audio is None, `send_audio` returning...")
+            return
+        sent_update = None
+        try:
+            sent_update = await self.sendAudio(
+                chat_id=chat_id,
+                audio=audio,
+                caption=caption,
+                duration=duration,
+                performer=performer,
+                title=title,
+                thumb=thumb,
+                parse_mode=parse_mode,
+                disable_notification=disable_notification,
+                reply_to_message_id=reply_to_message_id,
+                reply_markup=reply_markup
+            )
+            if isinstance(sent_update, Exception):
+                raise Exception("sendAudio API call failed!")
+        except Exception as e:
+            logging.error(f"Error sending audio\n{e}")
+            if already_sent:
+                with self.db as db:
+                    db['sent_audio_files'].update(
+                        dict(
+                            path=audio_path,
+                            errors=True
+                        ),
+                        ['path']
+                    )
+        if (
+            type(sent_update) is dict
+            and 'audio' in sent_update
+            and 'file_id' in sent_update['audio']
+            and (not already_sent)
+            and use_stored_file_id
+        ):
+            with self.db as db:
+                db['sent_audio_files'].insert(
+                    dict(
+                        path=audio_path,
+                        file_id=sent_update['audio']['file_id'],
                         errors=False
                     )
                 )
