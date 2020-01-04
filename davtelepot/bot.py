@@ -50,8 +50,8 @@ from .api import TelegramBot, TelegramError
 from .database import ObjectWithDatabase
 from .languages import MultiLanguageObject
 from .utilities import (
-    escape_html_chars, extract, get_secure_key, make_inline_query_answer,
-    make_lines_of_buttons, remove_html_tags
+    async_get, escape_html_chars, extract, get_secure_key,
+    make_inline_query_answer, make_lines_of_buttons, remove_html_tags
 )
 
 # Do not log aiohttp `INFO` and `DEBUG` levels
@@ -1692,6 +1692,36 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                     )
                 )
         return sent_update
+
+    async def download_file(self, file_id,
+                            file_name=None, mime_type=None, path=None):
+        """Given a telegram `file_id`, download the related file.
+
+        Telegram may not preserve the original file name and MIME type: the
+            file's MIME type and name (if available) should be stored when the
+            File object is received.
+        """
+        file = await self.getFile(file_id=file_id)
+        if file is None or isinstance(file, Exception):
+            logging.error(f"{file}")
+            return
+        file_bytes = await async_get(
+            url=(
+                f"https://api.telegram.org/file/"
+                f"bot{self.token}/"
+                f"{file['file_path']}"
+            ),
+            mode='raw'
+        )
+        path = path or self.path
+        if file_name is None:
+            file_name = get_secure_key(length=10)
+        try:
+            with open(f"{path}/{file_name}", 'wb') as local_file:
+                local_file.write(file_bytes)
+        except Exception as e:
+            logging.error(f"File download failed due to {e}")
+        return
 
     async def answer_inline_query(self,
                                   inline_query_id=None,
