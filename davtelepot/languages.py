@@ -166,7 +166,7 @@ class MultiLanguageObject(object):
         result = self.messages
         for field in fields:
             if field not in result:
-                logging.error(
+                logging.debug(
                     "Please define self.message{f}".format(
                         f=''.join(
                             '[\'{field}\']'.format(
@@ -184,7 +184,7 @@ class MultiLanguageObject(object):
             if language not in result:
                 language = 'en'
                 if language not in result:
-                    logging.error(
+                    logging.debug(
                         "Please define self.message{f}['en']".format(
                             f=''.join(
                                 '[\'{field}\']'.format(
