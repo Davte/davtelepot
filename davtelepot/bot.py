@@ -185,6 +185,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.messages['help_sections'] = OrderedDict()
         # Handle location messages
         self.individual_location_handlers = dict()
+        # Handle voice messages
+        self.individual_voice_handlers = dict()
         # Callback query-related properties
         self.callback_handlers = OrderedDict()
         self._callback_data_separator = None
@@ -725,8 +727,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         if replier:
             reply = await replier(
                 bot=self,
-                update=update,
-                user_record=user_record
+                **{
+                    name: argument
+                    for name, argument in locals().items()
+                    if name in inspect.signature(
+                        replier
+                    ).parameters
+                }
             )
         if reply:
             if type(reply) is str:
@@ -791,10 +798,33 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     async def voice_message_handler(self, update, user_record):
         """Handle `voice` message update."""
-        logging.info(
-            "A voice message update was received, "
-            "but this handler does nothing yet."
-        )
+        replier, reply = None, None
+        user_id = update['from']['id'] if 'from' in update else None
+        if user_id in self.individual_voice_handlers:
+            replier = self.individual_voice_handlers[user_id]
+            del self.individual_voice_handlers[user_id]
+        if replier:
+            reply = await replier(
+                bot=self,
+                **{
+                    name: argument
+                    for name, argument in locals().items()
+                    if name in inspect.signature(
+                        replier
+                    ).parameters
+                }
+            )
+        if reply:
+            if type(reply) is str:
+                reply = dict(text=reply)
+            try:
+                return await self.reply(update=update, **reply)
+            except Exception as e:
+                logging.error(
+                    f"Failed to handle voice message:\n{e}",
+                    exc_info=True
+                )
+        return
 
     async def video_note_message_handler(self, update, user_record):
         """Handle `video_note` message update."""
@@ -820,8 +850,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         if replier:
             reply = await replier(
                 bot=self,
-                update=update,
-                user_record=user_record
+                **{
+                    name: argument
+                    for name, argument in locals().items()
+                    if name in inspect.signature(
+                        replier
+                    ).parameters
+                }
             )
         if reply:
             if type(reply) is str:
@@ -2244,7 +2279,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """Set a custom location handler for the user.
 
         Any location update from the user will be handled by this custom
-            handler instead of default handlers for commands, aliases and text.
+            handler instead of default handlers for locations.
         Custom handlers last one single use, but they can call this method and
             set themselves as next custom handler.
         """
@@ -2263,7 +2298,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """Remove a custom location handler for the user.
 
         Any location message update from the user will be handled by default
-            handlers for commands, aliases and text.
+            handlers for locations.
         """
         identifier = self.get_user_identifier(
             user_id=user_id,
@@ -2271,6 +2306,40 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         if identifier in self.individual_location_handlers:
             del self.individual_location_handlers[identifier]
+        return
+
+    def set_individual_voice_handler(self, handler,
+                                     update=None, user_id=None):
+        """Set a custom voice message handler for the user.
+
+        Any voice message update from the user will be handled by this custom
+            handler instead of default handlers for voice messages.
+        Custom handlers last one single use, but they can call this method and
+            set themselves as next custom handler.
+        """
+        identifier = self.get_user_identifier(
+            user_id=user_id,
+            update=update
+        )
+        assert callable(handler), (f"Handler `{handler.name}` is not "
+                                   "callable. Custom voice handler "
+                                   "could not be set.")
+        self.individual_voice_handlers[identifier] = handler
+        return
+
+    def remove_individual_voice_handler(self,
+                                        update=None, user_id=None):
+        """Remove a custom voice handler for the user.
+
+        Any voice message update from the user will be handled by default
+            handlers for voice messages.
+        """
+        identifier = self.get_user_identifier(
+            user_id=user_id,
+            update=update
+        )
+        if identifier in self.individual_voice_handlers:
+            del self.individual_voice_handlers[identifier]
         return
 
     def set_placeholder(self, chat_id,
