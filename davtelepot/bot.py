@@ -217,6 +217,19 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self._log_file_name = None
         self._errors_file_name = None
         self.placeholder_requests = dict()
+        # Add `users` table with its fields if missing
+        self.db['users'].upsert(
+            dict(
+                telegram_id=000000000,
+                privileges=100,
+                username="username",
+                first_name="First",
+                last_name="Last",
+                language_code="en",
+                selected_language_code="en"
+            ),
+            ['telegram_id']
+        )
         return
 
     @property
@@ -2464,19 +2477,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     def setup(self):
         """Make bot ask for updates and handle responses."""
-        with self.db as db:
-            if 'users' not in db:
-                db['users'].insert(
-                    dict(
-                        telegram_id=9999999999,
-                        privileges=100,
-                        username="username",
-                        first_name="First",
-                        last_name="Last",
-                        language_code="en",
-                        selected_language_code="en"
-                    )
-                )
         if not self.webhook_url:
             asyncio.ensure_future(self.get_updates())
         else:
