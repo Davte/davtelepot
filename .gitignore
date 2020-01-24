@@ -1,3 +1,6 @@
+# PyCharm IDE folder
+.idea/
+
 # local_* files
 local_*
 

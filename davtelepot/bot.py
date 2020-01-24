@@ -93,7 +93,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     def __init__(
         self, token, hostname='', certificate=None, max_connections=40,
-        allowed_updates=[], database_url='bot.db'
+        allowed_updates=None, database_url='bot.db'
     ):
         """Init a bot instance.
 
@@ -107,6 +107,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             Maximum number of HTTPS connections allowed.
         allowed_updates : List(str)
             Allowed update types (empty list to allow all).
+            @type allowed_updates: list(str)
         """
         # Append `self` to class list of instances
         self.__class__.bots.append(self)
@@ -241,9 +242,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         return self._path or self.__class__._path
 
     @classmethod
-    def set_class_path(csl, path):
+    def set_class_path(cls, path):
         """Set class path attribute."""
-        csl._path = path
+        cls._path = path
 
     def set_path(self, path):
         """Set instance path attribute."""
@@ -365,7 +366,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
         Empty list to allow all updates.
         """
-        return self._allowed_updates
+        return self._allowed_updates or []
 
     @property
     def name(self):
@@ -432,9 +433,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             return self._authorization_denied_message
         return self.__class__._authorization_denied_message
 
-    def get_keyboard(self, user_record=dict(), update=dict(),
+    def get_keyboard(self, user_record=None, update=None,
                      telegram_id=None):
         """Return a reply keyboard translated into user language."""
+        if user_record is None:
+            user_record = dict()
+        if update is None:
+            update = dict()
         if (not user_record) and telegram_id:
             with self.db as db:
                 user_record = db['users'].find_one(telegram_id=telegram_id)
@@ -1077,7 +1082,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                            disable_notification=None,
                            reply_to_message_id=None,
                            reply_markup=None,
-                           update=dict(),
+                           update=None,
                            reply_to_update=False,
                            send_default_keyboard=True):
         """Send text via message(s).
@@ -1089,6 +1094,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             as reply_markup (only those messages can be edited, which were
             sent with no reply markup or with an inline keyboard).
         """
+        sent_message_update = None
+        if update is None:
+            update = dict()
         if 'message' in update:
             update = update['message']
         if chat_id is None and 'chat' in update:
@@ -1139,6 +1147,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         This method wraps lower-level `TelegramBot.editMessageText` method.
         Pass an `update` to extract a message identifier from it.
         """
+        updates = []
+        edited_message = None
         if update is not None:
             message_identifier = self.get_message_identifier(update)
             if 'chat_id' in message_identifier:
@@ -1191,6 +1201,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         Set `disable_notification` to True to avoid disturbing recipient.
         Pass the `update` to be forwarded or its identifier (`from_chat_id` and
             `message_id`).
+            @type message_id: int
         """
         if from_chat_id is None or message_id is None:
             message_identifier = self.get_message_identifier(update)
@@ -1203,13 +1214,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             disable_notification=disable_notification,
         )
 
-    async def delete_message(self, update=dict(), chat_id=None,
+    async def delete_message(self, update=None, chat_id=None,
                              message_id=None):
         """Delete given update with given *args and **kwargs.
 
         Please note, that a bot can delete only messages sent by itself
         or sent in a group which it is administrator of.
         """
+        if update is None:
+            update = dict()
         if chat_id is None or message_id is None:
             message_identifier = self.get_message_identifier(update)
         else:
@@ -1227,7 +1240,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                          disable_notification=None,
                          reply_to_message_id=None,
                          reply_markup=None,
-                         update=dict(),
+                         update=None,
                          reply_to_update=False,
                          send_default_keyboard=True,
                          use_stored_file_id=True):
@@ -1243,6 +1256,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             to True, use file_id (it is faster and recommended).
         """
         already_sent = False
+        photo_path = None
+        if update is None:
+            update = dict()
         if 'message' in update:
             update = update['message']
         if chat_id is None and 'chat' in update:
@@ -1345,7 +1361,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                          disable_notification=None,
                          reply_to_message_id=None,
                          reply_markup=None,
-                         update=dict(),
+                         update=None,
                          reply_to_update=False,
                          send_default_keyboard=True,
                          use_stored_file_id=True):
@@ -1361,6 +1377,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             to True, use file_id (it is faster and recommended).
         """
         already_sent = False
+        audio_path = None
+        if update is None:
+            update = dict()
         if 'message' in update:
             update = update['message']
         if chat_id is None and 'chat' in update:
@@ -1463,7 +1482,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                          disable_notification=None,
                          reply_to_message_id=None,
                          reply_markup=None,
-                         update=dict(),
+                         update=None,
                          reply_to_update=False,
                          send_default_keyboard=True,
                          use_stored_file_id=True):
@@ -1479,6 +1498,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             to True, use file_id (it is faster and recommended).
         """
         already_sent = False
+        voice_path = None
+        if update is None:
+            update = dict()
         if 'message' in update:
             update = update['message']
         if chat_id is None and 'chat' in update:
@@ -1577,7 +1599,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             reply_to_message_id=None, reply_markup=None,
                             document_path=None,
                             document_name=None,
-                            update=dict(),
+                            update=None,
                             reply_to_update=False,
                             send_default_keyboard=True,
                             use_stored_file_id=False):
@@ -1597,6 +1619,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             name if this parameter is set.
         """
         already_sent = False
+        if update is None:
+            update = dict()
         # This buffered_file trick is necessary for two reasons
         # 1. File operations must be blocking, but sendDocument is a coroutine
         # 2. A `with` statement is not possible here
@@ -1740,7 +1764,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     async def answer_inline_query(self,
                                   inline_query_id=None,
-                                  results=[],
+                                  results=None,
                                   cache_time=None,
                                   is_personal=None,
                                   next_offset=None,
@@ -1753,6 +1777,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         If `results` is a string, cast it to proper type (list of dicts having
             certain keys). See utilities.make_inline_query_answer for details.
         """
+        if results is None:
+            results = []
         if (
             inline_query_id is None
             and isinstance(update, dict)
@@ -1858,12 +1884,12 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         return
 
     @classmethod
-    def set_class_authorization_denied_message(csl, message):
+    def set_class_authorization_denied_message(cls, message):
         """Set class authorization denied message.
 
         It will be returned if user is unauthorized to make a request.
         """
-        csl._authorization_denied_message = message
+        cls._authorization_denied_message = message
 
     def set_authorization_denied_message(self, message):
         """Set instance authorization denied message.
@@ -1981,13 +2007,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             async def decorated_command_handler(bot, update, user_record):
                 logging.info(
                     f"Command `{command}@{bot.name}` called by "
-                    "`{from_}`".format(
-                        from_=(
-                            update['from']
-                            if 'from' in update
-                            else update['chat']
-                        )
-                    )
+                    f"`{update['from'] if 'from' in update else update['chat']}`"
                 )
                 if bot.authorization_function(
                     update=update,
@@ -2064,13 +2084,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 logging.info(
                     f"Text message update matching condition "
                     f"`{condition.__name__}@{bot.name}` from "
-                    "`{user}`".format(
-                        user=(
-                            update['from']
-                            if 'from' in update
-                            else update['chat']
-                        )
-                    )
+                    f"`{update['from'] if 'from' in update else update['chat']}`"
                 )
                 if bot.authorization_function(
                     update=update,
@@ -2080,8 +2094,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                     # Pass supported arguments from locals() to parser
                     return await parser(
                         **{
-                            name: argument
-                            for name, argument in locals().items()
+                            name: arg
+                            for name, arg in locals().items()
                             if name in inspect.signature(parser).parameters
                         }
                     )
@@ -2268,11 +2282,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         return identifier
 
     @staticmethod
-    def get_message_identifier(update=dict()):
+    def get_message_identifier(update=None):
         """Get a message identifier dictionary to edit `update`.
 
         Pass the result as keyword arguments to `edit...` API methods.
         """
+        if update is None:
+            update = dict()
         if 'message' in update:
             update = update['message']
         if 'chat' in update and 'message_id' in update:
@@ -2472,9 +2488,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
             await asyncio.sleep(5*60)
             self.__class__.stop(
-                65,
-                "Information about this bot could not be retrieved.\n"
-                "Restarting..."
+                message="Information about this bot could not be retrieved.\n"
+                        "Restarting...",
+                final_state=65
             )
 
     def setup(self):
@@ -2501,6 +2517,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         await self.get_me()
         if self.name is None:
             return
+        if allowed_updates is None:
+            allowed_updates = []
         webhook_was_set = await self.setWebhook(
             url=url, certificate=certificate, max_connections=max_connections,
             allowed_updates=allowed_updates
