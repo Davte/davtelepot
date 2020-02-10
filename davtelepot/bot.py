@@ -1752,8 +1752,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             mode='raw'
         )
         path = path or self.path
-        if file_name is None:
+        while file_name is None:
             file_name = get_secure_key(length=10)
+            if os.path.exists(f"{path}/{file_name}"):
+                file_name = None
         try:
             with open(f"{path}/{file_name}", 'wb') as local_file:
                 local_file.write(file_bytes)
