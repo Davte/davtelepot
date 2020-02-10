@@ -14,9 +14,12 @@ __author__ = "Davide Testa"
 __email__ = "davide@davte.it"
 __credits__ = ["Marco Origlia", "Nick Lee @Nickoala"]
 __license__ = "GNU General Public License v3.0"
-__version__ = "2.3.20"
+__version__ = "2.3.21"
 __maintainer__ = "Davide Testa"
 __contact__ = "t.me/davte"
 
 # Legacy module; please use `from davtelepot.bot import Bot` from now on
-from davtelepot.custombot import Bot
+from .custombot import Bot
+from . import bot, utilities
+
+__all__ = [Bot, bot, utilities]

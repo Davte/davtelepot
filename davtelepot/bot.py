@@ -218,6 +218,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self._log_file_name = None
         self._errors_file_name = None
         self.placeholder_requests = dict()
+        self.shared_data = dict()
         # Add `users` table with its fields if missing
         self.db['users'].upsert(
             dict(
