@@ -161,7 +161,7 @@ async def async_post(url, mode='html', **kwargs):
     )
 
 
-async def async_request(url, type='get', mode='json', encoding='utf-8',
+async def async_request(url, type='get', mode='json', encoding=None,
                         **kwargs):
     """Make an async html request.
 
@@ -184,9 +184,12 @@ async def async_request(url, type='get', mode='json', encoding='utf-8',
                 if type == 'get'
                 else s.post(url, timeout=30, data=kwargs)
             ) as r:
-                result = await r.read()
                 if mode in ['html', 'json', 'string']:
-                    result = result.decode(encoding)
+                    result = await r.text(encoding=encoding)
+                else:
+                    result = await r.read()
+                    if encoding is not None:
+                        result = result.decode(encoding)
     except Exception as e:
         logging.error(
             'Error making async request to {}:\n{}'.format(
