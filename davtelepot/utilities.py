@@ -5,15 +5,17 @@ import asyncio
 import collections
 import csv
 import datetime
-from difflib import SequenceMatcher
 import inspect
 import io
 import json
 import logging
 import os
 import random
+import re
 import string
 import time
+
+from difflib import SequenceMatcher
 
 # Third party modules
 import aiohttp
@@ -1152,6 +1154,7 @@ def parse_datetime_interval_string(text):
     parsers = []
     result_text, result_datetime, result_timedelta = [], None, None
     is_quoted_text = False
+    text = re.sub('\s\s+', ' ', text)  # Replace multiple spaces with single space character
     for word in text.split(' '):
         if word.count('"') % 2:
             is_quoted_text = not is_quoted_text
