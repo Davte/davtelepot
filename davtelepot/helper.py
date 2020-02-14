@@ -36,7 +36,7 @@ def get_command_description(bot, update, user_record):
                 bot.commands.items(),
                 key=lambda x:x[0]
                 )
-            if details['description']
+            if 'description' in details and details['description']
             and user_role.code <= bot.Role.get_user_role(
                 user_role_id=details['authorization_level']
             ).code
