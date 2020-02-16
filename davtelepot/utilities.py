@@ -466,7 +466,7 @@ async def async_wrapper(coroutine, *args1, **kwargs1):
         asyncio.get_event_loop().run_until_complete(main())
     ```
     """
-    async def wrapped_coroutine(*args2, **kwargs2):
+    async def wrapped_coroutine(*args2, bot=None, update=None, user_record=None, **kwargs2):
         # Update keyword arguments
         kwargs1.update(kwargs2)
         # Pass only supported arguments
@@ -477,7 +477,7 @@ async def async_wrapper(coroutine, *args1, **kwargs1):
                 coroutine
             ).parameters
         }
-        return await coroutine(*args1, *args2, **kwargs)
+        return await coroutine(*args1, *args2, bot=bot, update=update, user_record=user_record, **kwargs)
     return wrapped_coroutine
 
 
