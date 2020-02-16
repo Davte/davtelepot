@@ -469,6 +469,9 @@ async def async_wrapper(coroutine, *args1, **kwargs1):
     async def wrapped_coroutine(*args2, bot=None, update=None, user_record=None, **kwargs2):
         # Update keyword arguments
         kwargs1.update(kwargs2)
+        kwargs1['bot'] = bot
+        kwargs1['update'] = update
+        kwargs1['user_record'] = user_record
         # Pass only supported arguments
         kwargs = {
             name: argument
@@ -477,7 +480,7 @@ async def async_wrapper(coroutine, *args1, **kwargs1):
                 coroutine
             ).parameters
         }
-        return await coroutine(*args1, *args2, bot=bot, update=update, user_record=user_record, **kwargs)
+        return await coroutine(*args1, *args2, **kwargs)
     return wrapped_coroutine
 
 
