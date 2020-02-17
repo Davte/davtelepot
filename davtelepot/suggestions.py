@@ -55,7 +55,11 @@ async def _handle_suggestion_message(bot: davtelepot.bot.Bot, update, user_recor
             'suggestions', 'suggestions_command', 'invalid_suggestion',
             update=update, user_record=user_record
         )
-    if text.lower() in bot.messages['suggestions']['suggestions_command']['cancel_messages']:
+    if text.lower() in [
+        cancel_message
+        for language in bot.messages['suggestions']['suggestions_command']['cancel_messages'].values()
+        for cancel_message in language
+    ]:
         return bot.get_message(
             'suggestions', 'suggestions_command', 'operation_cancelled',
             update=update, user_record=user_record
@@ -135,8 +139,10 @@ async def _suggestions_button(bot: davtelepot.bot.Bot, update, user_record, data
             update=update, user_record=user_record
         )
     elif command in ['cancel']:
-        result = 'Operazione annullata'
-        text = 'Operazione annullata con successo.'
+        result = text = bot.get_message(
+            'suggestions', 'suggestions_command', 'operation_cancelled',
+            update=update, user_record=user_record
+        )
         reply_markup = None
     elif command in ['confirm'] and len(data) > 1:
         suggestion_id = data[1]
