@@ -219,6 +219,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self._errors_file_name = None
         self.placeholder_requests = dict()
         self.shared_data = dict()
+        self.Role = None
         # Add `users` table with its fields if missing
         self.db['users'].upsert(
             dict(
@@ -2814,3 +2815,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         finally:
             cls.loop.run_until_complete(cls.stop_app())
         return cls.final_state
+
+    def set_role_class(self, role):
+        """Set a Role class for bot.
+
+        `role` must be an instance of `authorization.Role`.
+        """
+        self.Role = role

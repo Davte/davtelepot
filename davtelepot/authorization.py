@@ -4,6 +4,7 @@
 from collections import OrderedDict
 
 # Project modules
+from .bot import Bot
 from .utilities import (
     Confirmator, get_cleaned_text, get_user, make_button, make_inline_keyboard
 )
@@ -132,11 +133,19 @@ class Role():
 
     @classmethod
     def get_by_role_id(cls, role_id=100):
-        """Give a `role_id`, return the corresponding `Role` instance."""
+        """Given a `role_id`, return the corresponding `Role` instance."""
         for code, role in cls.roles.items():
             if code == role_id:
                 return role
         raise IndexError(f"Unknown role id: {role_id}")
+
+    @classmethod
+    def get_role_by_name(cls, name='everybody'):
+        """Given a `name`, return the corresponding `Role` instance."""
+        for role in cls.roles.values():
+            if role.name == name:
+                return role
+        raise IndexError(f"Unknown role name: {name}")
 
     @classmethod
     def get_user_role(cls, user_record=None, user_role_id=None):
@@ -488,7 +497,7 @@ async def _ban_command(bot, update, user_record):
     return
 
 
-def init(bot, roles=None, authorization_messages=None):
+def init(bot: Bot, roles=None, authorization_messages=None):
     """Set bot roles and assign role-related commands.
 
     Pass an OrderedDict of `roles` to get them set.
@@ -496,7 +505,7 @@ def init(bot, roles=None, authorization_messages=None):
     class _Role(Role):
         roles = OrderedDict()
 
-    bot.Role = _Role
+    bot.set_role_class(_Role)
     if roles is None:
         roles = DEFAULT_ROLES
     # Cast roles to OrderedDict

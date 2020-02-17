@@ -37,3 +37,140 @@ default_help_messages = {
             'it': "Comandi 🤖",
     },
 }
+
+default_suggestion_messages = {
+    'suggestions_command': {
+        'command': "/suggestion",
+        'aliases': [
+            "/suggestions", "/ideas",
+            "/suggerimento", "/suggerimenti", "idee"
+        ],
+        'reply_keyboard_button': {
+            'en': "Ideas 💡",
+            'it': "Idee 💡"
+        },
+        'description': {
+            'en': "Send a suggestion to help improve the bot",
+            'it': "Invia un suggerimento per aiutare a migliorare il bot"
+        },
+        'prompt_text': {
+            'en': (
+                "Send a suggestion to bot administrator.\n\n"
+                "Maximum 1500 characters (extra ones will be ignored).\n"
+                "If you need more space, you may create a telegra.ph topic and link it here.\n\n"
+                "/cancel if you misclicked."
+            ),
+            'it': (
+                "Inserisci un suggerimento da inviare agli amministratori.\n\n"
+                "Massimo 1500 caratteri (quelli in più non verranno registrati).\n"
+                "Se ti serve maggiore libertà, puoi per esempio creare un topic "
+                "su telegra.ph e linkarlo qui!\n\n"
+                "/annulla se hai clickato per errore."
+            ),
+        },
+        'prompt_popup': {
+            'en': (
+                "Send a suggestion"
+            ),
+            'it': (
+                "Inserisci un suggerimento"
+            ),
+        },
+        'entered_suggestion': {
+            'text': {
+                'en': (
+                    "Entered suggestions:\n\n"
+                    "<code>{suggestion}</code>\n\n"
+                    "Do you want to send it to bot administrators?"
+                ),
+                'it': (
+                    "Suggerimento inserito:\n\n"
+                    "<code>{suggestion}</code>\n\n"
+                    "Vuoi inviarlo agli amministratori?"
+                ),
+            },
+            'buttons': {
+                'send': {
+                    'en': "Send it! 📧",
+                    'it': "Invia! 📧",
+                },
+                'cancel': {
+                    'en': "Cancel ❌",
+                    'it': "Annulla ❌",
+                },
+            }
+        },
+        'received_suggestion': {
+            'text': {
+                'en': (
+                    "💡 We received a new suggestion! 💡\n\n"
+                    "{user}\n\n"
+                    "<code>{suggestion}</code>\n\n"
+                    "#suggestions  #{bot.name}"
+                ),
+                'it': (
+                    "💡 Abbiamo ricevuto un nuovo suggerimento! 💡\n\n"
+                    "{user}\n\n"
+                    "<code>{suggestion}</code>\n\n"
+                    "#suggestions  #{bot.name}"
+                ),
+            },
+            'buttons': {
+                'new': {
+                    'en': "New suggestion 💡",
+                    'it': "Nuovo suggerimento 💡",
+                },
+            },
+        },
+        'invalid_suggestion': {
+            'en': "Invalid suggestion.",
+            'it': "Suggerimento non valido."
+        },
+        'cancel_messages': {
+            'en': ['cancel'],
+            'it': ['annulla', 'cancella'],
+        },
+        'operation_cancelled': {
+            'en': "Operation cancelled.",
+            'it': "Operazione annullata con successo.",
+        },
+        'suggestion_sent': {
+            'popup': {
+                'en': "Thanks!",
+                'it': "Grazie!",
+            },
+            'text': {
+                'en': (
+                    "💡 Suggestion sent, thank you! 💡\n\n"
+                    "<code>{suggestion}</code>\n\n"
+                    "#suggestions #{bot.name}"
+                ),
+                'it': (
+                    "💡 Suggerimento inviato, grazie! 💡\n\n"
+                    "<code>{suggestion}</code>\n\n"
+                    "#suggerimenti #{bot.name}"
+                ),
+            },
+        }
+    },
+    'suggestions_button': {
+        'file_name': {
+            'en': "Suggestions.csv",
+            'it': "Suggerimenti.csv",
+        },
+        'file_caption': {
+            'en': "Here is the suggestions file.",
+            'it': "Ecco il file dei suggerimenti.",
+        }
+    },
+    'see_suggestions': {
+        'command': "/getsuggestions",
+        'aliases': [
+            "/vedisuggerimenti",
+        ],
+        'description': {
+            'en': "Get a file containing all suggestions",
+            'it': "Richiedi un file con tutti i suggerimenti"
+        },
+    }
+}
