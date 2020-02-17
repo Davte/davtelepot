@@ -257,6 +257,30 @@ def init(telegram_bot: davtelepot.bot.Bot, suggestion_messages=default_suggestio
         + suggestion_messages['suggestions_command']['aliases']
     )
 
+    db = telegram_bot.db
+    types = db.types
+    if 'suggestions' not in db.tables:
+        table = db.create_table(
+            table_name='suggestions'
+        )
+        table.create_column(
+            'user_id',
+            types.integer
+        )
+        table.create_column(
+            'suggestion',
+            types.text
+        )
+        table.create_column(
+            'created',
+            types.datetime
+        )
+        table.create_column(
+            'sent',
+            types.datetime
+        )
+
+
     @telegram_bot.command(command=suggestion_messages['suggestions_command']['command'],
                           aliases=suggestion_messages['suggestions_command']['aliases'],
                           reply_keyboard_button=(
