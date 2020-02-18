@@ -120,7 +120,7 @@ class MultiLanguageObject(object):
         return language or self.default_language
 
     def get_message(self, *fields, update=None, user_record=None,
-                    default_message=None, language=None, **format_kwargs):
+                    default_message=None, language=None, messages=None, **format_kwargs):
         """Given a list of strings (`fields`), return proper message.
 
         Language will be determined by `get_language` method.
@@ -137,7 +137,7 @@ class MultiLanguageObject(object):
             language=language
         )
         # Find result for `language`
-        result = self.messages
+        result = messages or self.messages
         for field in fields:
             if field not in result:
                 logging.debug(

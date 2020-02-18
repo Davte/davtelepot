@@ -1070,8 +1070,11 @@ async def _errors_command(bot, update, user_record):
 
 
 async def _maintenance_command(bot, update, user_record):
+    maintenance_message = get_cleaned_text(update, bot, ['maintenance'])
+    if maintenance_message.startswith('{'):
+        maintenance_message = json.loads(maintenance_message)
     maintenance_status = bot.change_maintenance_status(
-        maintenance_message=get_cleaned_text(update, bot, ['maintenance'])
+        maintenance_message=maintenance_message
     )
     if maintenance_status:
         return bot.get_message(

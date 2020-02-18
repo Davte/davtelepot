@@ -476,7 +476,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             message = self._unknown_command_message
         else:
             message = self.__class__._unknown_command_message
-        if message is not None:
+        if isinstance(message, str):
             message = message.format(bot=self)
         return message
 
@@ -726,7 +726,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             if command in self.commands:
                 replier = self.commands[command]['handler']
             elif 'chat' in update and update['chat']['id'] > 0:
-                reply = self.unknown_command_message
+                reply = dict(text=self.unknown_command_message)
         else:  # Handle command aliases and text parsers
             # Aliases are case insensitive: text and alias are both .lower()
             for alias, function in self.command_aliases.items():
@@ -1086,7 +1086,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                            reply_markup=None,
                            update=None,
                            reply_to_update=False,
-                           send_default_keyboard=True):
+                           send_default_keyboard=True,
+                           user_record=None):
         """Send text via message(s).
 
         This method wraps lower-level `TelegramBot.sendMessage` method.
@@ -1119,6 +1120,14 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         if not text:
             return
         parse_mode = str(parse_mode)
+        if isinstance(text, dict) and chat_id > 0:
+            if user_record is None :
+                user_record = self.db['users'].find_one(telegram_id=chat_id)
+            text = self.get_message(
+                update=update,
+                user_record=user_record,
+                messages=text
+            )
         text_chunks = self.split_message_text(
             text=text,
             limit=self.__class__.TELEGRAM_MESSAGES_MAX_LEN - 100,
@@ -2026,7 +2035,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             ).parameters
                         }
                     )
-                return self.authorization_denied_message
+                return dict(text=self.authorization_denied_message)
             self.commands[command] = dict(
                 handler=decorated_command_handler,
                 description=description,
@@ -2101,7 +2110,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             if name in inspect.signature(parser).parameters
                         }
                     )
-                return bot.authorization_denied_message
+                return dict(text=bot.authorization_denied_message)
             self.text_message_parsers[condition] = dict(
                 handler=decorated_parser,
                 description=description,
