@@ -38,6 +38,43 @@ default_help_messages = {
     },
 }
 
+default_language_messages = {
+    'language_command': {
+        'name': {
+            'en': "/language",
+            'it': "/lingua"
+        },
+        'alias': {
+            'en': "Language 🗣",
+            'it': "Lingua 🗣"
+        },
+        'reply_keyboard_button': {
+            'en': "Language 🗣",
+            'it': "Lingua 🗣"
+        },
+        'description': {
+            'en': "Change language settings",
+            'it': "Cambia le impostazioni della lingua"
+        }
+    },
+    'language_button': {
+        'description': {
+            'en': "Change language settings",
+            'it': "Cambia le impostazioni della lingua"
+        },
+        'language_set': {
+            'en': "Selected language: English 🇬🇧",
+            'it': "Lingua selezionata: Italiano 🇮🇹"
+        }
+    },
+    'language_panel': {
+        'text': {
+            'en': "<b>Choose a language</b>",
+            'it': "<b>Seleziona una lingua</b>"
+        }
+    }
+}
+
 default_suggestion_messages = {
     'suggestions_command': {
         'command': "/suggestion",

@@ -6,44 +6,8 @@ from collections import OrderedDict
 import logging
 
 # Project modules
+from .messages import default_language_messages
 from .utilities import extract, make_button, make_inline_keyboard
-
-default_language_messages = {
-    'language_command': {
-        'name': {
-            'en': "/language",
-            'it': "/lingua"
-        },
-        'alias': {
-            'en': "Language 🗣",
-            'it': "Lingua 🗣"
-        },
-        'reply_keyboard_button': {
-            'en': "Language 🗣",
-            'it': "Lingua 🗣"
-        },
-        'description': {
-            'en': "Change language settings",
-            'it': "Cambia le impostazioni della lingua"
-        }
-    },
-    'language_button': {
-        'description': {
-            'en': "Change language settings",
-            'it': "Cambia le impostazioni della lingua"
-        },
-        'language_set': {
-            'en': "Selected language: English 🇬🇧",
-            'it': "Lingua selezionata: Italiano 🇮🇹"
-        }
-    },
-    'language_panel': {
-        'text': {
-            'en': "<b>Choose a language</b>",
-            'it': "<b>Seleziona una lingua</b>"
-        }
-    }
-}
 
 
 class MultiLanguageObject(object):
@@ -57,12 +21,14 @@ class MultiLanguageObject(object):
     """
 
     def __init__(self, *args,
-                 messages=dict(),
+                 messages=None,
                  default_language='en',
                  missing_message="Invalid message!",
                  supported_languages=None,
                  **kwargs):
         """Instantiate MultiLanguageObject, setting its attributes."""
+        if messages is None:
+            messages = dict()
         self.messages = messages
         self._default_language = default_language
         self._missing_message = missing_message
@@ -127,7 +93,7 @@ class MultiLanguageObject(object):
             self._supported_languages = dict()
         self._supported_languages.update(languages)
 
-    def get_language(self, update=dict(), user_record=dict(), language=None):
+    def get_language(self, update=None, user_record=None, language=None):
         """Get language.
 
         Language will be the first non-null value of this list:
@@ -136,6 +102,10 @@ class MultiLanguageObject(object):
         - `update['language_code']`: language of incoming telegram update
         - Fallback to default language if none of the above fits
         """
+        if user_record is None:
+            user_record = dict()
+        if update is None:
+            update = dict()
         if (
             language is None
             and 'selected_language_code' in user_record
@@ -149,7 +119,7 @@ class MultiLanguageObject(object):
             language = update['from']['language_code']
         return language or self.default_language
 
-    def get_message(self, *fields, update=dict(), user_record=dict(),
+    def get_message(self, *fields, update=None, user_record=None,
                     default_message=None, language=None, **format_kwargs):
         """Given a list of strings (`fields`), return proper message.
 
@@ -157,6 +127,10 @@ class MultiLanguageObject(object):
         `format_kwargs` will be passed to format function on the result.
         """
         # Choose language
+        if update is None:
+            update = dict()
+        if user_record is None:
+            user_record = dict()
         language = self.get_language(
             update=update,
             user_record=user_record,
@@ -203,14 +177,18 @@ class MultiLanguageObject(object):
 
 
 async def _language_command(bot, update, user_record):
-    text, reply_markup = get_language_panel(bot, user_record)
+    text, reply_markup = get_language_panel(
+        bot=bot,
+        update=update,
+        user_record=user_record
+    )
     return dict(
         text=text,
         reply_markup=reply_markup
     )
 
 
-def get_language_panel(bot, user_record):
+def get_language_panel(bot, update, user_record):
     """Get language panel for user.
 
     Return text and reply_markup of the message about user's language
@@ -218,7 +196,7 @@ def get_language_panel(bot, user_record):
     """
     text = bot.get_message(
         'language', 'language_panel', 'text',
-        user_record=user_record,
+        update=update, user_record=user_record,
     )
     text += "\n"
     if 'selected_language_code' in user_record:
@@ -287,7 +265,7 @@ async def _language_button(bot, update, user_record, data):
                 )
             )
     if len(data) == 0 or data[0] in ('show', 'set'):
-        text, reply_markup = get_language_panel(bot, user_record)
+        text, reply_markup = get_language_panel(bot=bot, update=update, user_record=user_record)
     if text:
         return dict(
             text=result,
@@ -299,19 +277,26 @@ async def _language_button(bot, update, user_record, data):
     return result
 
 
-def init(
-    bot, language_messages=None, show_in_keyboard=True,
-    supported_languages={}
-):
+def init(telegram_bot,
+         language_messages=None,
+         show_in_keyboard=True,
+         supported_languages=None):
     """Set language support to `bot`."""
-    assert isinstance(bot, MultiLanguageObject), (
+    if supported_languages is None:
+        supported_languages = {}
+    from .bot import Bot
+    assert isinstance(telegram_bot, MultiLanguageObject), (
         "Bot must be a MultiLanguageObject subclass in order to support "
         "multiple languages."
     )
+    assert isinstance(telegram_bot, Bot), (
+        "Bot must be a davtelepot Bot subclass in order to support "
+        "command and button decorators."
+    )
     if language_messages is None:
         language_messages = default_language_messages
-    bot.messages['language'] = language_messages
-    bot.add_supported_languages(supported_languages)
+    telegram_bot.messages['language'] = language_messages
+    telegram_bot.add_supported_languages(supported_languages)
 
     aliases = [
         alias
@@ -319,7 +304,7 @@ def init(
             'language_command']['alias'].values()
     ]
 
-    @bot.command(
+    @telegram_bot.command(
         command='/language',
         aliases=aliases,
         reply_keyboard_button=language_messages['language_command'][
@@ -331,7 +316,7 @@ def init(
     async def language_command(bot, update, user_record):
         return await _language_command(bot, update, user_record)
 
-    @bot.button(
+    @telegram_bot.button(
         prefix='lang:///',
         separator='|',
         description=language_messages['language_button']['description'],
