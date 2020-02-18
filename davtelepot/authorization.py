@@ -60,7 +60,7 @@ DEFAULT_ROLES[100] = {
 }
 
 
-class Role():
+class Role:
     """Authorization level for users of a bot."""
 
     roles = OrderedDict()
@@ -202,11 +202,11 @@ class Role():
     def __gt__(self, other):
         """Return True if self can appoint other."""
         return (
-            (
-                self.code < other.code
-                or other.code == 0
-            )
-            and self.code in other.can_be_appointed_by
+                (
+                        self.code < other.code
+                        or other.code == 0
+                )
+                and self.code in other.can_be_appointed_by
         )
 
     def __ge__(self, other):
@@ -232,6 +232,7 @@ class Role():
 
 def get_authorization_function(bot):
     """Take a `bot` and return its authorization_function."""
+
     def is_authorized(update, user_record=None, authorization_level=2):
         """Return True if user role is at least at `authorization_level`."""
         user_role = bot.Role.get_user_role(user_record=user_record)
@@ -241,6 +242,7 @@ def get_authorization_function(bot):
         if needed_role.code < user_role.code:
             return False
         return True
+
     return is_authorized
 
 
@@ -412,8 +414,8 @@ async def _authorization_button(bot, update, user_record, data):
     elif command in ['set'] and len(arguments) > 1:
         other_user_id, new_privileges, *_ = arguments
         if not Confirmator.get(
-            key=f'{user_id}_set_{other_user_id}',
-            confirm_timedelta=5
+                key=f'{user_id}_set_{other_user_id}',
+                confirm_timedelta=5
         ).confirm:
             return bot.get_message(
                 'authorization', 'auth_button', 'confirm',
@@ -497,58 +499,55 @@ async def _ban_command(bot, update, user_record):
     return
 
 
-def init(bot: Bot, roles=None, authorization_messages=None):
+def init(telegram_bot: Bot, roles=None, authorization_messages=None):
     """Set bot roles and assign role-related commands.
 
     Pass an OrderedDict of `roles` to get them set.
     """
+
     class _Role(Role):
         roles = OrderedDict()
 
-    bot.set_role_class(_Role)
+    telegram_bot.set_role_class(_Role)
     if roles is None:
         roles = DEFAULT_ROLES
     # Cast roles to OrderedDict
     if isinstance(roles, list):
         roles = OrderedDict(
             (i, element)
-            for i, element in enumerate(list)
+            for i, element in enumerate(roles)
         )
     if not isinstance(roles, OrderedDict):
         raise TypeError("`roles` shall be a OrderedDict!")
-    for id, role in roles.items():
+    for code, role in roles.items():
         if 'code' not in role:
-            role['code'] = id
-        bot.Role(**role)
+            role['code'] = code
+        telegram_bot.Role(**role)
 
-    bot.set_authorization_function(
-        get_authorization_function(bot)
+    telegram_bot.set_authorization_function(
+        get_authorization_function(telegram_bot)
     )
     if authorization_messages is None:
         authorization_messages = deafult_authorization_messages
-    bot.messages['authorization'] = authorization_messages
+    telegram_bot.messages['authorization'] = authorization_messages
 
-    @bot.command(command='/auth', aliases=[], show_in_keyboard=False,
-                 description=(
-                    authorization_messages['auth_command']['description']
-                 ),
-                 authorization_level='moderator')
+    @telegram_bot.command(command='/auth', aliases=[], show_in_keyboard=False,
+                          description=(
+                                  authorization_messages['auth_command']['description']
+                          ),
+                          authorization_level='moderator')
     async def authorization_command(bot, update, user_record):
         return await _authorization_command(bot, update, user_record)
 
-    @bot.button('auth:///',
-                description=(
-                   authorization_messages['auth_button']['description']
-                ),
-                separator='|',
-                authorization_level='moderator')
+    @telegram_bot.button('auth:///',
+                         description=authorization_messages['auth_button']['description'],
+                         separator='|',
+                         authorization_level='moderator')
     async def authorization_button(bot, update, user_record, data):
         return await _authorization_button(bot, update, user_record, data)
 
-    @bot.command('/ban', aliases=[], show_in_keyboard=False,
-                 description=(
-                    authorization_messages['ban_command']['description']
-                 ),
-                 authorization_level='admin')
+    @telegram_bot.command('/ban', aliases=[], show_in_keyboard=False,
+                          description=authorization_messages['ban_command']['description'],
+                          authorization_level='admin')
     async def ban_command(bot, update, user_record):
         return await _ban_command(bot, update, user_record)

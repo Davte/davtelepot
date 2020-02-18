@@ -14,6 +14,7 @@ import datetime
 import json
 
 # Third party modules
+from davtelepot import messages
 from davtelepot.utilities import (
     async_wrapper, Confirmator, extract, get_cleaned_text, get_user,
     escape_html_chars, line_drawing_unordered_list, make_button,
@@ -21,110 +22,6 @@ from davtelepot.utilities import (
     send_csv_file
 )
 from sqlalchemy.exc import ResourceClosedError
-
-
-default_talk_messages = dict(
-    admin_session_ended=dict(
-        en=(
-            'Session with user {u} ended.'
-        ),
-        it=(
-            'Sessione terminata con l\'utente {u}.'
-        ),
-    ),
-    admin_warning=dict(
-        en=(
-            'You are now talking to {u}.\n'
-            'Until you end this session, your messages will be '
-            'forwarded to each other.'
-        ),
-        it=(
-            'Sei ora connesso con {u}.\n'
-            'Finché non chiuderai la connessione, i messaggi che scriverai '
-            'qui saranno inoltrati a {u}, e ti inoltrerò i suoi.'
-        ),
-    ),
-    end_session=dict(
-        en=(
-            'End session?'
-        ),
-        it=(
-            'Chiudere la sessione?'
-        ),
-    ),
-    help_text=dict(
-        en='Press the button to search for user.',
-        it='Premi il pulsante per scegliere un utente.'
-    ),
-    search_button=dict(
-        en="🔍 Search for user",
-        it="🔍 Cerca utente",
-    ),
-    select_user=dict(
-        en='Which user would you like to talk to?',
-        it='Con quale utente vorresti parlare?'
-    ),
-    user_not_found=dict(
-        en=(
-            "Sory, but no user matches your query for\n"
-            "<code>{q}</code>"
-        ),
-        it=(
-            "Spiacente, ma nessun utente corrisponde alla ricerca per\n"
-            "<code>{q}</code>"
-        ),
-    ),
-    instructions=dict(
-        en=(
-            'Write a part of name, surname or username of the user you want '
-            'to talk to.'
-        ),
-        it=(
-            'Scrivi una parte del nome, cognome o username dell\'utente con '
-            'cui vuoi parlare.'
-        ),
-    ),
-    stop=dict(
-        en=(
-            'End session'
-        ),
-        it=(
-            'Termina la sessione'
-        ),
-    ),
-    user_session_ended=dict(
-        en=(
-            'Session with admin {u} ended.'
-        ),
-        it=(
-            'Sessione terminata con l\'amministratore {u}.'
-        ),
-    ),
-    user_warning=dict(
-        en=(
-            '{u}, admin of this bot, wants to talk to you.\n'
-            'Until this session is ended by {u}, your messages will be '
-            'forwarded to each other.'
-        ),
-        it=(
-            '{u}, amministratore di questo bot, vuole parlare con te.\n'
-            'Finché non chiuderà la connessione, i messaggi che scriverai '
-            'qui saranno inoltrati a {u}, e ti inoltrerò i suoi.'
-        ),
-    ),
-    # key=dict(
-    #     en='',
-    #     it='',
-    # ),
-    # key=dict(
-    #     en=(
-    #         ''
-    #     ),
-    #     it=(
-    #         ''
-    #     ),
-    # ),
-)
 
 
 async def _forward_to(update, bot, sender, addressee, is_admin=False):
@@ -411,7 +308,7 @@ async def end_session(bot, other_user_record, admin_record):
             u=get_user(other_user_record)
         ),
     )
-    for record in (admin_record, other_user_record, ):
+    for record in (admin_record, other_user_record,):
         bot.remove_individual_text_message_handler(record['telegram_id'])
     return
 
@@ -434,8 +331,8 @@ async def _talk_button(bot, update, user_record, data):
         reply_markup = None
     elif command == 'select':
         if (
-            len(arguments) < 1
-            or type(arguments[0]) is not int
+                len(arguments) < 1
+                or type(arguments[0]) is not int
         ):
             result = "Errore!"
         else:
@@ -453,8 +350,8 @@ async def _talk_button(bot, update, user_record, data):
             )
     elif command == 'stop':
         if (
-            len(arguments) < 1
-            or type(arguments[0]) is not int
+                len(arguments) < 1
+                or type(arguments[0]) is not int
         ):
             result = "Errore!"
         elif not Confirmator.get('stop_bots').confirm(telegram_id):
@@ -488,245 +385,6 @@ async def _talk_button(bot, update, user_record, data):
             )
         )
     return result
-
-
-default_admin_messages = {
-    'talk_command': {
-        'description': {
-            'en': "Choose a user and forward messages to each other",
-            'it': "Scegli un utente e il bot farà da tramite inoltrando a "
-                  "ognuno i messaggi dell'altro finché non terminerai la "
-                  "sessione"
-        }
-    },
-    'restart_command': {
-        'description': {
-            'en': "Restart bots",
-            'it': "Riavvia i bot"
-        },
-        'restart_scheduled_message': {
-            'en': "Bots are being restarted, after pulling from repository.",
-            'it': "I bot verranno riavviati in pochi secondi, caricando "
-                  "prima le eventuali modifiche al codice."
-        },
-        'restart_completed_message': {
-            'en': "<i>Restart was successful.</i>",
-            'it': "<i>Restart avvenuto con successo.</i>"
-        }
-    },
-    'stop_command': {
-        'description': {
-            'en': "Stop bots",
-            'it': "Ferma i bot"
-        },
-        'text': {
-            'en': "Are you sure you want to stop all bots?\n"
-                  "To make them start again you will have to ssh-log "
-                  "in server.\n\n"
-                  "To restart the bots remotely use the /restart command "
-                  "instead (before starting over, a <code>git pull</code> "
-                  "is performed).",
-            'it': "Sei sicuro di voler fermare i bot?\n"
-                  "Per farli ripartire dovrai accedere al server.\n\n"
-                  "Per far ripartire i bot da remoto usa invece il comando "
-                  "/restart (prima di ripartire farò un "
-                  "<code>git pull</code>)."
-        }
-    },
-    'stop_button': {
-        'stop_text': {
-            'en': "Stop bots",
-            'it': "Ferma i bot"
-        },
-        'cancel': {
-            'en': "Cancel",
-            'it': "Annulla"
-        },
-        'confirm': {
-            'en': "Do you really want to stop all bots?",
-            'it': "Vuoi davvero fermare tutti i bot?"
-        },
-        'stopping': {
-            'en': "Stopping bots...",
-            'it': "Arresto in corso..."
-        },
-        'cancelled': {
-            'en': "Operation was cancelled",
-            'it': "Operazione annullata"
-        }
-    },
-    'db_command': {
-        'description': {
-            'en': "Ask for bot database via Telegram",
-            'it': "Ricevi il database del bot via Telegram"
-        },
-        'not_sqlite': {
-            'en': "Only SQLite databases may be sent via Telegram, since they "
-                  "are single-file databases.\n"
-                  "This bot has a `{db_type}` database.",
-            'it': "Via Telegram possono essere inviati solo database SQLite, "
-                  "in quanto composti di un solo file.\n"
-                  "Questo bot ha invece un database `{db_type}`."
-        },
-        'file_caption': {
-            'en': "Here is bot database.",
-            'it': "Ecco il database!"
-        },
-        'db_sent': {
-            'en': "Database sent.",
-            'it': "Database inviato."
-        }
-    },
-    'query_command': {
-        'description': {
-            'en': "Receive the result of a SQL query performed on bot "
-                  "database",
-            'it': "Ricevi il risultato di una query SQL sul database del bot"
-        },
-        'help': {
-            'en': "Write a SQL query to be run on bot database.\n\n"
-                  "<b>Example</b>\n"
-                  "<code>/query SELECT * FROM users WHERE 0</code>",
-            'it': "Invia una query SQL da eseguire sul database del bot.\n\n"
-                  "<b>Esempio</b>\n"
-                  "<code>/query SELECT * FROM users WHERE 0</code>"
-        },
-        'no_iterable': {
-            'en': "No result to show was returned",
-            'it': "La query non ha restituito risultati da mostrare"
-        },
-        'exception': {
-            'en': "The query threw this error:",
-            'it': "La query ha dato questo errore:"
-        },
-        'result': {
-            'en': "Query result",
-            'it': "Risultato della query"
-        }
-    },
-    'select_command': {
-        'description': {
-            'en': "Receive the result of a SELECT query performed on bot "
-                  "database",
-            'it': "Ricevi il risultato di una query SQL di tipo SELECT "
-                  "sul database del bot"
-        }
-    },
-    'query_button': {
-        'error': {
-            'en': "Error!",
-            'it': "Errore!"
-        },
-        'file_name': {
-            'en': "Query result.csv",
-            'it': "Risultato della query.csv"
-        },
-        'empty_file': {
-            'en': "No result to show.",
-            'it': "Nessun risultato da mostrare."
-        }
-    },
-    'log_command': {
-        'description': {
-            'en': "Receive bot log file, if set",
-            'it': "Ricevi il file di log del bot, se impostato"
-        },
-        'no_log': {
-            'en': "Sorry but no log file is set.\n"
-                  "To set it, use `bot.set_log_file_name` instance method or "
-                  "`Bot.set_class_log_file_name` class method.",
-            'it': "Spiacente ma il file di log non è stato impostato.\n"
-                  "Per impostarlo, usa il metodo d'istanza "
-                  "`bot.set_log_file_name` o il metodo di classe"
-                  "`Bot.set_class_log_file_name`."
-        },
-        'sending_failure': {
-            'en': "Sending log file failed!\n\n"
-                  "<b>Error:</b>\n"
-                  "<code>{e}</code>",
-            'it': "Inviio del messaggio di log fallito!\n\n"
-                  "<b>Errore:</b>\n"
-                  "<code>{e}</code>"
-        },
-        'here_is_log_file': {
-            'en': "Here is the complete log file.",
-            'it': "Ecco il file di log completo."
-        },
-        'log_file_first_lines': {
-            'en': "Here are the first {lines} lines of the log file.",
-            'it': "Ecco le prime {lines} righe del file di log."
-        },
-        'log_file_last_lines': {
-            'en': "Here are the last {lines} lines of the log file.\n"
-                  "Newer lines are at the top of the file.",
-            'it': "Ecco le ultime {lines} righe del file di log.\n"
-                  "L'ordine è cronologico, con i messaggi nuovi in alto."
-        }
-    },
-    'errors_command': {
-        'description': {
-            'en': "Receive bot error log file, if set",
-            'it': "Ricevi il file di log degli errori del bot, se impostato"
-        },
-        'no_log': {
-            'en': "Sorry but no errors log file is set.\n"
-                  "To set it, use `bot.set_errors_file_name` instance method"
-                  "or `Bot.set_class_errors_file_name` class method.",
-            'it': "Spiacente ma il file di log degli errori non è stato "
-                  "impostato.\n"
-                  "Per impostarlo, usa il metodo d'istanza "
-                  "`bot.set_errors_file_name` o il metodo di classe"
-                  "`Bot.set_class_errors_file_name`."
-        },
-        'empty_log': {
-            'en': "Congratulations! Errors log is empty!",
-            'it': "Congratulazioni! Il log degli errori è vuoto!"
-        },
-        'sending_failure': {
-            'en': "Sending errors log file failed!\n\n"
-                  "<b>Error:</b>\n"
-                  "<code>{e}</code>",
-            'it': "Inviio del messaggio di log degli errori fallito!\n\n"
-                  "<b>Errore:</b>\n"
-                  "<code>{e}</code>"
-        },
-        'here_is_log_file': {
-            'en': "Here is the complete errors log file.",
-            'it': "Ecco il file di log degli errori completo."
-        },
-        'log_file_first_lines': {
-            'en': "Here are the first {lines} lines of the errors log file.",
-            'it': "Ecco le prime {lines} righe del file di log degli errori."
-        },
-        'log_file_last_lines': {
-            'en': "Here are the last {lines} lines of the errors log file.\n"
-                  "Newer lines are at the top of the file.",
-            'it': "Ecco le ultime {lines} righe del file di log degli "
-                  "errori.\n"
-                  "L'ordine è cronologico, con i messaggi nuovi in alto."
-        }
-    },
-    'maintenance_command': {
-        'description': {
-            'en': "Put the bot under maintenance",
-            'it': "Metti il bot in manutenzione"
-        },
-        'maintenance_started': {
-            'en': "<i>Bot has just been put under maintenance!</i>\n\n"
-                  "Until further notice, it will reply to users "
-                  "with the following message:\n\n"
-                  "{message}",
-            'it': "<i>Il bot è stato messo in manutenzione!</i>\n\n"
-                  "Fino a nuovo ordine, risponderà a tutti i comandi con il "
-                  "seguente messaggio\n\n"
-                  "{message}"
-        },
-        'maintenance_ended': {
-            'en': "<i>Maintenance ended!</i>",
-            'it': "<i>Manutenzione terminata!</i>"
-        }
-    }
-}
 
 
 async def _restart_command(bot, update, user_record):
@@ -801,22 +459,22 @@ async def _stop_button(bot, update, user_record, data):
     if command == 'stop':
         if not Confirmator.get('stop_bots').confirm(telegram_id):
             return bot.get_message(
-                    'admin', 'stop_button', 'confirm',
-                    update=update, user_record=user_record
-                )
-        text = bot.get_message(
-                'admin', 'stop_button', 'stopping',
+                'admin', 'stop_button', 'confirm',
                 update=update, user_record=user_record
             )
+        text = bot.get_message(
+            'admin', 'stop_button', 'stopping',
+            update=update, user_record=user_record
+        )
         result = text
         # Do not stop bots immediately, otherwise callback query
         # will never be answered
         asyncio.ensure_future(stop_bots(bot))
     elif command == 'cancel':
         text = bot.get_message(
-                'admin', 'stop_button', 'cancelled',
-                update=update, user_record=user_record
-            )
+            'admin', 'stop_button', 'cancelled',
+            update=update, user_record=user_record
+        )
         result = text
     if text:
         return dict(
@@ -833,10 +491,10 @@ async def _stop_button(bot, update, user_record, data):
 
 async def _send_bot_database(bot, update, user_record):
     if not all(
-        [
-            bot.db_url.endswith('.db'),
-            bot.db_url.startswith('sqlite:///')
-        ]
+            [
+                bot.db_url.endswith('.db'),
+                bot.db_url.startswith('sqlite:///')
+            ]
     ):
         return bot.get_message(
             'admin', 'db_command', 'not_sqlite',
@@ -905,14 +563,14 @@ async def _query_command(bot, update, user_record):
             e=e
         )
     result = (
-        "<b>{first_line}</b>\n".format(
-            first_line=bot.get_message(
-                'admin', 'query_command', 'result',
-                update=update, user_record=user_record
+            "<b>{first_line}</b>\n".format(
+                first_line=bot.get_message(
+                    'admin', 'query_command', 'result',
+                    update=update, user_record=user_record
+                )
             )
-        )
-        + f"<code>{query}</code>\n\n"
-        f"{result}"
+            + f"<code>{query}</code>\n\n"
+              f"{result}"
     )
     if query_id:
         reply_markup = make_inline_keyboard(
@@ -1037,7 +695,7 @@ async def _errors_command(bot, update, user_record):
     try:
         # Check that error log is not empty
         with open(bot.errors_file_path, 'r') as errors_file:
-            for line in errors_file:
+            for _ in errors_file:
                 break
             else:
                 return bot.get_message(
@@ -1094,14 +752,15 @@ def get_maintenance_exception_criterion(bot, allowed_command):
     `bot` : davtelepot.bot.Bot() instance
     `allowed_command` : str (command to be allowed during maintenance)
     """
+
     def criterion(update):
         if 'message' not in update:
             return False
         update = update['message']
         text = get_cleaned_text(update, bot, [])
         if (
-            'from' not in update
-            or 'id' not in update['from']
+                'from' not in update
+                or 'id' not in update['from']
         ):
             return False
         with bot.db as db:
@@ -1109,164 +768,162 @@ def get_maintenance_exception_criterion(bot, allowed_command):
                 telegram_id=update['from']['id']
             )
         if not bot.authorization_function(
-            update=update,
-            user_record=user_record,
-            authorization_level=2
+                update=update,
+                user_record=user_record,
+                authorization_level=2
         ):
             return False
         return text == allowed_command.strip('/')
+
     return criterion
 
 
-def init(bot, talk_messages=None, admin_messages=None):
+def init(telegram_bot, talk_messages=None, admin_messages=None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if talk_messages is None:
-        talk_messages = default_talk_messages
-    bot.messages['talk'] = talk_messages
+        talk_messages = messages.default_talk_messages
+    telegram_bot.messages['talk'] = talk_messages
     if admin_messages is None:
-        admin_messages = default_admin_messages
-    bot.messages['admin'] = admin_messages
-    with bot.db as db:
-        if 'talking_sessions' not in db.tables:
-            db['talking_sessions'].insert(
-                dict(
-                    user=0,
-                    admin=0,
-                    cancelled=1
-                )
+        admin_messages = messages.default_admin_messages
+    telegram_bot.messages['admin'] = admin_messages
+    db = telegram_bot.db
+    if 'talking_sessions' not in db.tables:
+        db['talking_sessions'].insert(
+            dict(
+                user=0,
+                admin=0,
+                cancelled=1
             )
+        )
 
     allowed_during_maintenance = [
-        get_maintenance_exception_criterion(bot, command)
+        get_maintenance_exception_criterion(telegram_bot, command)
         for command in ['stop', 'restart', 'maintenance']
     ]
 
-    @bot.additional_task(when='BEFORE')
+    @telegram_bot.additional_task(when='BEFORE')
     async def load_talking_sessions():
         sessions = []
-        with bot.db as db:
-            for session in db.query(
+        for session in db.query(
                 """SELECT *
-                FROM talking_sessions
-                WHERE NOT cancelled
-                """
-            ):
-                sessions.append(
-                    dict(
-                        other_user_record=db['users'].find_one(
-                            id=session['user']
-                        ),
-                        admin_record=db['users'].find_one(
-                            id=session['admin']
-                        ),
-                    )
+            FROM talking_sessions
+            WHERE NOT cancelled
+            """
+        ):
+            sessions.append(
+                dict(
+                    other_user_record=db['users'].find_one(
+                        id=session['user']
+                    ),
+                    admin_record=db['users'].find_one(
+                        id=session['admin']
+                    ),
                 )
-            for session in sessions:
-                await start_session(
-                    bot=bot,
-                    other_user_record=session['other_user_record'],
-                    admin_record=session['admin_record']
-                )
+            )
+        for session in sessions:
+            await start_session(
+                bot=telegram_bot,
+                other_user_record=session['other_user_record'],
+                admin_record=session['admin_record']
+            )
 
-    @bot.command(command='/talk', aliases=[], show_in_keyboard=False,
-                 description=admin_messages['talk_command']['description'],
-                 authorization_level='admin')
+    @telegram_bot.command(command='/talk', aliases=[], show_in_keyboard=False,
+                          description=admin_messages['talk_command']['description'],
+                          authorization_level='admin')
     async def talk_command(bot, update, user_record):
         return await _talk_command(bot, update, user_record)
 
-    @bot.button(prefix='talk:///', separator='|', authorization_level='admin')
+    @telegram_bot.button(prefix='talk:///', separator='|', authorization_level='admin')
     async def talk_button(bot, update, user_record, data):
         return await _talk_button(bot, update, user_record, data)
 
-    @bot.command(command='/restart', aliases=[], show_in_keyboard=False,
-                 description=admin_messages['restart_command']['description'],
-                 authorization_level='admin')
+    @telegram_bot.command(command='/restart', aliases=[], show_in_keyboard=False,
+                          description=admin_messages['restart_command']['description'],
+                          authorization_level='admin')
     async def restart_command(bot, update, user_record):
         return await _restart_command(bot, update, user_record)
 
-    @bot.additional_task('BEFORE')
+    @telegram_bot.additional_task('BEFORE')
     async def send_restart_messages():
         """Send restart messages at restart."""
-        with bot.db as db:
-            for restart_message in db['restart_messages'].find(sent=None):
-                asyncio.ensure_future(
-                    bot.send_message(
-                        **{
-                            key: val
-                            for key, val in restart_message.items()
-                            if key in (
-                                'chat_id',
-                                'text',
-                                'parse_mode',
-                                'reply_to_message_id'
-                            )
-                        }
-                    )
+        for restart_message in db['restart_messages'].find(sent=None):
+            asyncio.ensure_future(
+                telegram_bot.send_message(
+                    **{
+                        key: val
+                        for key, val in restart_message.items()
+                        if key in (
+                            'chat_id',
+                            'text',
+                            'parse_mode',
+                            'reply_to_message_id'
+                        )
+                    }
                 )
-                db['restart_messages'].update(
-                    dict(
-                        sent=datetime.datetime.now(),
-                        id=restart_message['id']
-                    ),
-                    ['id'],
-                    ensure=True
-                )
+            )
+            db['restart_messages'].update(
+                dict(
+                    sent=datetime.datetime.now(),
+                    id=restart_message['id']
+                ),
+                ['id'],
+                ensure=True
+            )
         return
 
-    @bot.command(command='/stop', aliases=[], show_in_keyboard=False,
-                 description=admin_messages['stop_command']['description'],
-                 authorization_level='admin')
+    @telegram_bot.command(command='/stop', aliases=[], show_in_keyboard=False,
+                          description=admin_messages['stop_command']['description'],
+                          authorization_level='admin')
     async def stop_command(bot, update, user_record):
         return await _stop_command(bot, update, user_record)
 
-    @bot.button(prefix='stop:///', separator='|',
-                description=admin_messages['stop_command']['description'],
-                authorization_level='admin')
+    @telegram_bot.button(prefix='stop:///', separator='|',
+                         description=admin_messages['stop_command']['description'],
+                         authorization_level='admin')
     async def stop_button(bot, update, user_record, data):
         return await _stop_button(bot, update, user_record, data)
 
-    @bot.command(command='/db', aliases=[], show_in_keyboard=False,
-                 description=admin_messages['db_command']['description'],
-                 authorization_level='admin')
+    @telegram_bot.command(command='/db', aliases=[], show_in_keyboard=False,
+                          description=admin_messages['db_command']['description'],
+                          authorization_level='admin')
     async def send_bot_database(bot, update, user_record):
         return await _send_bot_database(bot, update, user_record)
 
-    @bot.command(command='/query', aliases=[], show_in_keyboard=False,
-                 description=admin_messages['query_command']['description'],
-                 authorization_level='admin')
+    @telegram_bot.command(command='/query', aliases=[], show_in_keyboard=False,
+                          description=admin_messages['query_command']['description'],
+                          authorization_level='admin')
     async def query_command(bot, update, user_record):
         return await _query_command(bot, update, user_record)
 
-    @bot.command(command='/select', aliases=[], show_in_keyboard=False,
-                 description=admin_messages['select_command']['description'],
-                 authorization_level='admin')
+    @telegram_bot.command(command='/select', aliases=[], show_in_keyboard=False,
+                          description=admin_messages['select_command']['description'],
+                          authorization_level='admin')
     async def select_command(bot, update, user_record):
         return await _query_command(bot, update, user_record)
 
-    @bot.button(prefix='db_query:///', separator='|',
-                description=admin_messages['query_command']['description'],
-                authorization_level='admin')
+    @telegram_bot.button(prefix='db_query:///', separator='|',
+                         description=admin_messages['query_command']['description'],
+                         authorization_level='admin')
     async def query_button(bot, update, user_record, data):
         return await _query_button(bot, update, user_record, data)
 
-    @bot.command(command='/log', aliases=[], show_in_keyboard=False,
-                 description=admin_messages['log_command']['description'],
-                 authorization_level='admin')
+    @telegram_bot.command(command='/log', aliases=[], show_in_keyboard=False,
+                          description=admin_messages['log_command']['description'],
+                          authorization_level='admin')
     async def log_command(bot, update, user_record):
         return await _log_command(bot, update, user_record)
 
-    @bot.command(command='/errors', aliases=[], show_in_keyboard=False,
-                 description=admin_messages['errors_command']['description'],
-                 authorization_level='admin')
+    @telegram_bot.command(command='/errors', aliases=[], show_in_keyboard=False,
+                          description=admin_messages['errors_command']['description'],
+                          authorization_level='admin')
     async def errors_command(bot, update, user_record):
         return await _errors_command(bot, update, user_record)
 
     for exception in allowed_during_maintenance:
-        bot.allow_during_maintenance(exception)
+        telegram_bot.allow_during_maintenance(exception)
 
-    @bot.command(command='/maintenance', aliases=[], show_in_keyboard=False,
-                 description=admin_messages[
-                    'maintenance_command']['description'],
-                 authorization_level='admin')
+    @telegram_bot.command(command='/maintenance', aliases=[], show_in_keyboard=False,
+                          description=admin_messages['maintenance_command']['description'],
+                          authorization_level='admin')
     async def maintenance_command(bot, update, user_record):
         return await _maintenance_command(bot, update, user_record)
