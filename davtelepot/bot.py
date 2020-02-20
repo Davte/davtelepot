@@ -1146,6 +1146,18 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
         return sent_message_update
 
+    async def send_disposable_message(self, *args, interval=60, **kwargs):
+        sent_message = await self.reply(*args, **kwargs)
+        if sent_message is None:
+            return
+        task = self.delete_message(update=sent_message)
+        self.final_tasks.append(task)
+        await asyncio.sleep(interval)
+        await task
+        if task in self.final_tasks:
+            self.final_tasks.remove(task)
+        return
+
     async def edit_message_text(self, text,
                                 chat_id=None, message_id=None,
                                 inline_message_id=None,
