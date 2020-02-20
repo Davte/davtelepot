@@ -1217,6 +1217,37 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return edited_message
 
+    async def edit_message_media(self,
+                                 chat_id=None, message_id=None,
+                                 inline_message_id=None,
+                                 media=None,
+                                 reply_markup=None,
+                                 caption=None,
+                                 parse_mode=None,
+                                 photo=None,
+                                 update=None):
+        if update is not None:
+            message_identifier = self.get_message_identifier(update)
+            if 'chat_id' in message_identifier:
+                chat_id = message_identifier['chat_id']
+                message_id = message_identifier['message_id']
+            if 'inline_message_id' in message_identifier:
+                inline_message_id = message_identifier['inline_message_id']
+        if media is None:
+            media = {}
+        if caption is not None:
+            media['caption'] = caption
+        if parse_mode is not None:
+            media['parse_mode'] =
+        if photo is not None:
+            media['type'] = 'photo'
+            media['media'] = photo
+        return await self.editMessageMedia(chat_id=chat_id,
+                                           message_id=message_id,
+                                           inline_message_id=inline_message_id,
+                                           media=media,
+                                           reply_markup=reply_markup)
+
     async def forward_message(self, chat_id, update=None, from_chat_id=None,
                               message_id=None, disable_notification=False):
         """Forward message from `from_chat_id` to `chat_id`.
