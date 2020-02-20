@@ -782,11 +782,12 @@ async def _version_command(bot, update, user_record):
     try:
         _subprocess = await asyncio.create_subprocess_exec(
             'git', 'rev-parse', 'HEAD',
-            stdout=asyncio.subprocess.PIPE
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await _subprocess.communicate()
         if stderr is not None:
-            raise stderr
+            raise Exception(stderr.decode().strip())
         version = stdout.decode().strip()
     except Exception as e:
         return f"{e}"
