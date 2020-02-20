@@ -235,6 +235,21 @@ default_admin_messages = {
             'en': "<i>Maintenance ended!</i>",
             'it': "<i>Manutenzione terminata!</i>"
         }
+    },
+    'version_command': {
+        'reply_keyboard_button': {
+            'en': "Version #️⃣",
+            'it': "Versione #️⃣",
+        },
+        'description': {
+            'en': "Get source code version",
+            'it': "Chiedi la versione del codice sorgente",
+        },
+        'help_section': None,
+        'result': {
+            'en': "Last commit: {version}",
+            'it': "Ultimo commit: {version}",
+        },
     }
 }
 

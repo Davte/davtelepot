@@ -778,6 +778,25 @@ def get_maintenance_exception_criterion(bot, allowed_command):
     return criterion
 
 
+async def _version_command(bot, update, user_record):
+    try:
+        _subprocess = await asyncio.create_subprocess_exec(
+            'git', 'rev-parse', 'HEAD',
+            stdout=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await _subprocess.communicate()
+        if stderr is not None:
+            raise stderr
+        version = stdout.decode().strip()
+    except Exception as e:
+        return f"{e}"
+    return bot.get_message(
+        'admin', 'version_command', 'result',
+        version=version,
+        update=update, user_record=user_record
+    )
+
+
 def init(telegram_bot, talk_messages=None, admin_messages=None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if talk_messages is None:
@@ -927,3 +946,15 @@ def init(telegram_bot, talk_messages=None, admin_messages=None):
                           authorization_level='admin')
     async def maintenance_command(bot, update, user_record):
         return await _maintenance_command(bot, update, user_record)
+
+    @telegram_bot.command(
+        command='/version',
+        aliases=[],
+        reply_keyboard_button=admin_messages['version_command']['reply_keyboard_button'],
+        show_in_keyboard=False,
+        description=admin_messages['version_command']['description'],
+        help_section=admin_messages['version_command']['help_section'],
+        authorization_level='admin',
+    )
+    async def version_command(bot, update, user_record):
+        return await _version_command(bot=bot, update=update, user_record=user_record)
