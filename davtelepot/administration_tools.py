@@ -946,14 +946,12 @@ def init(telegram_bot, talk_messages=None, admin_messages=None):
     async def maintenance_command(bot, update, user_record):
         return await _maintenance_command(bot, update, user_record)
 
-    @telegram_bot.command(
-        command='/version',
-        aliases=[],
-        reply_keyboard_button=admin_messages['version_command']['reply_keyboard_button'],
-        show_in_keyboard=False,
-        description=admin_messages['version_command']['description'],
-        help_section=admin_messages['version_command']['help_section'],
-        authorization_level='admin',
-    )
+    @telegram_bot.command(command='/version',
+                          aliases=[],
+                          reply_keyboard_button=admin_messages['version_command']['reply_keyboard_button'],
+                          show_in_keyboard=False,
+                          description=admin_messages['version_command']['description'],
+                          help_section=admin_messages['version_command']['help_section'],
+                          authorization_level='admin',)
     async def version_command(bot, update, user_record):
         return await _version_command(bot=bot, update=update, user_record=user_record)

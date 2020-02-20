@@ -280,7 +280,6 @@ def init(telegram_bot: davtelepot.bot.Bot, suggestion_messages=default_suggestio
             types.datetime
         )
 
-
     @telegram_bot.command(command=suggestion_messages['suggestions_command']['command'],
                           aliases=suggestion_messages['suggestions_command']['aliases'],
                           reply_keyboard_button=(

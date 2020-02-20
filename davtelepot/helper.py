@@ -10,7 +10,7 @@ from davtelepot.utilities import (
 from .messages import default_help_messages
 
 
-def get_command_description(bot, update, user_record):
+def get_commands_description(bot, update, user_record):
     """Get a string description of `bot` commands.
 
     Show only commands available for `update` sender.
@@ -18,11 +18,26 @@ def get_command_description(bot, update, user_record):
     user_role = bot.Role.get_user_role(
         user_record=user_record
     )
-    return "\n".join(
-        [
-            "/{}: {}".format(
-                command,
-                bot.get_message(
+    commands = {}
+    for command, details in bot.commands.items():
+        if 'description' not in details or not details['description']:
+            continue
+        if 'authorization_level' not in details:
+            continue
+        command_role = bot.Role.get_role_by_name(details['authorization_level'])
+        if command_role.code < user_role.code:
+            continue
+        if command_role.code not in commands:
+            commands[command_role.code] = []
+        commands[command_role.code].append(
+            "/{command}{authorization_level}: {description}".format(
+                command=command,
+                authorization_level=(
+                    f" <i>[{command_role.plural}]</i>"
+                    if command_role.code != bot.Role.default_role_code
+                    else ""
+                ),
+                description=bot.get_message(
                     'commands', command, 'description',
                     user_record=user_record, update=update,
                     default_message=(
@@ -32,20 +47,47 @@ def get_command_description(bot, update, user_record):
                     )
                 )
             )
-            for command, details in sorted(
-                bot.commands.items(),
-                key=lambda x:x[0]
-                )
-            if 'description' in details and details['description']
-            and user_role.code <= bot.Role.get_user_role(
-                user_role_id=details['authorization_level']
-            ).code
+        )
+    return "\n".join(
+        [
+            command
+            for role, commands in sorted(
+                commands.items(),
+                key=(lambda x: -x[0])
+            )
+            for command in sorted(
+                commands
+            )
         ]
     )
+    #     [
+    #         "/{command}{authorization_level}: {description}".format(
+    #             command=command,
+    #             authorization_level=(
+    #                 ""
+    #                 if 1
+    #                 else ""
+    #             ),
+    #             description=bot.get_message(
+    #                 'commands', command, 'description',
+    #                 user_record=user_record, update=update,
+    #                 default_message=(
+    #                     details['description']
+    #                     if type(details['description']) is str
+    #                     else ''
+    #                 )
+    #             )
+    #         )
+    #         if 'description' in details and details['description']
+    #         and user_role.code <= bot.Role.get_user_role(
+    #             user_role_id=details['authorization_level']
+    #         ).code
+    #     ]
+    # )
 
 
 def _make_button(text=None, callback_data='',
-                 prefix='help:///', delimiter='|', data=[]):
+                 prefix='help:///', delimiter='|', data=None):
     return make_button(text=text, callback_data=callback_data,
                        prefix=prefix, delimiter=delimiter, data=data)
 
@@ -84,7 +126,7 @@ def get_help_buttons(bot, update, user_record):
         )
         for name, section in bot.messages['help_sections'].items()
         if 'authorization_level' in section
-        and user_role.code <= bot.Role.get_user_role(
+           and user_role.code <= bot.Role.get_user_role(
             user_role_id=section['authorization_level']
         ).code
     ]
@@ -134,7 +176,7 @@ async def _help_button(bot, update, user_record, data):
             'help', 'help_command', 'header',
             update=update, user_record=user_record,
             bot=bot,
-            commands=get_command_description(bot, update, user_record)
+            commands=get_commands_description(bot, update, user_record)
         )
         reply_markup = get_back_to_help_menu_keyboard(
             bot=bot, update=update, user_record=user_record
@@ -147,14 +189,14 @@ async def _help_button(bot, update, user_record, data):
         )
         reply_markup = get_help_buttons(bot, update, user_record)
     elif (
-        data[0] == 'section'
-        and len(data) > 1
-        and data[1] in bot.messages['help_sections']
+            data[0] == 'section'
+            and len(data) > 1
+            and data[1] in bot.messages['help_sections']
     ):
         section = bot.messages['help_sections'][data[1]]
         if bot.authorization_function(
-            update=update,
-            authorization_level=section['authorization_level']
+                update=update,
+                authorization_level=section['authorization_level']
         ):
             text = (
                 "<b>{label}</b>\n\n"
@@ -200,27 +242,26 @@ async def _start_command(bot, update, user_record):
     return
 
 
-def init(bot, help_messages=None):
+def init(telegram_bot, help_messages=None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if help_messages is None:
         help_messages = default_help_messages
-    bot.messages['help'] = help_messages
+    telegram_bot.messages['help'] = help_messages
 
-    @bot.command("/start", authorization_level='everybody')
+    @telegram_bot.command("/start", authorization_level='everybody')
     async def start_command(bot, update, user_record):
         return await _start_command(bot, update, user_record)
 
-    @bot.command(command='/help', aliases=['00help'],
-                 reply_keyboard_button=help_messages['help_command'][
-                    'reply_keyboard_button'],
-                 show_in_keyboard=True,
-                 description=help_messages['help_command']['description'],
-                 authorization_level='everybody')
+    @telegram_bot.command(command='/help', aliases=['00help'],
+                          reply_keyboard_button=help_messages['help_command'][
+                              'reply_keyboard_button'],
+                          show_in_keyboard=True,
+                          description=help_messages['help_command']['description'],
+                          authorization_level='everybody')
     async def help_command(bot, update, user_record):
-        result = await _help_command(bot, update, user_record)
-        return result
+        return await _help_command(bot, update, user_record)
 
-    @bot.button(prefix='help:///', separator='|',
-                authorization_level='everybody')
+    @telegram_bot.button(prefix='help:///', separator='|',
+                         authorization_level='everybody')
     async def help_button(bot, update, user_record, data):
         return await _help_button(bot, update, user_record, data)
