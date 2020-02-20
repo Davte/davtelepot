@@ -1238,7 +1238,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         if caption is not None:
             media['caption'] = caption
         if parse_mode is not None:
-            media['parse_mode'] =
+            media['parse_mode'] = parse_mode
         if photo is not None:
             media['type'] = 'photo'
             media['media'] = photo
