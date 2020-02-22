@@ -14,6 +14,7 @@ import datetime
 import json
 
 # Third party modules
+import davtelepot
 from davtelepot import messages
 from davtelepot.utilities import (
     async_wrapper, Confirmator, extract, get_cleaned_text, get_user,
@@ -786,12 +787,14 @@ async def _version_command(bot, update, user_record):
             stderr=asyncio.subprocess.STDOUT
         )
         stdout, _ = await _subprocess.communicate()
-        version = stdout.decode().strip()
+        last_commit = stdout.decode().strip()
+        davtelepot_version = davtelepot.__version__
     except Exception as e:
         return f"{e}"
     return bot.get_message(
         'admin', 'version_command', 'result',
-        version=version,
+        last_commit=last_commit,
+        davtelepot_version=davtelepot_version,
         update=update, user_record=user_record
     )
 

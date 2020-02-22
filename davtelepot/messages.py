@@ -247,8 +247,10 @@ default_admin_messages = {
         },
         'help_section': None,
         'result': {
-            'en': "Last commit: {version}",
-            'it': "Ultimo commit: {version}",
+            'en': "Last commit: {last_commit}\n"
+                  "davtelepot version: {davtelepot_version}",
+            'it': "Ultimo commit: {last_commit}"
+                  "Version di davtelepot: {davtelepot_version}",
         },
     }
 }
