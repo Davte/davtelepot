@@ -18,7 +18,7 @@ from aiohttp import web
 class TelegramError(Exception):
     """Telegram API exceptions class."""
 
-    def __init__(self, error_code=0, description=None, ok=False):
+    def __init__(self, error_code=0, description=None):
         """Get an error response and return corresponding Exception."""
         self._code = error_code
         if description is None:
@@ -38,7 +38,9 @@ class TelegramError(Exception):
         return f"Error {self.code}: {self._description}"
 
 
-class TelegramBot(object):
+# This class needs to mirror Telegram API, so camelCase method are needed
+# noinspection PyPep8Naming
+class TelegramBot:
     """Provide python method having the same signature as Telegram API methods.
 
     All mirrored methods are camelCase.
@@ -65,12 +67,13 @@ class TelegramBot(object):
         self._token = token
         self.sessions = dict()
         self._flood_wait = 0
-        self.last_sending_time = dict(
-            absolute=(
+        self.last_sending_time = {
+            'absolute': (
                 datetime.datetime.now()
                 - self.absolute_cooldown_timedelta
-            )
-        )
+            ),
+            0: []  # Each `telegram_id` key has a list of `datetime.datetime` as value
+        }
 
     @property
     def token(self):
@@ -139,14 +142,16 @@ class TelegramBot(object):
         return response['result']
 
     @staticmethod
-    def adapt_parameters(parameters, exclude=[]):
+    def adapt_parameters(parameters, exclude=None):
         """Build a aiohttp.FormData object from given `paramters`.
 
         Exclude `self`, empty values and parameters in `exclude` list.
         Cast integers to string to avoid TypeError during json serialization.
         """
+        if exclude is None:
+            exclude = []
         exclude.append('self')
-        # quote_fields must be set to False, otherwise filenames cause troubles
+        # quote_fields must be set to False, otherwise some file names cause troubles
         data = aiohttp.FormData(quote_fields=False)
         for key, value in parameters.items():
             if not (key in exclude or value is None):
@@ -260,13 +265,17 @@ class TelegramBot(object):
         self.last_sending_time['absolute'] = now()
         return
 
-    async def api_request(self, method, parameters={}, exclude=[]):
+    async def api_request(self, method, parameters=None, exclude=None):
         """Return the result of a Telegram bot API request, or an Exception.
 
         Opened sessions will be used more than one time (if appropriate) and
             will be closed on `Bot.app.cleanup`.
         Result may be a Telegram API json response, None, or Exception.
         """
+        if exclude is None:
+            exclude = []
+        if parameters is None:
+            parameters = {}
         response_object = None
         session, session_must_be_closed = self.get_session(method)
         # Prevent Telegram flood control for all methodsd having a `chat_id`
@@ -343,14 +352,6 @@ class TelegramBot(object):
 
         See https://core.telegram.org/bots/api#setwebhook for details.
         """
-        if url is None:
-            url = self.webhook_url
-        if allowed_updates is None:
-            allowed_updates = self.allowed_updates
-        if max_connections is None:
-            max_connections = self.max_connections
-        if certificate is None:
-            certificate = self.certificate
         if type(certificate) is str:
             try:
                 certificate = dict(

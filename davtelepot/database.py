@@ -22,7 +22,7 @@ class ObjectWithDatabase(object):
         ```
     """
 
-    def __init__(self, database_url=None):
+    def __init__(self, database_url: str = None):
         """Instantiate object and open connection with database."""
         if database_url is None:
             database_url = 'database.db'
@@ -41,12 +41,12 @@ class ObjectWithDatabase(object):
             logging.error(f"{e}")
 
     @property
-    def db_url(self):
+    def db_url(self) -> str:
         """Return complete path to database."""
         return self._database_url
 
     @property
-    def db(self):
+    def db(self) -> dataset.Database:
         """Return the dataset.Database instance related to `self`."""
         return self._database
 

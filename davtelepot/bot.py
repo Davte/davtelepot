@@ -1,6 +1,6 @@
 """Provide a simple Bot object, mirroring Telegram API methods.
 
-camelCase methods mirror API directly, while snake_case ones act as middlewares
+camelCase methods mirror API directly, while snake_case ones act as middleware
     someway.
 
 Usage
@@ -58,6 +58,8 @@ from .utilities import (
 logging.getLogger('aiohttp').setLevel(logging.WARNING)
 
 
+# Some methods are not implemented yet: that's the reason behind the following statement
+# noinspection PyUnusedLocal,PyMethodMayBeStatic,PyMethodMayBeStatic
 class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     """Simple Bot object, providing methods corresponding to Telegram bot API.
 
@@ -579,7 +581,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 break
         if not results:
             results = self.default_inline_query_answer
-        if type(results) is dict and 'answer' in results:
+        if isinstance(results, dict) and 'answer' in results:
             if 'switch_pm_text' in results:
                 switch_pm_text = results['switch_pm_text']
             if 'switch_pm_parameter' in results:
@@ -1010,6 +1012,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             "but this handler does nothing yet."
         )
 
+    # noinspection SpellCheckingInspection
     @staticmethod
     def split_message_text(text, limit=None, parse_mode='HTML'):
         r"""Split text if it hits telegram limits for text messages.
@@ -1076,7 +1079,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             method = self.send_voice
         if method is not None:
             return await method(update=update, *args, **kwargs)
-        raise Exception("Unsopported keyword arguments for `Bot().reply`.")
+        raise Exception("Unsupported keyword arguments for `Bot().reply`.")
 
     async def send_message(self, chat_id=None, text=None,
                            parse_mode='HTML',
@@ -1121,7 +1124,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             return
         parse_mode = str(parse_mode)
         if isinstance(text, dict) and chat_id > 0:
-            if user_record is None :
+            if user_record is None:
                 user_record = self.db['users'].find_one(telegram_id=chat_id)
             text = self.get_message(
                 update=update,
@@ -1255,7 +1258,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         Set `disable_notification` to True to avoid disturbing recipient.
         Pass the `update` to be forwarded or its identifier (`from_chat_id` and
             `message_id`).
-            @type message_id: int
         """
         if from_chat_id is None or message_id is None:
             message_identifier = self.get_message_identifier(update)
@@ -1669,7 +1671,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             set to True, use file_id (it is faster and recommended).
         `document_path` may contain `{path}`: it will be replaced by
             `self.path`.
-        `document_name` diplayed to Telegram may differ from actual document
+        `document_name` displayed to Telegram may differ from actual document
             name if this parameter is set.
         """
         already_sent = False
@@ -1785,7 +1787,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         return sent_update
 
     async def download_file(self, file_id,
-                            file_name=None, mime_type=None, path=None):
+                            file_name=None, path=None):
         """Given a telegram `file_id`, download the related file.
 
         Telegram may not preserve the original file name and MIME type: the
@@ -1998,7 +2000,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
         Decorate command handlers like this:
             ```
-            @bot.command('/mycommand', ['Button'], True, "My command", 'user')
+            @bot.command('/my_command', ['Button'], True, "My command", 'user')
             async def command_handler(bot, update, user_record):
                 return "Result"
             ```
@@ -2573,6 +2575,12 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             return
         if allowed_updates is None:
             allowed_updates = []
+        if certificate is None:
+            certificate = self.certificate
+        if max_connections is None:
+            max_connections = self.max_connections
+        if url is None:
+            url = self.webhook_url
         webhook_was_set = await self.setWebhook(
             url=url, certificate=certificate, max_connections=max_connections,
             allowed_updates=allowed_updates
