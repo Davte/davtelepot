@@ -858,7 +858,8 @@ def get_cleaned_text(update, bot=None, replace=[], strip='/ @'):
             )
         )
     text = update['text'].strip(strip)
-    for s in replace:
+    # Replace longer strings first
+    for s in sorted(replace, key=len, reverse=True):
         while s and text.lower().startswith(s.lower()):
             text = text[len(s):]
     return text.strip(strip)
