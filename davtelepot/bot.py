@@ -223,18 +223,38 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.shared_data = dict()
         self.Role = None
         # Add `users` table with its fields if missing
-        self.db['users'].upsert(
-            dict(
-                telegram_id=000000000,
-                privileges=100,
-                username="username",
-                first_name="First",
-                last_name="Last",
-                language_code="en",
-                selected_language_code="en"
-            ),
-            ['telegram_id']
-        )
+        if 'users' not in self.db.tables:
+            table = self.db.create_table(
+                table_name='users'
+            )
+            table.create_column(
+                'telegram_id',
+                self.db.types.integer
+            )
+            table.create_column(
+                'privileges',
+                self.db.types.integer
+            )
+            table.create_column(
+                'username',
+                self.db.types.string
+            )
+            table.create_column(
+                'first_name',
+                self.db.types.string
+            )
+            table.create_column(
+                'last_name',
+                self.db.types.string
+            )
+            table.create_column(
+                'language_code',
+                self.db.types.string
+            )
+            table.create_column(
+                'selected_language_code',
+                self.db.types.string
+            )
         return
 
     @property
