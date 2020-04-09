@@ -1143,7 +1143,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         if not text:
             return
         parse_mode = str(parse_mode)
-        if isinstance(text, dict) and chat_id > 0:
+        if isinstance(text, dict):
             if user_record is None:
                 user_record = self.db['users'].find_one(telegram_id=chat_id)
             text = self.get_message(
@@ -1202,6 +1202,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 message_id = message_identifier['message_id']
             if 'inline_message_id' in message_identifier:
                 inline_message_id = message_identifier['inline_message_id']
+        if isinstance(text, dict):
+            user_record = self.db['users'].find_one(telegram_id=chat_id)
+            text = self.get_message(
+                update=update,
+                user_record=user_record,
+                messages=text
+            )
         for i, (text_chunk, is_last) in enumerate(
             self.split_message_text(
                 text=text,
