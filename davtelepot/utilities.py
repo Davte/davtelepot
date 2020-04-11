@@ -23,6 +23,37 @@ from aiohttp import web
 from bs4 import BeautifulSoup
 
 
+weekdays = collections.OrderedDict()
+weekdays[0] = {
+    'en': "Sunday",
+    'it': "Domenica",
+}
+weekdays[1] = {
+    'en': "Monday",
+    'it': "Lunedì",
+}
+weekdays[2] = {
+    'en': "Tuesday",
+    'it': "Martedì",
+}
+weekdays[3] = {
+    'en': "Wednesday",
+    'it': "Mercoledì",
+}
+weekdays[4] = {
+    'en': "Thursday",
+    'it': "Giovedì",
+}
+weekdays[5] = {
+    'en': "Friday",
+    'it': "Venerdì",
+}
+weekdays[6] = {
+    'en': "Saturday",
+    'it': "Sabato",
+}
+
+
 def sumif(iterable, condition):
     """Sum all `iterable` items matching `condition`."""
     return sum(
