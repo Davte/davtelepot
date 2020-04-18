@@ -25,32 +25,32 @@ from bs4 import BeautifulSoup
 
 weekdays = collections.OrderedDict()
 weekdays[0] = {
-    'en': "Sunday",
-    'it': "Domenica",
-}
-weekdays[1] = {
     'en': "Monday",
     'it': "Lunedì",
 }
-weekdays[2] = {
+weekdays[1] = {
     'en': "Tuesday",
     'it': "Martedì",
 }
-weekdays[3] = {
+weekdays[2] = {
     'en': "Wednesday",
     'it': "Mercoledì",
 }
-weekdays[4] = {
+weekdays[3] = {
     'en': "Thursday",
     'it': "Giovedì",
 }
-weekdays[5] = {
+weekdays[4] = {
     'en': "Friday",
     'it': "Venerdì",
 }
-weekdays[6] = {
+weekdays[5] = {
     'en': "Saturday",
     'it': "Sabato",
+}
+weekdays[6] = {
+    'en': "Sunday",
+    'it': "Domenica",
 }
 
 
