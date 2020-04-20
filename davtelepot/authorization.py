@@ -235,6 +235,16 @@ def get_authorization_function(bot):
 
     def is_authorized(update, user_record=None, authorization_level=2):
         """Return True if user role is at least at `authorization_level`."""
+        if user_record is None:
+            if (
+                    isinstance(update, dict)
+                    and 'from' in update
+                    and isinstance(update['from'], dict)
+                    and 'id' in update['from']
+            ):
+                user_record = bot.db['users'].find_one(
+                    telegram_id=update['from']['id']
+                )
         user_role = bot.Role.get_user_role(user_record=user_record)
         if user_role.code == 0:
             return False
