@@ -607,35 +607,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             if 'switch_pm_parameter' in results:
                 switch_pm_parameter = results['switch_pm_parameter']
             results = results['answer']
-        for result in results:
-            if (
-                    isinstance(result, dict)
-                    and isinstance(result['title'], dict)
-            ):
-                result['title'] = self.get_message(
-                    update=update,
-                    user_record=user_record,
-                    messages=result['title']
-                )
-            if (
-                    isinstance(result, dict)
-                    and 'input_message_content' in result
-                    and isinstance(result['input_message_content'], dict)
-                    and 'message_text' in result['input_message_content']
-                    and isinstance(
-                        result['input_message_content']['message_text'],
-                        dict
-                    )
-            ):
-                result['input_message_content'][
-                    'message_text'] = self.get_message(
-                    update=update,
-                    user_record=user_record,
-                    messages=result['input_message_content']['message_text']
-                )
         try:
             await self.answer_inline_query(
                 update=update,
+                user_record=user_record,
                 results=results,
                 cache_time=10,
                 is_personal=True,
@@ -1871,6 +1846,41 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             logging.error(f"File download failed due to {e}")
         return
 
+    def translate_inline_query_answer_result(self, record,
+                                             update=None, user_record=None):
+        """Translate title and message text fields of inline query result.
+
+        This method does not alter original `record`. This way, default
+        inline query result is kept multilingual although single results
+        sent to users are translated.
+        """
+        result = dict()
+        for key, val in record.items():
+            if key == 'title' and isinstance(record[key], dict):
+                result[key] = self.get_message(
+                    update=update,
+                    user_record=user_record,
+                    messages=record[key]
+                )
+            elif (
+                    key == 'input_message_content'
+                    and isinstance(record[key], dict)
+            ):
+                result[key] = self.translate_inline_query_answer_result(
+                    record[key],
+                    update=update,
+                    user_record=user_record
+                )
+            elif key == 'message_text' and isinstance(record[key], dict):
+                result[key] = self.get_message(
+                    update=update,
+                    user_record=user_record,
+                    messages=record[key]
+                )
+            else:
+                result[key] = val
+        return result
+
     async def answer_inline_query(self,
                                   inline_query_id=None,
                                   results=None,
@@ -1879,7 +1889,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                                   next_offset=None,
                                   switch_pm_text=None,
                                   switch_pm_parameter=None,
-                                  update=None):
+                                  update=None,
+                                  user_record=None):
         """Answer inline queries.
 
         This method wraps lower-level `answerInlineQuery` method.
@@ -1894,7 +1905,12 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             and 'id' in update
         ):
             inline_query_id = update['id']
-        results = make_inline_query_answer(results)
+        results = [
+            self.translate_inline_query_answer_result(record=result,
+                                                      update=update,
+                                                      user_record=user_record)
+            for result in make_inline_query_answer(results)
+        ]
         return await self.answerInlineQuery(
             inline_query_id=inline_query_id,
             results=results,
@@ -1963,7 +1979,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         self._allowed_during_maintenance.append(criterion)
 
-    async def handle_update_during_maintenance(self, update):
+    async def handle_update_during_maintenance(self, update, user_record=None):
         """Handle an update while bot is under maintenance.
 
         Handle all types of updates.
@@ -1989,6 +2005,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 self.maintenance_message,
                 cache_time=30,
                 is_personal=False,
+                update=update,
+                user_record=user_record
             )
         return
 
