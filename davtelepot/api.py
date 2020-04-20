@@ -18,7 +18,8 @@ from aiohttp import web
 class TelegramError(Exception):
     """Telegram API exceptions class."""
 
-    def __init__(self, error_code=0, description=None):
+    def __init__(self, error_code=0, description=None, ok=False,
+                 *args, **kwargs):
         """Get an error response and return corresponding Exception."""
         self._code = error_code
         if description is None:
