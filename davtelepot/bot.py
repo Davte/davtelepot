@@ -607,6 +607,32 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             if 'switch_pm_parameter' in results:
                 switch_pm_parameter = results['switch_pm_parameter']
             results = results['answer']
+        for result in results:
+            if (
+                    isinstance(result, dict)
+                    and isinstance(result['title'], dict)
+            ):
+                result['title'] = self.get_message(
+                    update=update,
+                    user_record=user_record,
+                    messages=result['title']
+                )
+            if (
+                    isinstance(result, dict)
+                    and 'input_message_content' in result
+                    and isinstance(result['input_message_content'], dict)
+                    and 'message_text' in result['input_message_content']
+                    and isinstance(
+                        result['input_message_content']['message_text'],
+                        dict
+                    )
+            ):
+                result['input_message_content'][
+                    'message_text'] = self.get_message(
+                    update=update,
+                    user_record=user_record,
+                    messages=result['input_message_content']['message_text']
+                )
         try:
             await self.answer_inline_query(
                 update=update,

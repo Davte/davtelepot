@@ -249,8 +249,8 @@ default_admin_messages = {
         'result': {
             'en': "Last commit: {last_commit}\n"
                   "davtelepot version: {davtelepot_version}",
-            'it': "Ultimo commit: {last_commit}"
-                  "Version di davtelepot: {davtelepot_version}",
+            'it': "Ultimo commit: {last_commit}\n"
+                  "Versione di davtelepot: {davtelepot_version}",
         },
     }
 }
