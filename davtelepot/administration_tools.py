@@ -848,18 +848,26 @@ def init(telegram_bot, talk_messages=None, admin_messages=None):
                 admin_record=session['admin_record']
             )
 
-    @telegram_bot.command(command='/talk', aliases=[], show_in_keyboard=False,
-                          description=admin_messages['talk_command']['description'],
+    @telegram_bot.command(command='/talk',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'talk_command']['description'],
                           authorization_level='admin')
     async def talk_command(bot, update, user_record):
         return await _talk_command(bot, update, user_record)
 
-    @telegram_bot.button(prefix='talk:///', separator='|', authorization_level='admin')
+    @telegram_bot.button(prefix='talk:///',
+                         separator='|',
+                         authorization_level='admin')
     async def talk_button(bot, update, user_record, data):
         return await _talk_button(bot, update, user_record, data)
 
-    @telegram_bot.command(command='/restart', aliases=[], show_in_keyboard=False,
-                          description=admin_messages['restart_command']['description'],
+    @telegram_bot.command(command='/restart',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'restart_command']['description'],
                           authorization_level='admin')
     async def restart_command(bot, update, user_record):
         return await _restart_command(bot, update, user_record)
@@ -892,50 +900,72 @@ def init(telegram_bot, talk_messages=None, admin_messages=None):
             )
         return
 
-    @telegram_bot.command(command='/stop', aliases=[], show_in_keyboard=False,
-                          description=admin_messages['stop_command']['description'],
+    @telegram_bot.command(command='/stop',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'stop_command']['description'],
                           authorization_level='admin')
     async def stop_command(bot, update, user_record):
         return await _stop_command(bot, update, user_record)
 
-    @telegram_bot.button(prefix='stop:///', separator='|',
-                         description=admin_messages['stop_command']['description'],
+    @telegram_bot.button(prefix='stop:///',
+                         separator='|',
+                         description=admin_messages[
+                             'stop_command']['description'],
                          authorization_level='admin')
     async def stop_button(bot, update, user_record, data):
         return await _stop_button(bot, update, user_record, data)
 
-    @telegram_bot.command(command='/db', aliases=[], show_in_keyboard=False,
-                          description=admin_messages['db_command']['description'],
+    @telegram_bot.command(command='/db',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'db_command']['description'],
                           authorization_level='admin')
     async def send_bot_database(bot, update, user_record):
         return await _send_bot_database(bot, update, user_record)
 
-    @telegram_bot.command(command='/query', aliases=[], show_in_keyboard=False,
-                          description=admin_messages['query_command']['description'],
+    @telegram_bot.command(command='/query',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'query_command']['description'],
                           authorization_level='admin')
     async def query_command(bot, update, user_record):
         return await _query_command(bot, update, user_record)
 
-    @telegram_bot.command(command='/select', aliases=[], show_in_keyboard=False,
-                          description=admin_messages['select_command']['description'],
+    @telegram_bot.command(command='/select',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'select_command']['description'],
                           authorization_level='admin')
     async def select_command(bot, update, user_record):
         return await _query_command(bot, update, user_record)
 
-    @telegram_bot.button(prefix='db_query:///', separator='|',
-                         description=admin_messages['query_command']['description'],
+    @telegram_bot.button(prefix='db_query:///',
+                         separator='|',
+                         description=admin_messages[
+                             'query_command']['description'],
                          authorization_level='admin')
     async def query_button(bot, update, user_record, data):
         return await _query_button(bot, update, user_record, data)
 
-    @telegram_bot.command(command='/log', aliases=[], show_in_keyboard=False,
-                          description=admin_messages['log_command']['description'],
+    @telegram_bot.command(command='/log',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'log_command']['description'],
                           authorization_level='admin')
     async def log_command(bot, update, user_record):
         return await _log_command(bot, update, user_record)
 
-    @telegram_bot.command(command='/errors', aliases=[], show_in_keyboard=False,
-                          description=admin_messages['errors_command']['description'],
+    @telegram_bot.command(command='/errors',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'errors_command']['description'],
                           authorization_level='admin')
     async def errors_command(bot, update, user_record):
         return await _errors_command(bot, update, user_record)
@@ -943,18 +973,24 @@ def init(telegram_bot, talk_messages=None, admin_messages=None):
     for exception in allowed_during_maintenance:
         telegram_bot.allow_during_maintenance(exception)
 
-    @telegram_bot.command(command='/maintenance', aliases=[], show_in_keyboard=False,
-                          description=admin_messages['maintenance_command']['description'],
+    @telegram_bot.command(command='/maintenance', aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'maintenance_command']['description'],
                           authorization_level='admin')
     async def maintenance_command(bot, update, user_record):
         return await _maintenance_command(bot, update, user_record)
 
     @telegram_bot.command(command='/version',
                           aliases=[],
-                          reply_keyboard_button=admin_messages['version_command']['reply_keyboard_button'],
+                          **{key: admin_messages['version_command'][key]
+                             for key in ('reply_keyboard_button',
+                                         'description',
+                                         'help_section',)
+                             },
                           show_in_keyboard=False,
-                          description=admin_messages['version_command']['description'],
-                          help_section=admin_messages['version_command']['help_section'],
                           authorization_level='admin',)
     async def version_command(bot, update, user_record):
-        return await _version_command(bot=bot, update=update, user_record=user_record)
+        return await _version_command(bot=bot,
+                                      update=update,
+                                      user_record=user_record)
