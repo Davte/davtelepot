@@ -1,70 +1,6 @@
 """Default messages for bot functions."""
 
 default_admin_messages = {
-    'talk_command': {
-        'description': {
-            'en': "Choose a user and forward messages to each other",
-            'it': "Scegli un utente e il bot farà da tramite inoltrando a "
-                  "ognuno i messaggi dell'altro finché non terminerai la "
-                  "sessione"
-        }
-    },
-    'restart_command': {
-        'description': {
-            'en': "Restart bots",
-            'it': "Riavvia i bot"
-        },
-        'restart_scheduled_message': {
-            'en': "Bots are being restarted, after pulling from repository.",
-            'it': "I bot verranno riavviati in pochi secondi, caricando "
-                  "prima le eventuali modifiche al codice."
-        },
-        'restart_completed_message': {
-            'en': "<i>Restart was successful.</i>",
-            'it': "<i>Restart avvenuto con successo.</i>"
-        }
-    },
-    'stop_command': {
-        'description': {
-            'en': "Stop bots",
-            'it': "Ferma i bot"
-        },
-        'text': {
-            'en': "Are you sure you want to stop all bots?\n"
-                  "To make them start again you will have to ssh-log "
-                  "in server.\n\n"
-                  "To restart the bots remotely use the /restart command "
-                  "instead (before starting over, a <code>git pull</code> "
-                  "is performed).",
-            'it': "Sei sicuro di voler fermare i bot?\n"
-                  "Per farli ripartire dovrai accedere al server.\n\n"
-                  "Per far ripartire i bot da remoto usa invece il comando "
-                  "/restart (prima di ripartire farò un "
-                  "<code>git pull</code>)."
-        }
-    },
-    'stop_button': {
-        'stop_text': {
-            'en': "Stop bots",
-            'it': "Ferma i bot"
-        },
-        'cancel': {
-            'en': "Cancel",
-            'it': "Annulla"
-        },
-        'confirm': {
-            'en': "Do you really want to stop all bots?",
-            'it': "Vuoi davvero fermare tutti i bot?"
-        },
-        'stopping': {
-            'en': "Stopping bots...",
-            'it': "Arresto in corso..."
-        },
-        'cancelled': {
-            'en': "Operation was cancelled",
-            'it': "Operazione annullata"
-        }
-    },
     'db_command': {
         'description': {
             'en': "Ask for bot database via Telegram",
@@ -85,92 +21,6 @@ default_admin_messages = {
         'db_sent': {
             'en': "Database sent.",
             'it': "Database inviato."
-        }
-    },
-    'query_command': {
-        'description': {
-            'en': "Receive the result of a SQL query performed on bot "
-                  "database",
-            'it': "Ricevi il risultato di una query SQL sul database del bot"
-        },
-        'help': {
-            'en': "Write a SQL query to be run on bot database.\n\n"
-                  "<b>Example</b>\n"
-                  "<code>/query SELECT * FROM users WHERE 0</code>",
-            'it': "Invia una query SQL da eseguire sul database del bot.\n\n"
-                  "<b>Esempio</b>\n"
-                  "<code>/query SELECT * FROM users WHERE 0</code>"
-        },
-        'no_iterable': {
-            'en': "No result to show was returned",
-            'it': "La query non ha restituito risultati da mostrare"
-        },
-        'exception': {
-            'en': "The query threw this error:",
-            'it': "La query ha dato questo errore:"
-        },
-        'result': {
-            'en': "Query result",
-            'it': "Risultato della query"
-        }
-    },
-    'select_command': {
-        'description': {
-            'en': "Receive the result of a SELECT query performed on bot "
-                  "database",
-            'it': "Ricevi il risultato di una query SQL di tipo SELECT "
-                  "sul database del bot"
-        }
-    },
-    'query_button': {
-        'error': {
-            'en': "Error!",
-            'it': "Errore!"
-        },
-        'file_name': {
-            'en': "Query result.csv",
-            'it': "Risultato della query.csv"
-        },
-        'empty_file': {
-            'en': "No result to show.",
-            'it': "Nessun risultato da mostrare."
-        }
-    },
-    'log_command': {
-        'description': {
-            'en': "Receive bot log file, if set",
-            'it': "Ricevi il file di log del bot, se impostato"
-        },
-        'no_log': {
-            'en': "Sorry but no log file is set.\n"
-                  "To set it, use `bot.set_log_file_name` instance method or "
-                  "`Bot.set_class_log_file_name` class method.",
-            'it': "Spiacente ma il file di log non è stato impostato.\n"
-                  "Per impostarlo, usa il metodo d'istanza "
-                  "`bot.set_log_file_name` o il metodo di classe"
-                  "`Bot.set_class_log_file_name`."
-        },
-        'sending_failure': {
-            'en': "Sending log file failed!\n\n"
-                  "<b>Error:</b>\n"
-                  "<code>{e}</code>",
-            'it': "Inviio del messaggio di log fallito!\n\n"
-                  "<b>Errore:</b>\n"
-                  "<code>{e}</code>"
-        },
-        'here_is_log_file': {
-            'en': "Here is the complete log file.",
-            'it': "Ecco il file di log completo."
-        },
-        'log_file_first_lines': {
-            'en': "Here are the first {lines} lines of the log file.",
-            'it': "Ecco le prime {lines} righe del file di log."
-        },
-        'log_file_last_lines': {
-            'en': "Here are the last {lines} lines of the log file.\n"
-                  "Newer lines are at the top of the file.",
-            'it': "Ecco le ultime {lines} righe del file di log.\n"
-                  "L'ordine è cronologico, con i messaggi nuovi in alto."
         }
     },
     'errors_command': {
@@ -216,6 +66,43 @@ default_admin_messages = {
                   "L'ordine è cronologico, con i messaggi nuovi in alto."
         }
     },
+    'log_command': {
+        'description': {
+            'en': "Receive bot log file, if set",
+            'it': "Ricevi il file di log del bot, se impostato"
+        },
+        'no_log': {
+            'en': "Sorry but no log file is set.\n"
+                  "To set it, use `bot.set_log_file_name` instance method or "
+                  "`Bot.set_class_log_file_name` class method.",
+            'it': "Spiacente ma il file di log non è stato impostato.\n"
+                  "Per impostarlo, usa il metodo d'istanza "
+                  "`bot.set_log_file_name` o il metodo di classe"
+                  "`Bot.set_class_log_file_name`."
+        },
+        'sending_failure': {
+            'en': "Sending log file failed!\n\n"
+                  "<b>Error:</b>\n"
+                  "<code>{e}</code>",
+            'it': "Inviio del messaggio di log fallito!\n\n"
+                  "<b>Errore:</b>\n"
+                  "<code>{e}</code>"
+        },
+        'here_is_log_file': {
+            'en': "Here is the complete log file.",
+            'it': "Ecco il file di log completo."
+        },
+        'log_file_first_lines': {
+            'en': "Here are the first {lines} lines of the log file.",
+            'it': "Ecco le prime {lines} righe del file di log."
+        },
+        'log_file_last_lines': {
+            'en': "Here are the last {lines} lines of the log file.\n"
+                  "Newer lines are at the top of the file.",
+            'it': "Ecco le ultime {lines} righe del file di log.\n"
+                  "L'ordine è cronologico, con i messaggi nuovi in alto."
+        }
+    },
     'maintenance_command': {
         'description': {
             'en': "Put the bot under maintenance",
@@ -236,6 +123,139 @@ default_admin_messages = {
             'it': "<i>Manutenzione terminata!</i>"
         }
     },
+    'new_version': {
+        'title': {
+            'en': "🔔 New version detected! 📰",
+            'it': "🔔 Rilevata nuova versione! 📰",
+        },
+        'last_commit': {
+            'en': "Old commit: <code>{old_record[last_commit]}</code>\n"
+                  "New commit: <code>{new_record[last_commit]}</code>",
+            'it': "Vecchio commit: <code>{old_record[last_commit]}</code>\n"
+                  "Nuovo commit: <code>{new_record[last_commit]}</code>",
+        },
+        'davtelepot_version': {
+            'en': "davtelepot version: "
+                  "<code>{old_record[davtelepot_version]}</code> —> "
+                  "<code>{new_record[davtelepot_version]}</code>",
+            'it': "Versione di davtelepot: "
+                  "<code>{old_record[davtelepot_version]}</code> —> "
+                  "<code>{new_record[davtelepot_version]}</code>",
+        },
+    },
+    'query_button': {
+        'error': {
+            'en': "Error!",
+            'it': "Errore!",
+        },
+        'file_name': {
+            'en': "Query result.csv",
+            'it': "Risultato della query.csv",
+        },
+        'empty_file': {
+            'en': "No result to show.",
+            'it': "Nessun risultato da mostrare.",
+        }
+    },
+    'query_command': {
+        'description': {
+            'en': "Receive the result of a SQL query performed on bot "
+                  "database",
+            'it': "Ricevi il risultato di una query SQL sul database del bot"
+        },
+        'help': {
+            'en': "Write a SQL query to be run on bot database.\n\n"
+                  "<b>Example</b>\n"
+                  "<code>/query SELECT * FROM users WHERE 0</code>",
+            'it': "Invia una query SQL da eseguire sul database del bot.\n\n"
+                  "<b>Esempio</b>\n"
+                  "<code>/query SELECT * FROM users WHERE 0</code>"
+        },
+        'no_iterable': {
+            'en': "No result to show was returned",
+            'it': "La query non ha restituito risultati da mostrare"
+        },
+        'exception': {
+            'en': "The query threw this error:",
+            'it': "La query ha dato questo errore:"
+        },
+        'result': {
+            'en': "Query result",
+            'it': "Risultato della query"
+        }
+    },
+    'restart_command': {
+        'description': {
+            'en': "Restart bots",
+            'it': "Riavvia i bot"
+        },
+        'restart_scheduled_message': {
+            'en': "Bots are being restarted, after pulling from repository.",
+            'it': "I bot verranno riavviati in pochi secondi, caricando "
+                  "prima le eventuali modifiche al codice."
+        },
+        'restart_completed_message': {
+            'en': "<i>Restart was successful.</i>",
+            'it': "<i>Restart avvenuto con successo.</i>"
+        }
+    },
+    'select_command': {
+        'description': {
+            'en': "Receive the result of a SELECT query performed on bot "
+                  "database",
+            'it': "Ricevi il risultato di una query SQL di tipo SELECT "
+                  "sul database del bot"
+        }
+    },
+    'stop_button': {
+        'stop_text': {
+            'en': "Stop bots",
+            'it': "Ferma i bot"
+        },
+        'cancel': {
+            'en': "Cancel",
+            'it': "Annulla"
+        },
+        'confirm': {
+            'en': "Do you really want to stop all bots?",
+            'it': "Vuoi davvero fermare tutti i bot?"
+        },
+        'stopping': {
+            'en': "Stopping bots...",
+            'it': "Arresto in corso..."
+        },
+        'cancelled': {
+            'en': "Operation was cancelled",
+            'it': "Operazione annullata"
+        }
+    },
+    'stop_command': {
+        'description': {
+            'en': "Stop bots",
+            'it': "Ferma i bot"
+        },
+        'text': {
+            'en': "Are you sure you want to stop all bots?\n"
+                  "To make them start again you will have to ssh-log "
+                  "in server.\n\n"
+                  "To restart the bots remotely use the /restart command "
+                  "instead (before starting over, a <code>git pull</code> "
+                  "is performed).",
+            'it': "Sei sicuro di voler fermare i bot?\n"
+                  "Per farli ripartire dovrai accedere al server.\n\n"
+                  "Per far ripartire i bot da remoto usa invece il comando "
+                  "/restart (prima di ripartire farò un "
+                  "<code>git pull</code>)."
+        }
+    },
+    'talk_command': {
+        'description': {
+            'en': "Choose a user and forward messages to each other",
+            'it': "Scegli un utente e il bot farà da tramite inoltrando a "
+                  "ognuno i messaggi dell'altro finché non terminerai la "
+                  "sessione"
+        }
+    },
     'version_command': {
         'reply_keyboard_button': {
             'en': "Version #️⃣",
@@ -247,12 +267,12 @@ default_admin_messages = {
         },
         'help_section': None,
         'result': {
-            'en': "Last commit: {last_commit}\n"
-                  "davtelepot version: {davtelepot_version}",
-            'it': "Ultimo commit: {last_commit}\n"
-                  "Versione di davtelepot: {davtelepot_version}",
+            'en': "Last commit: <code>{last_commit}</code>\n\n"
+                  "davtelepot version: <code>{davtelepot_version}</code>",
+            'it': "Ultimo commit: <code>{last_commit}</code>\n\n"
+                  "Versione di davtelepot: <code>{davtelepot_version}</code>",
         },
-    }
+    },
 }
 
 default_authorization_denied_message = {
