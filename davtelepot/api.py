@@ -11,6 +11,8 @@ import json
 import logging
 
 # Third party modules
+from typing import Union, List
+
 import aiohttp
 from aiohttp import web
 
@@ -38,6 +40,37 @@ class TelegramError(Exception):
     def description(self):
         """Human-readable description of error."""
         return f"Error {self.code}: {self._description}"
+
+
+class ChatPermissions(dict):
+    """Actions that a non-administrator user is allowed to take in a chat."""
+    def __init__(self,
+                 can_send_messages: bool = True,
+                 can_send_media_messages: bool = True,
+                 can_send_polls: bool = True,
+                 can_send_other_messages: bool = True,
+                 can_add_web_page_previews: bool = True,
+                 can_change_info: bool = True,
+                 can_invite_users: bool = True,
+                 can_pin_messages: bool = True):
+        super().__init__(self)
+        self['can_send_messages'] = can_send_messages
+        self['can_send_media_messages'] = can_send_media_messages
+        self['can_send_polls'] = can_send_polls
+        self['can_send_other_messages'] = can_send_other_messages
+        self['can_add_web_page_previews'] = can_add_web_page_previews
+        self['can_change_info'] = can_change_info
+        self['can_invite_users'] = can_invite_users
+        self['can_pin_messages'] = can_pin_messages
+
+
+class Command(dict):
+    def __init__(self,
+                 command: str = None,
+                 description: str = None):
+        super().__init__(self)
+        self['command'] = command
+        self['description'] = description
 
 
 # This class needs to mirror Telegram API, so camelCase method are needed
@@ -1318,5 +1351,101 @@ class TelegramBot:
         """
         return await self.api_request(
             'getGameHighScores',
+            parameters=locals()
+        )
+
+    async def sendDice(self,
+                       chat_id: Union[int, str] = None,
+                       emoji: str = None,
+                       disable_notification: bool = False,
+                       reply_to_message_id: int = None,
+                       reply_markup=None):
+        """Send a dice.
+
+        Use this method to send a dice, which will have a random value from 1
+            to 6.
+        On success, the sent Message is returned.
+        (Yes, we're aware of the “proper” singular of die. But it's awkward,
+            and we decided to help it change. One dice at a time!)
+        See https://core.telegram.org/bots/api#senddice for
+            details.
+        """
+        return await self.api_request(
+            'sendDice',
+            parameters=locals()
+        )
+
+    async def setChatAdministratorCustomTitle(self,
+                                              chat_id: Union[int, str] = None,
+                                              user_id: int = None,
+                                              custom_title: str = None):
+        """Set a custom title for an administrator.
+
+        Use this method to set a custom title for an administrator in a
+            supergroup promoted by the bot.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setchatadministratorcustomtitle
+            for details.
+        """
+        return await self.api_request(
+            'setChatAdministratorCustomTitle',
+            parameters=locals()
+        )
+
+    async def setChatPermissions(self,
+                                 chat_id: Union[int, str] = None,
+                                 permissions: Union[ChatPermissions,
+                                                    dict] = None):
+        """Set default chat permissions for all members.
+
+        Use this method to set default chat permissions for all members.
+        The bot must be an administrator in the group or a supergroup for this
+            to work and must have the can_restrict_members admin rights.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setchatpermissions for details.
+        """
+        return await self.api_request(
+            'setChatPermissions',
+            parameters=locals()
+        )
+
+    async def setMyCommands(self, commands: List[Command]):
+        """Change the list of the bot's commands.
+
+        Use this method to change the list of the bot's commands.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setmycommands for details.
+        """
+        return await self.api_request(
+            'setMyCommands',
+            parameters=locals()
+        )
+
+    async def getMyCommands(self):
+        """Get the current list of the bot's commands.
+
+        Use this method to get the current list of the bot's commands.
+        Requires no parameters.
+        Returns Array of BotCommand on success.
+        See https://core.telegram.org/bots/api#getmycommands for details.
+        """
+        return await self.api_request(
+            'getMyCommands',
+            parameters=locals()
+        )
+
+    async def setStickerSetThumb(self,
+                                 name: str = None,
+                                 user_id: int = None,
+                                 thumb=None):
+        """Set the thumbnail of a sticker set.
+
+        Use this method to set the thumbnail of a sticker set.
+        Animated thumbnails can be set for animated sticker sets only.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setstickersetthumb for details.
+        """
+        return await self.api_request(
+            'setStickerSetThumb',
             parameters=locals()
         )

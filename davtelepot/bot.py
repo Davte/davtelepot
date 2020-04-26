@@ -174,7 +174,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             'invoice': self.invoice_message_handler,
             'successful_payment': self.successful_payment_message_handler,
             'connected_website': self.connected_website_message_handler,
-            'passport_data': self.passport_data_message_handler
+            'passport_data': self.passport_data_message_handler,
+            'dice': self.dice_handler,
         }
         # Special text message handlers: individual, commands, aliases, parsers
         self.individual_text_message_handlers = dict()
@@ -1030,6 +1031,13 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """Handle `passport_data` message update."""
         logging.info(
             "A passport_data message update was received, "
+            "but this handler does nothing yet."
+        )
+
+    async def dice_handler(self, update, user_record):
+        """Handle `dice` message update."""
+        logging.info(
+            "A dice message update was received, "
             "but this handler does nothing yet."
         )
 
