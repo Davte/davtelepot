@@ -14,15 +14,23 @@ import datetime
 import json
 
 # Third party modules
-import davtelepot
-from davtelepot import messages
-from davtelepot.utilities import (
-    async_wrapper, Confirmator, extract, get_cleaned_text, get_user,
-    escape_html_chars, line_drawing_unordered_list, make_button,
+from sqlalchemy.exc import ResourceClosedError
+
+# Project modules
+from . import bot as davtelepot_bot, messages, __version__ as version
+from .utilities import (
+    async_wrapper, CachedPage, Confirmator, extract, get_cleaned_text,
+    get_user, escape_html_chars, line_drawing_unordered_list, make_button,
     make_inline_keyboard, remove_html_tags, send_part_of_text_file,
     send_csv_file
 )
-from sqlalchemy.exc import ResourceClosedError
+
+# davtelepot_web_page = CachedPage(url="https://pypi.org/project/davtelepot/",
+davtelepot_web_page = CachedPage(
+    url='https://pypi.python.org/pypi/davtelepot/json',
+    cache_time=2,
+    mode='json'
+)
 
 
 async def _forward_to(update, bot, sender, addressee, is_admin=False):
@@ -793,7 +801,7 @@ async def get_version():
         last_commit = f"{e}"
     if last_commit.startswith("fatal: not a git repository"):
         last_commit = "-"
-    davtelepot_version = davtelepot.__version__
+    davtelepot_version = version
     return last_commit, davtelepot_version
 
 
@@ -855,6 +863,17 @@ async def notify_new_version(bot):
     return
 
 
+async def update_davtelepot(bot: davtelepot_bot,
+                            monitoring_interval: int = 60 * 60):
+    while 1:
+        web_page = await davtelepot_web_page.get_page()
+        if web_page['info']['version'] != version:
+            bot.stop(message='New version of davtelepot detected.\n'
+                             '=== RESTARTING ===',
+                     final_state=65)
+        await asyncio.sleep(monitoring_interval)
+
+
 def init(telegram_bot, talk_messages=None, admin_messages=None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if talk_messages is None:
@@ -877,6 +896,8 @@ def init(telegram_bot, talk_messages=None, admin_messages=None):
         get_maintenance_exception_criterion(telegram_bot, command)
         for command in ['stop', 'restart', 'maintenance']
     ]
+
+    asyncio.ensure_future(update_davtelepot(telegram_bot))
 
     @telegram_bot.additional_task(when='BEFORE')
     async def load_talking_sessions():

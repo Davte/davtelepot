@@ -1,4 +1,4 @@
-"""This module provides a glow-like middleware for Telegram bot API.
+"""This module provides a python mirror for Telegram bot API.
 
 All methods and parameters are the same as the original json API.
 A simple aiohttp asynchronous web client is used to make requests.
@@ -10,11 +10,11 @@ import datetime
 import json
 import logging
 
-# Third party modules
 from typing import Union, List
 
+# Third party modules
 import aiohttp
-from aiohttp import web
+import aiohttp.web
 
 
 class TelegramError(Exception):
@@ -82,7 +82,7 @@ class TelegramBot:
     """
 
     loop = asyncio.get_event_loop()
-    app = web.Application()
+    app = aiohttp.web.Application()
     sessions_timeouts = {
         'getUpdates': dict(
             timeout=35,
