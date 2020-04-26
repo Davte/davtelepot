@@ -12,6 +12,7 @@ davtelepot.admin_tools.init(my_bot)
 import asyncio
 import datetime
 import json
+import logging
 
 # Third party modules
 from sqlalchemy.exc import ResourceClosedError
@@ -23,13 +24,6 @@ from .utilities import (
     get_user, escape_html_chars, line_drawing_unordered_list, make_button,
     make_inline_keyboard, remove_html_tags, send_part_of_text_file,
     send_csv_file
-)
-
-# davtelepot_web_page = CachedPage(url="https://pypi.org/project/davtelepot/",
-davtelepot_web_page = CachedPage(
-    url='https://pypi.python.org/pypi/davtelepot/json',
-    cache_time=2,
-    mode='json'
 )
 
 
@@ -187,11 +181,9 @@ def get_talk_panel(bot, update, user_record=None, text=''):
                             {
                                 key: val
                                 for key, val in user.items()
-                                if key in (
-                                    'first_name',
-                                    'last_name',
-                                    'username'
-                                )
+                                if key in ('first_name',
+                                           'last_name',
+                                           'username')
                             }
                         )
                     ),
@@ -835,10 +827,10 @@ async def notify_new_version(bot):
             or old_record['davtelepot_version'] != davtelepot_version
     ):
         new_record = dict(
-                updated_at=datetime.datetime.now(),
-                last_commit=last_commit,
-                davtelepot_version=davtelepot_version
-            )
+            updated_at=datetime.datetime.now(),
+            last_commit=last_commit,
+            davtelepot_version=davtelepot_version
+        )
         bot.db['version_history'].insert(
             new_record
         )
@@ -863,14 +855,27 @@ async def notify_new_version(bot):
     return
 
 
-async def update_davtelepot(bot: davtelepot_bot,
-                            monitoring_interval: int = 60 * 60):
+async def get_package_updates(bot: davtelepot_bot,
+                              monitoring_interval: int = 60 * 60):
     while 1:
-        web_page = await davtelepot_web_page.get_page()
-        if web_page['info']['version'] != version:
-            bot.stop(message='New version of davtelepot detected.\n'
-                             '=== RESTARTING ===',
-                     final_state=65)
+        for package in bot.packages:
+            package_web_page = CachedPage.get(
+                f'https://pypi.python.org/pypi/{package.__name__}/json',
+                cache_time=2,
+                mode='json'
+            )
+            web_page = await package_web_page.get_page()
+            if web_page is None or isinstance(web_page, Exception):
+                logging.error(f"Cannot get updates for {package.__name__}, "
+                              "skipping...")
+                continue
+            new_version = web_page['info']['version']
+            current_version = package.__version__
+            if new_version != current_version:
+                print(f"New version of {package}: "
+                      f"<code>{current_version}</code> > "
+                      f"<code>{new_version}</code>")
+                # TODO notify administrators
         await asyncio.sleep(monitoring_interval)
 
 
@@ -897,7 +902,7 @@ def init(telegram_bot, talk_messages=None, admin_messages=None):
         for command in ['stop', 'restart', 'maintenance']
     ]
 
-    asyncio.ensure_future(update_davtelepot(telegram_bot))
+    asyncio.ensure_future(get_package_updates(telegram_bot))
 
     @telegram_bot.additional_task(when='BEFORE')
     async def load_talking_sessions():
@@ -1066,7 +1071,7 @@ def init(telegram_bot, talk_messages=None, admin_messages=None):
                                          'help_section',)
                              },
                           show_in_keyboard=False,
-                          authorization_level='admin',)
+                          authorization_level='admin')
     async def version_command(bot, update, user_record):
         return await _version_command(bot=bot,
                                       update=update,
