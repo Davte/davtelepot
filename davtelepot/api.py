@@ -1,7 +1,7 @@
 """This module provides a glow-like middleware for Telegram bot API.
 
 All methods and parameters are the same as the original json API.
-A simple aiohttp asyncronous web client is used to make requests.
+A simple aiohttp asynchronous web client is used to make requests.
 """
 
 # Standard library modules
@@ -18,6 +18,7 @@ from aiohttp import web
 class TelegramError(Exception):
     """Telegram API exceptions class."""
 
+    # noinspection PyUnusedLocal
     def __init__(self, error_code=0, description=None, ok=False,
                  *args, **kwargs):
         """Get an error response and return corresponding Exception."""
@@ -68,12 +69,13 @@ class TelegramBot:
         self._token = token
         self.sessions = dict()
         self._flood_wait = 0
+        # Each `telegram_id` key has a list of `datetime.datetime` as value
         self.last_sending_time = {
             'absolute': (
                 datetime.datetime.now()
                 - self.absolute_cooldown_timedelta
             ),
-            0: []  # Each `telegram_id` key has a list of `datetime.datetime` as value
+            0: []
         }
 
     @property
@@ -144,7 +146,7 @@ class TelegramBot:
 
     @staticmethod
     def adapt_parameters(parameters, exclude=None):
-        """Build a aiohttp.FormData object from given `paramters`.
+        """Build a aiohttp.FormData object from given `parameters`.
 
         Exclude `self`, empty values and parameters in `exclude` list.
         Cast integers to string to avoid TypeError during json serialization.
@@ -152,7 +154,7 @@ class TelegramBot:
         if exclude is None:
             exclude = []
         exclude.append('self')
-        # quote_fields must be set to False, otherwise some file names cause troubles
+        # quote_fields=False, otherwise some file names cause troubles
         data = aiohttp.FormData(quote_fields=False)
         for key, value in parameters.items():
             if not (key in exclude or value is None):
@@ -279,7 +281,7 @@ class TelegramBot:
             parameters = {}
         response_object = None
         session, session_must_be_closed = self.get_session(method)
-        # Prevent Telegram flood control for all methodsd having a `chat_id`
+        # Prevent Telegram flood control for all methods having a `chat_id`
         if 'chat_id' in parameters:
             await self.prevent_flooding(parameters['chat_id'])
         parameters = self.adapt_parameters(parameters, exclude=exclude)
@@ -316,7 +318,7 @@ class TelegramBot:
         except asyncio.TimeoutError as e:
             logging.info(f"{e}: {method} API call timed out")
         except Exception as e:
-            logging.info(f"Unexpected eception:\n{e}")
+            logging.info(f"Unexpected exception:\n{e}")
             response_object = e
         finally:
             if session_must_be_closed and not session.closed:
@@ -1075,7 +1077,7 @@ class TelegramBot:
                           disable_notification=None,
                           reply_to_message_id=None,
                           reply_markup=None):
-        """Send .webp stickers.
+        """Send `.webp` stickers.
 
         On success, the sent Message is returned.
         See https://core.telegram.org/bots/api#sendsticker for details.
