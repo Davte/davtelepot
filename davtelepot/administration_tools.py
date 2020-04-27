@@ -18,7 +18,7 @@ import logging
 from sqlalchemy.exc import ResourceClosedError
 
 # Project modules
-from . import bot as davtelepot_bot, messages, __version__
+from . import bot as davtelepot_bot, messages
 from .utilities import (
     async_wrapper, CachedPage, Confirmator, extract, get_cleaned_text,
     get_user, escape_html_chars, line_drawing_unordered_list, make_button,
