@@ -796,14 +796,19 @@ async def get_last_commit():
     return last_commit
 
 
-async def _version_command(bot, update, user_record):
+async def _version_command(bot: davtelepot_bot, update, user_record):
     last_commit = await get_last_commit()
-    return bot.get_message(
-        'admin', 'version_command', 'result',
+    text = bot.get_message(
+        'admin', 'version_command', 'header',
         last_commit=last_commit,
-        davtelepot_version=__version__,
         update=update, user_record=user_record
     )
+    text += '\n'.join(
+        f"<b>{package.__name__}</b>: "
+        f"<code>{package.__version__}</code>"
+        for package in bot.packages
+    )
+    return text
 
 
 async def notify_new_version(bot: davtelepot_bot):
