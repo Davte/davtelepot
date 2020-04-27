@@ -149,15 +149,6 @@ async def _suggestions_button(bot: davtelepot.bot.Bot, update, user_record, data
         when = datetime.datetime.now()
         with bot.db as db:
             registered_user = db['users'].find_one(telegram_id=user_id)
-            admins = [
-                x['telegram_id']
-                for x in db['users'].find(
-                    privileges=[
-                        bot.Role.get_role_by_name('admin').code,
-                        bot.Role.get_role_by_name('founder').code
-                    ]
-                )
-            ]
             db['suggestions'].update(
                 dict(
                     id=suggestion_id,
@@ -176,11 +167,11 @@ async def _suggestions_button(bot: davtelepot.bot.Bot, update, user_record, data
             bot=bot,
             update=update, user_record=user_record,
         )
-        for admin in admins:
+        for admin in bot.administrators:
             when += datetime.timedelta(seconds=1)
             asyncio.ensure_future(
                 bot.send_message(
-                    chat_id=admin,
+                    chat_id=admin['telegram_id'],
                     text=suggestion_message,
                     parse_mode='HTML'
                 )
@@ -248,8 +239,10 @@ async def _see_suggestions(bot: davtelepot.bot.Bot, update, user_record):
     )
 
 
-def init(telegram_bot: davtelepot.bot.Bot, suggestion_messages=default_suggestion_messages):
+def init(telegram_bot: davtelepot.bot.Bot, suggestion_messages=None):
     """Set suggestion handling for `bot`."""
+    if suggestion_messages is None:
+        suggestion_messages = default_suggestion_messages
     telegram_bot.messages['suggestions'] = suggestion_messages
     suggestion_prefixes = (
         list(suggestion_messages['suggestions_command']['reply_keyboard_button'].values())

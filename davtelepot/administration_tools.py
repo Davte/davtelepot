@@ -18,7 +18,7 @@ import logging
 from sqlalchemy.exc import ResourceClosedError
 
 # Project modules
-from . import bot as davtelepot_bot, messages, __version__ as version
+from . import bot as davtelepot_bot, messages, __version__
 from .utilities import (
     async_wrapper, CachedPage, Confirmator, extract, get_cleaned_text,
     get_user, escape_html_chars, line_drawing_unordered_list, make_button,
@@ -779,7 +779,7 @@ def get_maintenance_exception_criterion(bot, allowed_command):
     return criterion
 
 
-async def get_version():
+async def get_last_commit():
     """Get last commit hash and davtelepot version."""
     try:
         _subprocess = await asyncio.create_subprocess_exec(
@@ -793,64 +793,74 @@ async def get_version():
         last_commit = f"{e}"
     if last_commit.startswith("fatal: not a git repository"):
         last_commit = "-"
-    davtelepot_version = version
-    return last_commit, davtelepot_version
+    return last_commit
 
 
 async def _version_command(bot, update, user_record):
-    last_commit, davtelepot_version = await get_version()
+    last_commit = await get_last_commit()
     return bot.get_message(
         'admin', 'version_command', 'result',
         last_commit=last_commit,
-        davtelepot_version=davtelepot_version,
+        davtelepot_version=__version__,
         update=update, user_record=user_record
     )
 
 
-async def notify_new_version(bot):
+async def notify_new_version(bot: davtelepot_bot):
     """Notify `bot` administrators about new versions.
 
     Notify admins when last commit and/or davtelepot version change.
     """
-    last_commit, davtelepot_version = await get_version()
+    last_commit = await get_last_commit()
     old_record = bot.db['version_history'].find_one(
         order_by=['-id']
     )
+    current_versions = {
+        f"{package.__name__}_version": package.__version__
+        for package in bot.packages
+    }
+    current_versions['last_commit'] = last_commit
     if old_record is None:
         old_record = dict(
             updated_at=datetime.datetime.min,
-            last_commit=None,
-            davtelepot_version=None
         )
-    if (
-            old_record['last_commit'] != last_commit
-            or old_record['davtelepot_version'] != davtelepot_version
+    for name in current_versions.keys():
+        if name not in old_record:
+            old_record[name] = None
+    if any(
+            old_record[name] != current_version
+            for name, current_version in current_versions.items()
     ):
-        new_record = dict(
-            updated_at=datetime.datetime.now(),
-            last_commit=last_commit,
-            davtelepot_version=davtelepot_version
-        )
         bot.db['version_history'].insert(
-            new_record
+            dict(
+                updated_at=datetime.datetime.now(),
+                **current_versions
+            )
         )
-        for admin in bot.db['users'].find(privileges=[1, 2]):
+        for admin in bot.administrators:
+            text = bot.get_message(
+                'admin', 'new_version', 'title',
+                user_record=admin
+            ) + '\n\n'
+            if last_commit != old_record['last_commit']:
+                text += bot.get_message(
+                    'admin', 'new_version', 'last_commit',
+                    old_record=old_record,
+                    new_record=current_versions,
+                    user_record=admin
+                ) + '\n\n'
+            text += '\n'.join(
+                f"<b>{name[:-len('_version')]}</b>: "
+                f"<code>{old_record[name]}</code> —> "
+                f"<code>{current_version}</code>"
+                for name, current_version in current_versions.items()
+                if name not in ('last_commit', )
+                and current_version != old_record[name]
+            )
             await bot.send_message(
                 chat_id=admin['telegram_id'],
                 disable_notification=True,
-                text='\n\n'.join(
-                    bot.get_message(
-                        'admin', 'new_version', field,
-                        old_record=old_record,
-                        new_record=new_record,
-                        user_record=admin
-                    )
-                    for field in filter(
-                        lambda x: (x not in old_record
-                                   or old_record[x] != new_record[x]),
-                        ('title', 'last_commit', 'davtelepot_version')
-                    )
-                )
+                text=text
             )
     return
 
@@ -858,6 +868,7 @@ async def notify_new_version(bot):
 async def get_package_updates(bot: davtelepot_bot,
                               monitoring_interval: int = 60 * 60):
     while 1:
+        news = dict()
         for package in bot.packages:
             package_web_page = CachedPage.get(
                 f'https://pypi.python.org/pypi/{package.__name__}/json',
@@ -872,15 +883,42 @@ async def get_package_updates(bot: davtelepot_bot,
             new_version = web_page['info']['version']
             current_version = package.__version__
             if new_version != current_version:
-                print(f"New version of {package}: "
-                      f"<code>{current_version}</code> > "
-                      f"<code>{new_version}</code>")
-                # TODO notify administrators
+                news[package.__name__] = {
+                    'current': current_version,
+                    'new': new_version
+                }
+        if news:
+            for admin in bot.administrators:
+                text = bot.get_message(
+                    'admin', 'updates_available', 'header',
+                    user_record=admin
+                ) + '\n\n'
+                text += '\n'.join(
+                    f"<b>{package}</b>: "
+                    f"<code>{versions['current']}</code> —> "
+                    f"<code>{versions['new']}</code>"
+                    for package, versions in news.items()
+                )
+                await bot.send_message(
+                    chat_id=admin['telegram_id'],
+                    disable_notification=True,
+                    text=text
+                )
         await asyncio.sleep(monitoring_interval)
 
 
-def init(telegram_bot, talk_messages=None, admin_messages=None):
+def init(telegram_bot,
+         talk_messages=None,
+         admin_messages=None,
+         packages=None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
+    if packages is None:
+        packages = []
+    telegram_bot.packages.extend(
+        filter(lambda package: package not in telegram_bot.packages,
+               packages)
+    )
+    asyncio.ensure_future(get_package_updates(telegram_bot))
     if talk_messages is None:
         talk_messages = messages.default_talk_messages
     telegram_bot.messages['talk'] = talk_messages
@@ -901,8 +939,6 @@ def init(telegram_bot, talk_messages=None, admin_messages=None):
         get_maintenance_exception_criterion(telegram_bot, command)
         for command in ['stop', 'restart', 'maintenance']
     ]
-
-    asyncio.ensure_future(get_package_updates(telegram_bot))
 
     @telegram_bot.additional_task(when='BEFORE')
     async def load_talking_sessions():
