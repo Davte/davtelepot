@@ -802,7 +802,7 @@ async def _version_command(bot: davtelepot_bot, update, user_record):
         'admin', 'version_command', 'header',
         last_commit=last_commit,
         update=update, user_record=user_record
-    )
+    ) + '\n\n'
     text += '\n'.join(
         f"<b>{package.__name__}</b>: "
         f"<code>{package.__version__}</code>"
