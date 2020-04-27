@@ -2,9 +2,11 @@
 
 # Standard library modules
 from collections import OrderedDict
+from typing import Callable, Union
 
 # Project modules
 from .bot import Bot
+from .messages import default_authorization_messages
 from .utilities import (
     Confirmator, get_cleaned_text, get_user, make_button, make_inline_keyboard
 )
@@ -256,85 +258,10 @@ def get_authorization_function(bot):
     return is_authorized
 
 
-deafult_authorization_messages = {
-    'auth_command': {
-        'description': {
-            'en': "Edit user permissions. To select a user, reply to "
-                  "a message of theirs or write their username",
-            'it': "Cambia il grado di autorizzazione di un utente "
-                  "(in risposta o scrivendone lo username)"
-        },
-        'unhandled_case': {
-            'en': "<code>Unhandled case :/</code>",
-            'it': "<code>Caso non previsto :/</code>"
-        },
-        'instructions': {
-            'en': "Reply with this command to a user or write "
-                  "<code>/auth username</code> to edit their permissions.",
-            'it': "Usa questo comando in risposta a un utente "
-                  "oppure scrivi <code>/auth username</code> per "
-                  "cambiarne il grado di autorizzazione."
-        },
-        'unknown_user': {
-            'en': "Unknown user.",
-            'it': "Utente sconosciuto."
-        },
-        'choose_user': {
-            'en': "{n} users match your query. Please select one.",
-            'it': "Ho trovato {n} utenti che soddisfano questi criteri.\n"
-                  "Per procedere selezionane uno."
-        },
-        'no_match': {
-            'en': "No user matches your query. Please try again.",
-            'it': "Non ho trovato utenti che soddisfino questi criteri.\n"
-                  "Prova di nuovo."
-        }
-    },
-    'ban_command': {
-        'description': {
-            'en': "Reply to a user with /ban to ban them",
-            'it': "Banna l'utente (da usare in risposta)"
-        }
-    },
-    'auth_button': {
-        'description': {
-            'en': "Edit user permissions",
-            'it': "Cambia il grado di autorizzazione di un utente"
-        },
-        'confirm': {
-            'en': "Are you sure?",
-            'it': "Sicuro sicuro?"
-        },
-        'back_to_user': {
-            'en': "Back to user",
-            'it': "Torna all'utente"
-        },
-        'permission_denied': {
-            'user': {
-                'en': "You cannot appoint this user!",
-                'it': "Non hai l'autorità di modificare i permessi di questo "
-                      "utente!"
-            },
-            'role': {
-                'en': "You're not allowed to appoint someone to this role!",
-                'it': "Non hai l'autorità di conferire questo permesso!"
-            }
-        },
-        'no_change': {
-            'en': "No change suggested!",
-            'it': "È già così!"
-        },
-        'appointed': {
-            'en': "Permission granted",
-            'it': "Permesso conferito"
-        }
-    },
-}
-
-
 async def _authorization_command(bot, update, user_record):
     text = get_cleaned_text(bot=bot, update=update, replace=['auth'])
     reply_markup = None
+    # noinspection PyUnusedLocal
     result = bot.get_message(
         'authorization', 'auth_command', 'unhandled_case',
         update=update, user_record=user_record
@@ -509,7 +436,17 @@ async def _ban_command(bot, update, user_record):
     return
 
 
-def init(telegram_bot: Bot, roles=None, authorization_messages=None):
+def default_get_administrators_function(bot: Bot):
+    return list(
+        bot.db['users'].find(privileges=[1,2])
+    )
+
+
+def init(telegram_bot: Bot,
+         roles: Union[list, OrderedDict] = None,
+         authorization_messages=None,
+         get_administrators_function: Callable[[object],
+                                               list] = None):
     """Set bot roles and assign role-related commands.
 
     Pass an OrderedDict of `roles` to get them set.
@@ -537,8 +474,11 @@ def init(telegram_bot: Bot, roles=None, authorization_messages=None):
     telegram_bot.set_authorization_function(
         get_authorization_function(telegram_bot)
     )
-    if authorization_messages is None:
-        authorization_messages = deafult_authorization_messages
+    get_administrators_function = (get_administrators_function
+                                   or default_get_administrators_function)
+    telegram_bot.set_get_administrator_function(get_administrators_function)
+    authorization_messages = (authorization_messages
+                              or default_authorization_messages)
     telegram_bot.messages['authorization'] = authorization_messages
 
     @telegram_bot.command(command='/auth', aliases=[], show_in_keyboard=False,

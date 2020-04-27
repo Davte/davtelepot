@@ -134,14 +134,6 @@ default_admin_messages = {
             'it': "Vecchio commit: <code>{old_record[last_commit]}</code>\n"
                   "Nuovo commit: <code>{new_record[last_commit]}</code>",
         },
-        'davtelepot_version': {
-            'en': "davtelepot version: "
-                  "<code>{old_record[davtelepot_version]}</code> —> "
-                  "<code>{new_record[davtelepot_version]}</code>",
-            'it': "Versione di davtelepot: "
-                  "<code>{old_record[davtelepot_version]}</code> —> "
-                  "<code>{new_record[davtelepot_version]}</code>",
-        },
     },
     'query_button': {
         'error': {
@@ -256,6 +248,14 @@ default_admin_messages = {
                   "sessione"
         }
     },
+    'updates_available': {
+        'header': {
+            'en': "🔔 Updates available! ⬇️\n\n"
+                  "Click to /restart bot",
+            'it': "🔔 Aggiornamenti disponibili! ⬇\n\n"
+                  "Clicka qui per fare il /restart",
+        },
+    },
     'version_command': {
         'reply_keyboard_button': {
             'en': "Version #️⃣",
@@ -272,6 +272,81 @@ default_admin_messages = {
             'it': "Ultimo commit: <code>{last_commit}</code>\n\n"
                   "Versione di davtelepot: <code>{davtelepot_version}</code>",
         },
+    },
+}
+
+default_authorization_messages = {
+    'auth_command': {
+        'description': {
+            'en': "Edit user permissions. To select a user, reply to "
+                  "a message of theirs or write their username",
+            'it': "Cambia il grado di autorizzazione di un utente "
+                  "(in risposta o scrivendone lo username)"
+        },
+        'unhandled_case': {
+            'en': "<code>Unhandled case :/</code>",
+            'it': "<code>Caso non previsto :/</code>"
+        },
+        'instructions': {
+            'en': "Reply with this command to a user or write "
+                  "<code>/auth username</code> to edit their permissions.",
+            'it': "Usa questo comando in risposta a un utente "
+                  "oppure scrivi <code>/auth username</code> per "
+                  "cambiarne il grado di autorizzazione."
+        },
+        'unknown_user': {
+            'en': "Unknown user.",
+            'it': "Utente sconosciuto."
+        },
+        'choose_user': {
+            'en': "{n} users match your query. Please select one.",
+            'it': "Ho trovato {n} utenti che soddisfano questi criteri.\n"
+                  "Per procedere selezionane uno."
+        },
+        'no_match': {
+            'en': "No user matches your query. Please try again.",
+            'it': "Non ho trovato utenti che soddisfino questi criteri.\n"
+                  "Prova di nuovo."
+        }
+    },
+    'ban_command': {
+        'description': {
+            'en': "Reply to a user with /ban to ban them",
+            'it': "Banna l'utente (da usare in risposta)"
+        }
+    },
+    'auth_button': {
+        'description': {
+            'en': "Edit user permissions",
+            'it': "Cambia il grado di autorizzazione di un utente"
+        },
+        'confirm': {
+            'en': "Are you sure?",
+            'it': "Sicuro sicuro?"
+        },
+        'back_to_user': {
+            'en': "Back to user",
+            'it': "Torna all'utente"
+        },
+        'permission_denied': {
+            'user': {
+                'en': "You cannot appoint this user!",
+                'it': "Non hai l'autorità di modificare i permessi di questo "
+                      "utente!"
+            },
+            'role': {
+                'en': "You're not allowed to appoint someone to this role!",
+                'it': "Non hai l'autorità di conferire questo permesso!"
+            }
+        },
+        'no_change': {
+            'en': "No change suggested!",
+            'it': "È già così!"
+        },
+        'appointed': {
+            'en': "Permission granted",
+            'it': "Permesso conferito"
+        }
     },
 }
 

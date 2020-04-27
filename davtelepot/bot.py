@@ -34,13 +34,16 @@ Usage
 
 # Standard library modules
 import asyncio
-from collections import OrderedDict
 import datetime
 import io
 import inspect
 import logging
 import os
 import re
+import sys
+
+from collections import OrderedDict
+from typing import Callable
 
 # Third party modules
 from aiohttp import web
@@ -210,6 +213,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             if 'chat' in update
             else None
         )
+        # Function to get updated list of bot administrators
+        self._get_administrators = lambda bot: []
         # Message to be returned if user is not allowed to call method
         self._authorization_denied_message = None
         # Default authorization function (always return True)
@@ -223,6 +228,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.placeholder_requests = dict()
         self.shared_data = dict()
         self.Role = None
+        self.packages = [sys.modules['davtelepot']]
         # Add `users` table with its fields if missing
         if 'users' not in self.db.tables:
             table = self.db.create_table(
@@ -552,6 +558,26 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self._default_inline_query_answer = make_inline_query_answer(
             default_inline_query_answer
         )
+
+    def set_get_administrator_function(self,
+                                       new_function: Callable[[object],
+                                                              list]):
+        """Set a new get_administrators function.
+
+        This function should take bot as argument and return an updated list
+            of its administrators.
+        Example:
+        ```python
+        def get_administrators(bot):
+            admins = bot.db['users'].find(privileges=2)
+            return list(admins)
+        ```
+        """
+        self._get_administrators = new_function
+
+    @property
+    def administrators(self):
+        return self._get_administrators(self)
 
     async def message_router(self, update, user_record):
         """Route Telegram `message` update to appropriate message handler."""
