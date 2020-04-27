@@ -262,15 +262,15 @@ default_admin_messages = {
             'it': "Versione #️⃣",
         },
         'description': {
-            'en': "Get source code version",
-            'it': "Chiedi la versione del codice sorgente",
+            'en': "Get packages version and source code last commit",
+            'it': "Chiedi la versione dei pacchetti e del codice sorgente",
         },
         'help_section': None,
-        'result': {
-            'en': "Last commit: <code>{last_commit}</code>\n\n"
-                  "davtelepot version: <code>{davtelepot_version}</code>",
-            'it': "Ultimo commit: <code>{last_commit}</code>\n\n"
-                  "Versione di davtelepot: <code>{davtelepot_version}</code>",
+        'header': {
+            'en': "ℹ️ Version information #️⃣\n\n"
+                  "Last commit: <code>{last_commit}</code>",
+            'it': "ℹ️ Informazioni sulle versioni dei pacchetti #️⃣\n\n"
+                  "Ultimo commit: <code>{last_commit}</code>"
         },
     },
 }
