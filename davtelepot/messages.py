@@ -125,8 +125,8 @@ default_admin_messages = {
     },
     'new_version': {
         'title': {
-            'en': "🔔 New version detected! 📰",
-            'it': "🔔 Rilevata nuova versione! 📰",
+            'en': "🔔 New version installed ✅",
+            'it': "🔔 Rilevata nuova versione installata! ✅",
         },
         'last_commit': {
             'en': "Old commit: <code>{old_record[last_commit]}</code>\n"
