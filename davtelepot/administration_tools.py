@@ -13,14 +13,16 @@ import asyncio
 import datetime
 import json
 import logging
+import types
 
-from typing import Union
+from typing import Union, List
 
 # Third party modules
 from sqlalchemy.exc import ResourceClosedError
 
 # Project modules
-from . import bot as davtelepot_bot, messages
+from . import messages
+from .bot import Bot
 from .utilities import (
     async_wrapper, CachedPage, Confirmator, extract, get_cleaned_text,
     get_user, escape_html_chars, line_drawing_unordered_list, make_button,
@@ -29,7 +31,11 @@ from .utilities import (
 )
 
 
-async def _forward_to(update, bot, sender, addressee, is_admin=False):
+async def _forward_to(update,
+                      bot: Bot,
+                      sender,
+                      addressee,
+                      is_admin=False):
     if update['text'].lower() in ['stop'] and is_admin:
         with bot.db as db:
             admin_record = db['users'].find_one(
@@ -64,7 +70,10 @@ async def _forward_to(update, bot, sender, addressee, is_admin=False):
     return
 
 
-def get_talk_panel(bot, update, user_record=None, text=''):
+def get_talk_panel(bot: Bot,
+                   update,
+                   user_record=None,
+                   text: str = ''):
     """Return text and reply markup of talk panel.
 
     `text` may be:
@@ -202,7 +211,9 @@ def get_talk_panel(bot, update, user_record=None, text=''):
     return text, reply_markup
 
 
-async def _talk_command(bot, update, user_record):
+async def _talk_command(bot: Bot,
+                        update,
+                        user_record):
     text = get_cleaned_text(
         update,
         bot,
@@ -217,7 +228,9 @@ async def _talk_command(bot, update, user_record):
     )
 
 
-async def start_session(bot, other_user_record, admin_record):
+async def start_session(bot: Bot,
+                        other_user_record,
+                        admin_record):
     """Start talking session between user and admin.
 
     Register session in database, so it gets loaded before message_loop starts.
@@ -280,7 +293,9 @@ async def start_session(bot, other_user_record, admin_record):
     return
 
 
-async def end_session(bot, other_user_record, admin_record):
+async def end_session(bot: Bot,
+                      other_user_record,
+                      admin_record):
     """End talking session between user and admin.
 
     Cancel session in database, so it will not be loaded anymore.
@@ -316,7 +331,10 @@ async def end_session(bot, other_user_record, admin_record):
     return
 
 
-async def _talk_button(bot, update, user_record, data):
+async def _talk_button(bot: Bot,
+                       update,
+                       user_record,
+                       data):
     telegram_id = user_record['telegram_id']
     command, *arguments = data
     result, text, reply_markup = '', '', None
@@ -390,7 +408,9 @@ async def _talk_button(bot, update, user_record, data):
     return result
 
 
-async def _restart_command(bot, update, user_record):
+async def _restart_command(bot: Bot,
+                           update,
+                           user_record):
     with bot.db as db:
         db['restart_messages'].insert(
             dict(
@@ -415,7 +435,9 @@ async def _restart_command(bot, update, user_record):
     return
 
 
-async def _stop_command(bot, update, user_record):
+async def _stop_command(bot: Bot,
+                        update,
+                        user_record):
     text = bot.get_message(
         'admin', 'stop_command', 'text',
         update=update, user_record=user_record
@@ -448,14 +470,17 @@ async def _stop_command(bot, update, user_record):
     )
 
 
-async def stop_bots(bot):
+async def stop_bots(bot: Bot):
     """Stop bots in `bot` class."""
     await asyncio.sleep(2)
     bot.__class__.stop(message='=== STOP ===', final_state=0)
     return
 
 
-async def _stop_button(bot, update, user_record, data):
+async def _stop_button(bot: Bot,
+                       update,
+                       user_record,
+                       data: List[Union[int, str]]):
     result, text, reply_markup = '', '', None
     telegram_id = user_record['telegram_id']
     command = data[0] if len(data) > 0 else 'None'
@@ -798,7 +823,7 @@ async def get_last_commit():
     return last_commit
 
 
-async def _version_command(bot: davtelepot_bot, update, user_record):
+async def _version_command(bot: Bot, update, user_record):
     last_commit = await get_last_commit()
     text = bot.get_message(
         'admin', 'version_command', 'header',
@@ -813,7 +838,7 @@ async def _version_command(bot: davtelepot_bot, update, user_record):
     return text
 
 
-async def notify_new_version(bot: davtelepot_bot):
+async def notify_new_version(bot: Bot):
     """Notify `bot` administrators about new versions.
 
     Notify admins when last commit and/or davtelepot version change.
@@ -872,7 +897,7 @@ async def notify_new_version(bot: davtelepot_bot):
     return
 
 
-async def get_package_updates(bot: davtelepot_bot,
+async def get_package_updates(bot: Bot,
                               monitoring_interval: Union[
                                   int, datetime.timedelta
                               ] = 60 * 60,
@@ -945,10 +970,10 @@ async def get_package_updates(bot: davtelepot_bot,
         await asyncio.sleep(monitoring_interval)
 
 
-def init(telegram_bot,
-         talk_messages=None,
-         admin_messages=None,
-         packages=None):
+def init(telegram_bot: Bot,
+         talk_messages: dict = None,
+         admin_messages: dict = None,
+         packages: List[types.ModuleType] = None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if packages is None:
         packages = []
