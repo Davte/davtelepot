@@ -14,6 +14,8 @@ import datetime
 import json
 import logging
 
+from typing import Union
+
 # Third party modules
 from sqlalchemy.exc import ResourceClosedError
 
@@ -871,7 +873,18 @@ async def notify_new_version(bot: davtelepot_bot):
 
 
 async def get_package_updates(bot: davtelepot_bot,
-                              monitoring_interval: int = 60 * 60):
+                              monitoring_interval: Union[
+                                  int, datetime.timedelta
+                              ] = 60 * 60,
+                              notification_interval: Union[
+                                  int, datetime.timedelta
+                              ] = 60 * 60 * 24):
+    if isinstance(monitoring_interval, datetime.timedelta):
+        monitoring_interval = monitoring_interval.total_seconds()
+    if type(notification_interval) is int:
+        notification_interval = datetime.timedelta(
+            seconds=notification_interval
+        )
     while 1:
         news = dict()
         for package in bot.packages:
@@ -887,7 +900,17 @@ async def get_package_updates(bot: davtelepot_bot,
                 continue
             new_version = web_page['info']['version']
             current_version = package.__version__
-            if new_version != current_version:
+            notification_record = bot.db['updates_notifications'].find_one(
+                package=package.__name__,
+                order_by=['-id'],
+                _limit=1
+            )
+            if (
+                    new_version != current_version
+                    and (notification_record is None
+                         or notification_record['notified_at']
+                         < datetime.datetime.now() - notification_interval)
+            ):
                 news[package.__name__] = {
                     'current': current_version,
                     'new': new_version
@@ -909,6 +932,16 @@ async def get_package_updates(bot: davtelepot_bot,
                     disable_notification=True,
                     text=text
                 )
+            bot.db['updates_notifications'].insert_many(
+                [
+                    {
+                        "package": package,
+                        "version": information['new'],
+                        'notified_at': datetime.datetime.now()
+                    }
+                    for package, information in news.items()
+                ]
+            )
         await asyncio.sleep(monitoring_interval)
 
 
