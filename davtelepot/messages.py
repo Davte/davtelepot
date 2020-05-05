@@ -66,6 +66,16 @@ default_admin_messages = {
                   "L'ordine è cronologico, con i messaggi nuovi in alto."
         }
     },
+    'father_command': {
+        'description': {
+            'en': "Edit the @BotFather commands",
+            'it': "Modifica i comandi con @BotFather",
+        },
+        'title': {
+            'en': "🤖 BotFather commands\n\n",
+            'it': "🤖 Comandi su BotFather\n\n",
+        }
+    },
     'log_command': {
         'description': {
             'en': "Receive bot log file, if set",

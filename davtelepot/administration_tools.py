@@ -1024,6 +1024,10 @@ async def _load_talking_sessions(bot: Bot):
         )
 
 
+async def _father_command(bot, update):
+    return
+
+
 def init(telegram_bot: Bot,
          talk_messages: dict = None,
          admin_messages: dict = None,
@@ -1096,6 +1100,18 @@ def init(telegram_bot: Bot,
                           authorization_level='admin')
     async def errors_command(bot, update, user_record):
         return await _errors_command(bot, update, user_record)
+
+    @telegram_bot.command(command='/father',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          **{
+                              key: value
+                              for key, value in admin_messages['father_command'].items()
+                              if key in ('description', )
+                          },
+                          authorization_level='admin')
+    async def father_command(bot, update):
+        return await _father_command(bot=bot, update=update)
 
     @telegram_bot.command(command='/log',
                           aliases=[],
