@@ -970,6 +970,60 @@ async def get_package_updates(bot: Bot,
         await asyncio.sleep(monitoring_interval)
 
 
+async def _send_start_messages(bot: Bot):
+    """Send restart messages at restart."""
+    for restart_message in bot.db['restart_messages'].find(sent=None):
+        asyncio.ensure_future(
+            bot.send_message(
+                **{
+                    key: val
+                    for key, val in restart_message.items()
+                    if key in (
+                        'chat_id',
+                        'text',
+                        'parse_mode',
+                        'reply_to_message_id'
+                    )
+                }
+            )
+        )
+        bot.db['restart_messages'].update(
+            dict(
+                sent=datetime.datetime.now(),
+                id=restart_message['id']
+            ),
+            ['id'],
+            ensure=True
+        )
+    return
+
+
+async def _load_talking_sessions(bot: Bot):
+    sessions = []
+    for session in bot.db.query(
+            """SELECT *
+        FROM talking_sessions
+        WHERE NOT cancelled
+        """
+    ):
+        sessions.append(
+            dict(
+                other_user_record=bot.db['users'].find_one(
+                    id=session['user']
+                ),
+                admin_record=bot.db['users'].find_one(
+                    id=session['admin']
+                ),
+            )
+        )
+    for session in sessions:
+        await start_session(
+            bot=bot,
+            other_user_record=session['other_user_record'],
+            admin_record=session['admin_record']
+        )
+
+
 def init(telegram_bot: Bot,
          talk_messages: dict = None,
          admin_messages: dict = None,
@@ -990,12 +1044,20 @@ def init(telegram_bot: Bot,
     telegram_bot.messages['admin'] = admin_messages
     db = telegram_bot.db
     if 'talking_sessions' not in db.tables:
-        db['talking_sessions'].insert(
-            dict(
-                user=0,
-                admin=0,
-                cancelled=1
-            )
+        table = db.create_table(
+            table_name='users'
+        )
+        table.create_column(
+            'user',
+            db.types.integer
+        )
+        table.create_column(
+            'admin',
+            db.types.integer
+        )
+        table.create_column(
+            'cancelled',
+            db.types.integer
         )
 
     allowed_during_maintenance = [
@@ -1005,29 +1067,7 @@ def init(telegram_bot: Bot,
 
     @telegram_bot.additional_task(when='BEFORE')
     async def load_talking_sessions():
-        sessions = []
-        for session in db.query(
-                """SELECT *
-            FROM talking_sessions
-            WHERE NOT cancelled
-            """
-        ):
-            sessions.append(
-                dict(
-                    other_user_record=db['users'].find_one(
-                        id=session['user']
-                    ),
-                    admin_record=db['users'].find_one(
-                        id=session['admin']
-                    ),
-                )
-            )
-        for session in sessions:
-            await start_session(
-                bot=telegram_bot,
-                other_user_record=session['other_user_record'],
-                admin_record=session['admin_record']
-            )
+        return await _load_talking_sessions(bot=telegram_bot)
 
     @telegram_bot.command(command='/talk',
                           aliases=[],
@@ -1055,31 +1095,7 @@ def init(telegram_bot: Bot,
 
     @telegram_bot.additional_task('BEFORE')
     async def send_restart_messages():
-        """Send restart messages at restart."""
-        for restart_message in db['restart_messages'].find(sent=None):
-            asyncio.ensure_future(
-                telegram_bot.send_message(
-                    **{
-                        key: val
-                        for key, val in restart_message.items()
-                        if key in (
-                            'chat_id',
-                            'text',
-                            'parse_mode',
-                            'reply_to_message_id'
-                        )
-                    }
-                )
-            )
-            db['restart_messages'].update(
-                dict(
-                    sent=datetime.datetime.now(),
-                    id=restart_message['id']
-                ),
-                ['id'],
-                ensure=True
-            )
-        return
+        return await _send_start_messages(bot=telegram_bot)
 
     @telegram_bot.command(command='/stop',
                           aliases=[],
