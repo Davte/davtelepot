@@ -17,11 +17,11 @@ Usage
                       database_url='my_other_db')
 
     @long_polling_bot.command('/foo')
-    async def foo_command(bot, update, user_record):
+    async def foo_command(bot, update, user_record, language):
         return "Bar!"
 
     @webhook_bot.command('/bar')
-    async def bar_command(bot, update, user_record):
+    async def bar_command(bot, update, user_record, language):
         return "Foo!"
 
     exit_state = Bot.run(
@@ -579,17 +579,19 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     def administrators(self):
         return self._get_administrators(self)
 
-    async def message_router(self, update, user_record):
+    async def message_router(self, update, user_record, language):
         """Route Telegram `message` update to appropriate message handler."""
         for key, value in update.items():
             if key in self.message_handlers:
-                return await self.message_handlers[key](update, user_record)
+                return await self.message_handlers[key](update=update,
+                                                        user_record=user_record,
+                                                        language=language)
         logging.error(
             f"The following message update was received: {update}\n"
             "However, this message type is unknown."
         )
 
-    async def edited_message_handler(self, update, user_record):
+    async def edited_message_handler(self, update, user_record, language=None):
         """Handle Telegram `edited_message` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -597,7 +599,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def channel_post_handler(self, update, user_record):
+    async def channel_post_handler(self, update, user_record, language=None):
         """Handle Telegram `channel_post` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -605,7 +607,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def edited_channel_post_handler(self, update, user_record):
+    async def edited_channel_post_handler(self, update, user_record, language=None):
         """Handle Telegram `edited_channel_post` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -613,7 +615,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def inline_query_handler(self, update, user_record):
+    async def inline_query_handler(self, update, user_record, language=None):
         """Handle Telegram `inline_query` update.
 
         Answer it with results or log errors.
@@ -648,7 +650,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             logging.info("Error answering inline query\n{}".format(e))
         return
 
-    async def chosen_inline_result_handler(self, update, user_record):
+    async def chosen_inline_result_handler(self, update, user_record, language=None):
         """Handle Telegram `chosen_inline_result` update."""
         if user_record is not None:
             user_id = user_record['telegram_id']
@@ -678,7 +680,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.chosen_inline_result_handlers[user_id][result_id] = handler
         return
 
-    async def callback_query_handler(self, update, user_record):
+    async def callback_query_handler(self, update, user_record, language=None):
         """Handle Telegram `callback_query` update.
 
         A callback query is sent when users press inline keyboard buttons.
@@ -733,7 +735,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             logging.error(e)
         return
 
-    async def shipping_query_handler(self, update, user_record):
+    async def shipping_query_handler(self, update, user_record, language=None):
         """Handle Telegram `shipping_query` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -741,7 +743,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def pre_checkout_query_handler(self, update, user_record):
+    async def pre_checkout_query_handler(self, update, user_record, language=None):
         """Handle Telegram `pre_checkout_query` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -749,7 +751,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def poll_handler(self, update, user_record):
+    async def poll_handler(self, update, user_record, language=None):
         """Handle Telegram `poll` update."""
         logging.info(
             f"The following update was received: {update}\n"
@@ -757,7 +759,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
         return
 
-    async def text_message_handler(self, update, user_record):
+    async def text_message_handler(self, update, user_record, language=None):
         """Handle `text` message update."""
         replier, reply = None, None
         text = update['text'].lower()
@@ -817,56 +819,56 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return
 
-    async def audio_file_handler(self, update, user_record):
+    async def audio_file_handler(self, update, user_record, language=None):
         """Handle `audio` file update."""
         logging.info(
             "A audio file update was received, "
             "but this handler does nothing yet."
         )
 
-    async def document_message_handler(self, update, user_record):
+    async def document_message_handler(self, update, user_record, language=None):
         """Handle `document` message update."""
         logging.info(
             "A document message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def animation_message_handler(self, update, user_record):
+    async def animation_message_handler(self, update, user_record, language=None):
         """Handle `animation` message update."""
         logging.info(
             "A animation message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def game_message_handler(self, update, user_record):
+    async def game_message_handler(self, update, user_record, language=None):
         """Handle `game` message update."""
         logging.info(
             "A game message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def photo_message_handler(self, update, user_record):
+    async def photo_message_handler(self, update, user_record, language=None):
         """Handle `photo` message update."""
         logging.info(
             "A photo message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def sticker_message_handler(self, update, user_record):
+    async def sticker_message_handler(self, update, user_record, language=None):
         """Handle `sticker` message update."""
         logging.info(
             "A sticker message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def video_message_handler(self, update, user_record):
+    async def video_message_handler(self, update, user_record, language=None):
         """Handle `video` message update."""
         logging.info(
             "A video message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def voice_message_handler(self, update, user_record):
+    async def voice_message_handler(self, update, user_record, language=None):
         """Handle `voice` message update."""
         replier, reply = None, None
         user_id = update['from']['id'] if 'from' in update else None
@@ -896,21 +898,21 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return
 
-    async def video_note_message_handler(self, update, user_record):
+    async def video_note_message_handler(self, update, user_record, language=None):
         """Handle `video_note` message update."""
         logging.info(
             "A video_note message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def contact_message_handler(self, update, user_record):
+    async def contact_message_handler(self, update, user_record, language=None):
         """Handle `contact` message update."""
         logging.info(
             "A contact message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def location_message_handler(self, update, user_record):
+    async def location_message_handler(self, update, user_record, language=None):
         """Handle `location` message update."""
         replier, reply = None, None
         user_id = update['from']['id'] if 'from' in update else None
@@ -940,56 +942,56 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return
 
-    async def venue_message_handler(self, update, user_record):
+    async def venue_message_handler(self, update, user_record, language=None):
         """Handle `venue` message update."""
         logging.info(
             "A venue message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def poll_message_handler(self, update, user_record):
+    async def poll_message_handler(self, update, user_record, language=None):
         """Handle `poll` message update."""
         logging.info(
             "A poll message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def new_chat_members_message_handler(self, update, user_record):
+    async def new_chat_members_message_handler(self, update, user_record, language=None):
         """Handle `new_chat_members` message update."""
         logging.info(
             "A new_chat_members message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def left_chat_member_message_handler(self, update, user_record):
+    async def left_chat_member_message_handler(self, update, user_record, language=None):
         """Handle `left_chat_member` message update."""
         logging.info(
             "A left_chat_member message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def new_chat_title_message_handler(self, update, user_record):
+    async def new_chat_title_message_handler(self, update, user_record, language=None):
         """Handle `new_chat_title` message update."""
         logging.info(
             "A new_chat_title message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def new_chat_photo_message_handler(self, update, user_record):
+    async def new_chat_photo_message_handler(self, update, user_record, language=None):
         """Handle `new_chat_photo` message update."""
         logging.info(
             "A new_chat_photo message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def delete_chat_photo_message_handler(self, update, user_record):
+    async def delete_chat_photo_message_handler(self, update, user_record, language=None):
         """Handle `delete_chat_photo` message update."""
         logging.info(
             "A delete_chat_photo message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def group_chat_created_message_handler(self, update, user_record):
+    async def group_chat_created_message_handler(self, update, user_record, language=None):
         """Handle `group_chat_created` message update."""
         logging.info(
             "A group_chat_created message update was received, "
@@ -1004,63 +1006,63 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             "but this handler does nothing yet."
         )
 
-    async def channel_chat_created_message_handler(self, update, user_record):
+    async def channel_chat_created_message_handler(self, update, user_record, language=None):
         """Handle `channel_chat_created` message update."""
         logging.info(
             "A channel_chat_created message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def migrate_to_chat_id_message_handler(self, update, user_record):
+    async def migrate_to_chat_id_message_handler(self, update, user_record, language=None):
         """Handle `migrate_to_chat_id` message update."""
         logging.info(
             "A migrate_to_chat_id message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def migrate_from_chat_id_message_handler(self, update, user_record):
+    async def migrate_from_chat_id_message_handler(self, update, user_record, language=None):
         """Handle `migrate_from_chat_id` message update."""
         logging.info(
             "A migrate_from_chat_id message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def pinned_message_message_handler(self, update, user_record):
+    async def pinned_message_message_handler(self, update, user_record, language=None):
         """Handle `pinned_message` message update."""
         logging.info(
             "A pinned_message message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def invoice_message_handler(self, update, user_record):
+    async def invoice_message_handler(self, update, user_record, language=None):
         """Handle `invoice` message update."""
         logging.info(
             "A invoice message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def successful_payment_message_handler(self, update, user_record):
+    async def successful_payment_message_handler(self, update, user_record, language=None):
         """Handle `successful_payment` message update."""
         logging.info(
             "A successful_payment message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def connected_website_message_handler(self, update, user_record):
+    async def connected_website_message_handler(self, update, user_record, language=None):
         """Handle `connected_website` message update."""
         logging.info(
             "A connected_website message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def passport_data_message_handler(self, update, user_record):
+    async def passport_data_message_handler(self, update, user_record, language=None):
         """Handle `passport_data` message update."""
         logging.info(
             "A passport_data message update was received, "
             "but this handler does nothing yet."
         )
 
-    async def dice_handler(self, update, user_record):
+    async def dice_handler(self, update, user_record, language=None):
         """Handle `dice` message update."""
         logging.info(
             "A dice message update was received, "
@@ -2013,7 +2015,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         self._allowed_during_maintenance.append(criterion)
 
-    async def handle_update_during_maintenance(self, update, user_record=None):
+    async def handle_update_during_maintenance(self, update, user_record=None, language=None):
         """Handle an update while bot is under maintenance.
 
         Handle all types of updates.
@@ -2106,7 +2108,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         Decorate command handlers like this:
             ```
             @bot.command('/my_command', ['Button'], True, "My command", 'user')
-            async def command_handler(bot, update, user_record):
+            async def command_handler(bot, update, user_record, language):
                 return "Result"
             ```
         When a message text starts with `/command[@bot_name]`, or with an
@@ -2165,7 +2167,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         command = command.strip('/ ').lower()
 
         def command_decorator(command_handler):
-            async def decorated_command_handler(bot, update, user_record):
+            async def decorated_command_handler(bot, update, user_record, language=None):
                 logging.info(
                     f"Command `{command}@{bot.name}` called by "
                     f"`{update['from'] if 'from' in update else update['chat']}`"
@@ -2223,7 +2225,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 return 'from' in update
 
             @bot.parser(custom_criteria, authorization_level='user')
-            async def text_parser(bot, update, user_record):
+            async def text_parser(bot, update, user_record, language):
                 return "Result"
             ```
         If condition evaluates True when run on a message text
@@ -2241,7 +2243,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
 
         def parser_decorator(parser):
-            async def decorated_parser(bot, update, user_record):
+            async def decorated_parser(bot, update, user_record, language=None):
                 logging.info(
                     f"Text message update matching condition "
                     f"`{condition.__name__}@{bot.name}` from "
@@ -2310,7 +2312,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             ```
             @bot.button('a_prefix:///', description="A button",
                         authorization_level='user')
-            async def button_handler(bot, update, user_record, data):
+            async def button_handler(bot, update, user_record, language, data):
                 return "Result"
             ```
         `separator` will be used to parse callback data received when a button
@@ -2325,7 +2327,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
 
         def button_decorator(handler):
-            async def decorated_button_handler(bot, update, user_record):
+            async def decorated_button_handler(bot, update, user_record, language=None):
                 logging.info(
                     f"Button `{update['data']}`@{bot.name} pressed by "
                     f"`{update['from']}`"
@@ -2382,7 +2384,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
 
         def query_decorator(handler):
-            async def decorated_query_handler(bot, update, user_record):
+            async def decorated_query_handler(bot, update, user_record, language=None):
                 logging.info(
                     f"Inline query matching condition "
                     f"`{condition.__name__}@{bot.name}` from "
@@ -2881,9 +2883,12 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         for key, value in update.items():
             if key in self.routing_table:
                 user_record = self.get_user_record(update=value)
+                language = self.get_language(update=update,
+                                             user_record=user_record)
                 return await self.routing_table[key](
                     update=value,
-                    user_record=user_record
+                    user_record=user_record,
+                    language=language
                 )
         logging.error(f"Unknown type of update.\n{update}")
 
