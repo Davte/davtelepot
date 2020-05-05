@@ -1059,30 +1059,77 @@ def init(telegram_bot: Bot,
             'cancelled',
             db.types.integer
         )
-
-    allowed_during_maintenance = [
+    for exception in [
         get_maintenance_exception_criterion(telegram_bot, command)
         for command in ['stop', 'restart', 'maintenance']
-    ]
+    ]:
+        telegram_bot.allow_during_maintenance(exception)
 
+    # Tasks to complete before starting bot
     @telegram_bot.additional_task(when='BEFORE')
     async def load_talking_sessions():
         return await _load_talking_sessions(bot=telegram_bot)
 
-    @telegram_bot.command(command='/talk',
+    @telegram_bot.additional_task(when='BEFORE', bot=telegram_bot)
+    async def notify_version(bot):
+        return await notify_new_version(bot=bot)
+
+    @telegram_bot.additional_task('BEFORE')
+    async def send_restart_messages():
+        return await _send_start_messages(bot=telegram_bot)
+
+    # Administration commands
+    @telegram_bot.command(command='/db',
                           aliases=[],
                           show_in_keyboard=False,
                           description=admin_messages[
-                              'talk_command']['description'],
+                              'db_command']['description'],
                           authorization_level='admin')
-    async def talk_command(bot, update, user_record):
-        return await _talk_command(bot, update, user_record)
+    async def send_bot_database(bot, update, user_record):
+        return await _send_bot_database(bot, update, user_record)
 
-    @telegram_bot.button(prefix='talk:///',
+    @telegram_bot.command(command='/errors',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'errors_command']['description'],
+                          authorization_level='admin')
+    async def errors_command(bot, update, user_record):
+        return await _errors_command(bot, update, user_record)
+
+    @telegram_bot.command(command='/log',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'log_command']['description'],
+                          authorization_level='admin')
+    async def log_command(bot, update, user_record):
+        return await _log_command(bot, update, user_record)
+
+    @telegram_bot.command(command='/maintenance', aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'maintenance_command']['description'],
+                          authorization_level='admin')
+    async def maintenance_command(bot, update, user_record):
+        return await _maintenance_command(bot, update, user_record)
+
+    @telegram_bot.command(command='/query',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'query_command']['description'],
+                          authorization_level='admin')
+    async def query_command(bot, update, user_record):
+        return await _query_command(bot, update, user_record)
+
+    @telegram_bot.button(prefix='db_query:///',
                          separator='|',
+                         description=admin_messages[
+                             'query_command']['description'],
                          authorization_level='admin')
-    async def talk_button(bot, update, user_record, data):
-        return await _talk_button(bot, update, user_record, data)
+    async def query_button(bot, update, user_record, data):
+        return await _query_button(bot, update, user_record, data)
 
     @telegram_bot.command(command='/restart',
                           aliases=[],
@@ -1093,9 +1140,14 @@ def init(telegram_bot: Bot,
     async def restart_command(bot, update, user_record):
         return await _restart_command(bot, update, user_record)
 
-    @telegram_bot.additional_task('BEFORE')
-    async def send_restart_messages():
-        return await _send_start_messages(bot=telegram_bot)
+    @telegram_bot.command(command='/select',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'select_command']['description'],
+                          authorization_level='admin')
+    async def select_command(bot, update, user_record):
+        return await _query_command(bot, update, user_record)
 
     @telegram_bot.command(command='/stop',
                           aliases=[],
@@ -1114,69 +1166,20 @@ def init(telegram_bot: Bot,
     async def stop_button(bot, update, user_record, data):
         return await _stop_button(bot, update, user_record, data)
 
-    @telegram_bot.command(command='/db',
+    @telegram_bot.command(command='/talk',
                           aliases=[],
                           show_in_keyboard=False,
                           description=admin_messages[
-                              'db_command']['description'],
+                              'talk_command']['description'],
                           authorization_level='admin')
-    async def send_bot_database(bot, update, user_record):
-        return await _send_bot_database(bot, update, user_record)
+    async def talk_command(bot, update, user_record):
+        return await _talk_command(bot, update, user_record)
 
-    @telegram_bot.command(command='/query',
-                          aliases=[],
-                          show_in_keyboard=False,
-                          description=admin_messages[
-                              'query_command']['description'],
-                          authorization_level='admin')
-    async def query_command(bot, update, user_record):
-        return await _query_command(bot, update, user_record)
-
-    @telegram_bot.command(command='/select',
-                          aliases=[],
-                          show_in_keyboard=False,
-                          description=admin_messages[
-                              'select_command']['description'],
-                          authorization_level='admin')
-    async def select_command(bot, update, user_record):
-        return await _query_command(bot, update, user_record)
-
-    @telegram_bot.button(prefix='db_query:///',
+    @telegram_bot.button(prefix='talk:///',
                          separator='|',
-                         description=admin_messages[
-                             'query_command']['description'],
                          authorization_level='admin')
-    async def query_button(bot, update, user_record, data):
-        return await _query_button(bot, update, user_record, data)
-
-    @telegram_bot.command(command='/log',
-                          aliases=[],
-                          show_in_keyboard=False,
-                          description=admin_messages[
-                              'log_command']['description'],
-                          authorization_level='admin')
-    async def log_command(bot, update, user_record):
-        return await _log_command(bot, update, user_record)
-
-    @telegram_bot.command(command='/errors',
-                          aliases=[],
-                          show_in_keyboard=False,
-                          description=admin_messages[
-                              'errors_command']['description'],
-                          authorization_level='admin')
-    async def errors_command(bot, update, user_record):
-        return await _errors_command(bot, update, user_record)
-
-    for exception in allowed_during_maintenance:
-        telegram_bot.allow_during_maintenance(exception)
-
-    @telegram_bot.command(command='/maintenance', aliases=[],
-                          show_in_keyboard=False,
-                          description=admin_messages[
-                              'maintenance_command']['description'],
-                          authorization_level='admin')
-    async def maintenance_command(bot, update, user_record):
-        return await _maintenance_command(bot, update, user_record)
+    async def talk_button(bot, update, user_record, data):
+        return await _talk_button(bot, update, user_record, data)
 
     @telegram_bot.command(command='/version',
                           aliases=[],
@@ -1191,7 +1194,3 @@ def init(telegram_bot: Bot,
         return await _version_command(bot=bot,
                                       update=update,
                                       user_record=user_record)
-
-    @telegram_bot.additional_task(when='BEFORE', bot=telegram_bot)
-    async def notify_version(bot):
-        return await notify_new_version(bot=bot)
