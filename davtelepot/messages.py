@@ -67,14 +67,157 @@ default_admin_messages = {
         }
     },
     'father_command': {
+        'back': {
+            'en': "↩️ Back",
+            'it': "↩️ Indietro",
+        },
+        'confirm': {
+            'en': "🔄 Click again to confirm",
+            'it': "🔄 Clicka di nuovo per confermare",
+        },
         'description': {
             'en': "Edit the @BotFather commands",
             'it': "Modifica i comandi con @BotFather",
         },
+        'error': {
+            'en': "❌ Error! ❌",
+            'it': "❌ Errore! ❌",
+        },
+        'modes': [
+            {
+                'id': "get",
+                'name': {
+                    'en': "See",
+                    'it': "Consulta"
+                },
+                'symbol': "ℹ️",
+                'description': {
+                    'en': "See commands stored by @BotFather",
+                    'it': "Consulta i comandi salvati su @BotFather"
+                },
+            },
+            {
+                'id': "set",
+                'name': {
+                    'en': "Change",
+                    'it': "Modifica"
+                },
+                'symbol': "✏️",
+                'description': {
+                    'en': "Change commands stored by @BotFather",
+                    'it': "Modifica i comandi salvati su @BotFather"
+                },
+            },
+            {
+                'id': "settings",
+                'name': {
+                    'en': "Settings",
+                    'it': "Impostazioni"
+                },
+                'symbol': "⚙️",
+                'description': {
+                    'en': "Set commands to hide or to add",
+                    'it': "Imposta comandi da nascondere o aggiungere"
+                },
+            },
+        ],
+        'set': {
+            'button': {
+                'en': "⚠️ Set these commands 🔧",
+                'it': "⚠️ Imposta questi comandi 🔧",
+            },
+            'done': {
+                'en': "✅ Done!",
+                'it': "✅ Fatto!",
+            },
+            'header': {
+                'en': "✏️ <b>Change commands stored by @BotFather 🤖</b>",
+                'it': "✏️ <b>Modifica i comandi salvati su @BotFather 🤖</b>",
+            },
+            'legend': {
+                'en': "<b>Legend</b>\n"
+                      "✅ <i>Already stored</i>\n"
+                      "☑ <i>New command</i>\n"
+                      "❌ <i>Will be removed</i>",
+                'it': "<b>Legenda</b>\n"
+                      "✅ <i>Già presente</i>\n"
+                      "☑ <i>Nuovo comando</i>\n"
+                      "❌ <i>Comando eliminato</i>",
+            },
+            'no_change': {
+                'en': "❌ No change detected",
+                'it': "❌ Nessuna modifica",
+            },
+        },
+        'settings': {
+            'browse_records': {
+                'en': "✏️ <b>Edit BotFather settings</b> ⚙️\n\n"
+                      "Select a record to edit.\n"
+                      "Showing records from {record_interval[0]} to "
+                      "{record_interval[1]} of {record_interval[2]}\n\n"
+                      "<i>Legend</i>\n"
+                      "➕ Added commands\n"
+                      "➖ Hidden commands\n",
+                'it': "✏️ <b>Modifica impostazioni di BotFather</b> ⚙\n\n️"
+                      "Seleziona un'impostazione da modificare.\n"
+                      "Record da {record_interval[0]} a "
+                      "{record_interval[1]} di {record_interval[2]}\n\n"
+                      "<i>Legenda</i>\n"
+                      "➕ Comandi aggiunti\n"
+                      "➖ Comandi nascosti\n",
+            },
+            'modes': {
+                'add': {
+                    'symbol': "➕️",
+                    'name': {
+                        'en': "Add",
+                        'it': "Aggiungi"
+                    },
+                    'description': {
+                        'en': "Add command to default list",
+                        'it': "Aggiungi un comando dalla lista autogenerata"
+                    }
+                },
+                'hide': {
+                    'symbol': "➖️",
+                    'name': {
+                        'en': "Hide",
+                        'it': "Nascondi"
+                    },
+                    'description': {
+                        'en': "Hide command from default list",
+                        'it': "Nascondi un comando dalla lista autogenerata"
+                    }
+                },
+                'edit': {
+                    'symbol': "✏️",
+                    'name': {
+                        'en': "Edit",
+                        'it': "Modifica"
+                    },
+                    'description': {
+                        'en': "Edit added or hidden commands",
+                        'it': "Modifica i comandi aggiunti o nascosti"
+                    }
+                },
+            },
+            'panel': {
+                'en': "🤖 <b>@BotFather settings</b> ⚙️\n\n"
+                      "➕ <i>Additional commands</i>\n"
+                      "{additional_commands}\n\n"
+                      "➖ <i>Hidden commands</i>\n"
+                      "{hidden_commands}",
+                'it': "⚙️ <b>Impostazioni di @BotFather</b> 🤖\n\n"
+                      "➕ <i>Comandi aggiuntivi</i>\n"
+                      "{additional_commands}\n\n"
+                      "➖ <i>Comandi nascosti</i>\n"
+                      "{hidden_commands}",
+            },
+        },
         'title': {
-            'en': "🤖 BotFather commands\n\n",
-            'it': "🤖 Comandi su BotFather\n\n",
-        }
+            'en': "🤖 <b>BotFather</b>",
+            'it': "🤖 <b>BotFather</b>",
+        },
     },
     'log_command': {
         'description': {

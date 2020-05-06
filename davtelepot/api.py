@@ -1424,7 +1424,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def setMyCommands(self, commands: List[Command]):
+    async def setMyCommands(self, commands: List[Union[Command, dict]]):
         """Change the list of the bot's commands.
 
         Use this method to change the list of the bot's commands.

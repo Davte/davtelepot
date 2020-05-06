@@ -701,7 +701,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 answer = await _function(
                     bot=self,
                     update=update,
-                    user_record=user_record
+                    user_record=user_record,
+                    language=language
                 )
                 break
         if answer is None:
