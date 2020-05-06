@@ -664,18 +664,33 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendPoll(self, chat_id, question, options,
-                       dummy=None,
-                       disable_notification=None,
-                       reply_to_message_id=None,
+    async def sendPoll(self,
+                       chat_id: Union[int, str],
+                       question: str,
+                       options: List[str],
+                       is_anonymous: bool = True,
+                       type_: str = 'regular',
+                       allows_multiple_answers: bool = False,
+                       correct_option_id: int = None,
+                       explanation: str = None,
+                       explanation_parse_mode: str = None,
+                       open_period: int = None,
+                       close_date: int = None,
+                       is_closed: bool = None,
+                       disable_notification: bool = None,
+                       reply_to_message_id: int = None,
                        reply_markup=None):
         """Send a native poll in a group, a supergroup or channel.
 
         See https://core.telegram.org/bots/api#sendpoll for details.
         """
+        # To avoid shadowing `type`, this workaround is required
+        parameters = locals().copy()
+        parameters['type'] = parameters['type_']
+        del parameters['type_']
         return await self.api_request(
             'sendPoll',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendChatAction(self, chat_id, action):

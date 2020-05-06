@@ -1025,6 +1025,7 @@ async def _load_talking_sessions(bot: Bot):
 
 
 async def _father_command(bot, update):
+
     return
 
 
