@@ -1412,12 +1412,63 @@ async def _father_button(bot: Bot, user_record: OrderedDict,
                 )
             ]
         )
+    elif command == 'del':
+        if not Confirmator.get('del_bot_father_commands',
+                               confirm_timedelta=3
+                               ).confirm(user_record['id']):
+            return bot.get_message(
+                'admin', 'confirm',
+                language=language
+            )
+        stored_commands = await bot.getMyCommands()
+        if not len(stored_commands):
+            text = bot.get_message(
+                'admin', 'father_command', 'del', 'no_change',
+                language=language
+            )
+        else:
+            if isinstance(
+                    await bot.setMyCommands([]),
+                    Exception
+            ):
+                text = bot.get_message(
+                    'admin', 'father_command', 'del', 'error',
+                    language=language
+                )
+            else:
+                text = bot.get_message(
+                    'admin', 'father_command', 'del', 'done',
+                    language=language
+                )
+                reply_markup = make_inline_keyboard(
+                    [
+                        make_button(
+                            text=bot.get_message('admin', 'father_command', 'back',
+                                                 language=language),
+                            prefix='father:///',
+                            delimiter='|',
+                            data=['main']
+                        )
+                    ]
+                )
     elif command == 'get':
         commands = await bot.getMyCommands()
-        text = '<code>' + '\n'.join(
-            "{c[command]} - {c[description]}".format(c=command)
-            for command in commands
-        ) + '</code>'
+        if len(commands) == 0:
+            commands = bot.get_message(
+                'admin', 'father_command', 'get', 'empty',
+                language=language,
+                commands=commands
+            )
+        else:
+            commands = '<code>' + '\n'.join(
+                "{c[command]} - {c[description]}".format(c=command)
+                for command in commands
+            ) + '</code>'
+        text = bot.get_message(
+            'admin', 'father_command', 'get', 'panel',
+            language=language,
+            commands=commands
+        )
         reply_markup = make_inline_keyboard(
             [
                 make_button(

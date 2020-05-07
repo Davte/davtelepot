@@ -95,6 +95,20 @@ default_admin_messages = {
             'en': "↩️ Back",
             'it': "↩️ Indietro",
         },
+        'del': {
+            'done': {
+                'en': "✅ Commands deleted",
+                'it': "✅ Comandi rimossi",
+            },
+            'error': {
+                'en': "Something went wrong 😕",
+                'it': "Qualcosa è andato storto 😕",
+            },
+            'no_change': {
+                'en': "❌ No command stored",
+                'it': "❌ Nessun comando salvato",
+            },
+        },
         'description': {
             'en': "Edit the @BotFather commands",
             'it': "Modifica i comandi con @BotFather",
@@ -102,6 +116,20 @@ default_admin_messages = {
         'error': {
             'en': "❌ Error! ❌",
             'it': "❌ Errore! ❌",
+        },
+        'get': {
+            'empty': {
+                'en': "No command set yet. You may use <code>✏️ Change</code> "
+                      "button",
+                'it': "Nessun comando impostato ancora. Puoi usare il bottone "
+                      "<code>✏️ Modifica</code>",
+            },
+            'panel': {
+                'en': "🤖 <b>BotFather commands</b> ℹ️\n\n"
+                      "{commands}",
+                'it': "🤖 <b>Comandi su BotFather</b> ℹ️\n\n"
+                      "{commands}",
+            },
         },
         'modes': [
             {
@@ -126,6 +154,18 @@ default_admin_messages = {
                 'description': {
                     'en': "Change commands stored by @BotFather",
                     'it': "Modifica i comandi salvati su @BotFather"
+                },
+            },
+            {
+                'id': "del",
+                'name': {
+                    'en': "Delete",
+                    'it': "Cancella"
+                },
+                'symbol': "🗑",
+                'description': {
+                    'en': "Delete commands stored by @BotFather",
+                    'it': "Cancella i comandi salvati su @BotFather"
                 },
             },
             {
