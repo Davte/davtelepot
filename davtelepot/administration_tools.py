@@ -13,6 +13,7 @@ import asyncio
 import datetime
 import json
 import logging
+import re
 import types
 
 from collections import OrderedDict
@@ -33,6 +34,8 @@ from .utilities import (
 
 # Use this parameter in SQL `LIMIT x OFFSET y` clauses
 rows_number_limit = 10
+
+command_description_parser = re.compile(r'(?P<command>\w+)(\s?-\s?(?P<description>.*))?')
 
 
 async def _forward_to(update,
@@ -1059,7 +1062,7 @@ def get_custom_commands(bot: Bot, language: str = None) -> List[dict]:
             hidden=False
         )
     ]
-    hidden_commands = [
+    hidden_commands_names = [
         record['command']
         for record in bot.db['bot_father_commands'].find(
             cancelled=None,
@@ -1069,9 +1072,10 @@ def get_custom_commands(bot: Bot, language: str = None) -> List[dict]:
     return sorted(
         [
             command
-            for command in get_current_commands(bot=bot, language=language)
-            if command['command'] not in hidden_commands
-        ] + additional_commands,
+            for command in (get_current_commands(bot=bot, language=language)
+                            + additional_commands)
+            if command['command'] not in hidden_commands_names
+        ],
         key=(lambda c: c['command'])
     )
 
@@ -1144,7 +1148,11 @@ def browse_bot_father_settings_records(bot: Bot,
         language=language,
         record_interval=((page * rows_number_limit + 1) if records else 0,
                          min((page + 1) * rows_number_limit, len(records)),
-                         records_count)
+                         records_count),
+        commands_list='\n'.join(
+            f"{'➖' if record['hidden'] else '➕'} {record['command']}"
+            for record in records[:rows_number_limit]
+        )
     )
     buttons = make_lines_of_buttons(
         [
@@ -1154,7 +1162,7 @@ def browse_bot_father_settings_records(bot: Bot,
                 delimiter='|',
                 data=['settings', 'edit', 'select', record['id']]
             )
-            for record in records
+            for record in records[:rows_number_limit]
         ],
         3
     )
@@ -1198,10 +1206,144 @@ def browse_bot_father_settings_records(bot: Bot,
     return result, text, reply_markup
 
 
+def get_bot_father_settings_editor(mode: str,
+                                   record: OrderedDict = None):
+    """Get a coroutine to edit or create a record in bot father settings table.
+
+    Modes:
+        - add
+        - hide
+    """
+    async def bot_father_settings_editor(bot: Bot, update: dict,
+                                         language: str):
+        """Edit or create a record in bot father settings table."""
+        nonlocal record
+        if record is not None:
+            record_id = record['id']
+        else:
+            record_id = None
+        # Cancel if user used /cancel command, or remove trailing forward_slash
+        input_text = update['text']
+        if input_text.startswith('/'):
+            if language not in bot.messages['admin']['cancel']['lower']:
+                language = bot.default_language
+            if input_text.lower().endswith(bot.messages['admin']['cancel']['lower'][language]):
+                return bot.get_message(
+                    'admin', 'cancel', 'done',
+                    language=language
+                )
+            else:
+                input_text = input_text[1:]
+        if record is None:
+            # Use regex compiled pattern to search for command and description
+            re_search = command_description_parser.search(input_text)
+            if re_search is None:
+                return bot.get_message(
+                    'admin', 'error', 'text',
+                    language=language
+                )
+            re_search = re_search.groupdict()
+            command = re_search['command'].lower()
+            description = re_search['description']
+        else:
+            command = record['command']
+            description = input_text
+        error = None
+        # A description (str 3-256) is required
+        if mode in ('add', 'edit'):
+            if description is None or len(description) < 3:
+                error = 'missing_description'
+            elif type(description) is str and len(description) > 255:
+                error = 'description_too_long'
+            elif mode == 'add':
+                duplicate = bot.db['bot_father_commands'].find_one(
+                    command=command,
+                    cancelled=None
+                )
+                if duplicate:
+                    error = 'duplicate_record'
+        if error:
+            text = bot.get_message(
+                'admin', 'father_command', 'settings', 'modes',
+                'add', 'error', error,
+                language=language
+            )
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        text=bot.get_message(
+                            'admin', 'father_command', 'back',
+                            language=language
+                        ),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['settings']
+                    )
+                ]
+            )
+        else:
+            table = bot.db['bot_father_commands']
+            new_record = dict(
+                command=command,
+                description=description,
+                hidden=(mode == 'hide'),
+                cancelled=None
+            )
+            if record_id is None:
+                record_id = table.insert(
+                    new_record
+                )
+            else:
+                new_record['id'] = record_id
+                table.upsert(
+                    new_record,
+                    ['id']
+                )
+            text = bot.get_message(
+                'admin', 'father_command', 'settings', 'modes',
+                mode, ('edit' if 'id' in new_record else 'add'), 'done',
+                command=command,
+                description=(description if description else '-'),
+                language=language
+            )
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        text=bot.get_message(
+                            'admin', 'father_command', 'settings', 'modes',
+                            'edit', 'button',
+                            language=language
+                        ),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['settings', 'edit', 'select', record_id]
+                    ), make_button(
+                        text=bot.get_message(
+                            'admin', 'father_command', 'back',
+                            language=language
+                        ),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['settings']
+                    )
+                ],
+                2
+            )
+        asyncio.ensure_future(
+            bot.delete_message(update=update)
+        )
+        return dict(
+            text=text,
+            reply_markup=reply_markup
+        )
+    return bot_father_settings_editor
+
+
 async def edit_bot_father_settings_via_message(bot: Bot,
                                                user_record: OrderedDict,
                                                language: str,
-                                               mode: str):
+                                               mode: str,
+                                               record: OrderedDict = None):
     result, text, reply_markup = '', '', None
     modes = bot.messages['admin']['father_command']['settings']['modes']
     if mode not in modes:
@@ -1210,13 +1352,35 @@ async def edit_bot_father_settings_via_message(bot: Bot,
             language=language
         )
     else:
-        result = "🚧 Not implemented yet!"
-        # TODO: write messages, set individual text message parser to create records
-        # result = bot.get_message(
-        #     messages=modes[mode],
-        #     language=language
-        # )
-        # bot.set_individual_text_message_handler()
+        result = bot.get_message(
+            ('add' if record is None else 'edit'), 'popup',
+            messages=modes[mode],
+            language=language,
+            command=(record['command'] if record is not None else None)
+        )
+        text = bot.get_message(
+            ('add' if record is None else 'edit'), 'text',
+            messages=modes[mode],
+            language=language,
+            command=(record['command'] if record is not None else None)
+        )
+        reply_markup = make_inline_keyboard(
+            [
+                make_button(
+                    text=bot.get_message(
+                        'admin', 'cancel', 'button',
+                        language=language,
+                    ),
+                    prefix='father:///',
+                    delimiter='|',
+                    data=['cancel']
+                )
+            ]
+        )
+        bot.set_individual_text_message_handler(
+            get_bot_father_settings_editor(mode=mode, record=record),
+            user_id=user_record['telegram_id'],
+        )
     return result, text, reply_markup
 
 
@@ -1231,7 +1395,24 @@ async def _father_button(bot: Bot, user_record: OrderedDict,
     """
     result, text, reply_markup = '', '', None
     command, *data = data
-    if command == 'get':
+    if command == 'cancel':
+        bot.remove_individual_text_message_handler(user_id=user_record['telegram_id'])
+        result = text = bot.get_message(
+            'admin', 'cancel', 'done',
+            language=language
+        )
+        reply_markup = make_inline_keyboard(
+            [
+                make_button(
+                    text=bot.get_message('admin', 'father_command', 'back',
+                                         language=language),
+                    prefix='father:///',
+                    delimiter='|',
+                    data=['main']
+                )
+            ]
+        )
+    elif command == 'get':
         commands = await bot.getMyCommands()
         text = '<code>' + '\n'.join(
             "{c[command]} - {c[description]}".format(c=command)
@@ -1255,13 +1436,13 @@ async def _father_button(bot: Bot, user_record: OrderedDict,
         )
     elif command == 'set':
         stored_commands = await bot.getMyCommands()
-        current_commands = get_current_commands(bot=bot, language=language)
+        current_commands = get_custom_commands(bot=bot, language=language)
         if len(data) > 0 and data[0] == 'confirm':
             if not Confirmator.get('set_bot_father_commands',
                                    confirm_timedelta=3
                                    ).confirm(user_record['id']):
                 return bot.get_message(
-                    'admin', 'father_command', 'confirm',
+                    'admin', 'confirm',
                     language=language
                 )
             if stored_commands == current_commands:
@@ -1270,13 +1451,19 @@ async def _father_button(bot: Bot, user_record: OrderedDict,
                     language=language
                 )
             else:
-                await bot.setMyCommands(
-                    current_commands
-                )
-                text = bot.get_message(
-                    'admin', 'father_command', 'set', 'done',
-                    language=language
-                )
+                if isinstance(
+                        await bot.setMyCommands(current_commands),
+                        Exception
+                ):
+                    text = bot.get_message(
+                        'admin', 'father_command', 'set', 'error',
+                        language=language
+                    )
+                else:
+                    text = bot.get_message(
+                        'admin', 'father_command', 'set', 'done',
+                        language=language
+                    )
             reply_markup = make_inline_keyboard(
                 [
                     make_button(
@@ -1289,17 +1476,24 @@ async def _father_button(bot: Bot, user_record: OrderedDict,
                 ]
             )
         else:
+            stored_commands_names = [c['command'] for c in stored_commands]
+            current_commands_names = [c['command'] for c in current_commands]
+            # Show preview of new, edited and removed commands
+            # See 'legend' in bot.messages['admin']['father_command']['set']
             text = bot.get_message(
                     'admin', 'father_command', 'set', 'header',
                     language=language
             ) + '\n\n' + '\n\n'.join([
                 '\n'.join(
-                    ('✅ ' if c in stored_commands else '☑️ ') + c['command']
+                    ('✅ ' if c in stored_commands
+                     else '☑️ ' if c['command'] not in stored_commands_names
+                     else '✏️') + c['command']
                     for c in current_commands
                 ),
                 '\n'.join(
-                    f'❌ {c["command"]}'
-                    for c in stored_commands if c not in current_commands
+                    f'❌ {command}'
+                    for command in stored_commands_names
+                    if command not in current_commands_names
                 ),
                 bot.get_message(
                     'admin', 'father_command', 'set', 'legend',
@@ -1387,7 +1581,108 @@ async def _father_button(bot: Bot, user_record: OrderedDict,
         elif data[0] == 'edit':
             if len(data) > 2 and data[1] == 'select':
                 selected_record = bot.db['bot_father_commands'].find_one(id=data[2])
-                # TODO: show selected record and actions on it
+                if selected_record is None:
+                    return bot.get_message(
+                        'admin', 'error',
+                        language=language
+                    )
+                if len(data) == 3:
+                    text = bot.get_message(
+                        'admin', 'father_command', 'settings',
+                        'modes', 'edit', 'panel', 'text',
+                        language=language,
+                        command=selected_record['command'],
+                        description=selected_record['description'],
+                    )
+                    reply_markup = make_inline_keyboard(
+                        [
+                            make_button(
+                                text=bot.get_message(
+                                    'admin', 'father_command', 'settings',
+                                    'modes', 'edit', 'panel',
+                                    'edit_description', 'button',
+                                    language=language,
+                                ),
+                                prefix='father:///',
+                                delimiter='|',
+                                data=['settings', 'edit', 'select',
+                                      selected_record['id'], 'edit_descr']
+                            ),
+                            make_button(
+                                text=bot.get_message(
+                                    'admin', 'father_command', 'settings',
+                                    'modes', 'edit', 'panel',
+                                    'delete', 'button',
+                                    language=language,
+                                ),
+                                prefix='father:///',
+                                delimiter='|',
+                                data=['settings', 'edit', 'select',
+                                      selected_record['id'], 'del']
+                            ),
+                            make_button(
+                                text=bot.get_message(
+                                    'admin', 'father_command', 'back',
+                                    language=language,
+                                ),
+                                prefix='father:///',
+                                delimiter='|',
+                                data=['settings', 'edit']
+                            )
+                        ],
+                        2
+                    )
+                elif len(data) > 3 and data[3] == 'edit_descr':
+                    result, text, reply_markup = await edit_bot_father_settings_via_message(
+                        bot=bot,
+                        user_record=user_record,
+                        language=language,
+                        mode=data[0],
+                        record=selected_record
+                    )
+                elif len(data) > 3 and data[3] == 'del':
+                    if not Confirmator.get('set_bot_father_commands',
+                                           confirm_timedelta=3
+                                           ).confirm(user_record['id']):
+                        result = bot.get_message(
+                            'admin', 'confirm',
+                            language=language
+                        )
+                    else:
+                        bot.db['bot_father_commands'].update(
+                            dict(
+                                id=selected_record['id'],
+                                cancelled=True
+                            ),
+                            ['id']
+                        )
+                        result = bot.get_message(
+                            'admin', 'father_command', 'settings',
+                            'modes', 'edit', 'panel', 'delete',
+                            'done', 'popup',
+                            language=language
+                        )
+                        text = bot.get_message(
+                            'admin', 'father_command', 'settings',
+                            'modes', 'edit', 'panel', 'delete',
+                            'done', 'text',
+                            language=language
+                        )
+                        reply_markup = make_inline_keyboard(
+                            [
+                                make_button(
+                                    text=bot.get_message(
+                                        'admin', 'father_command',
+                                        'back',
+                                        language=language
+                                    ),
+                                    prefix='father:///',
+                                    delimiter='|',
+                                    data=['settings']
+                                )
+                            ],
+                            1
+                        )
             elif len(data) == 1 or data[1] == 'go':
                 result, text, reply_markup = browse_bot_father_settings_records(
                     bot=bot,
