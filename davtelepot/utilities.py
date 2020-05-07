@@ -18,6 +18,8 @@ import time
 from difflib import SequenceMatcher
 
 # Third party modules
+from typing import Union
+
 import aiohttp
 from aiohttp import web
 from bs4 import BeautifulSoup
@@ -703,7 +705,7 @@ class Confirmable():
 
     CONFIRM_TIMEDELTA = datetime.timedelta(seconds=10)
 
-    def __init__(self, confirm_timedelta=None):
+    def __init__(self, confirm_timedelta: Union[datetime.timedelta, int] = None):
         """Instantiate Confirmable instance.
 
         If `confirm_timedelta` is not passed,
@@ -711,6 +713,8 @@ class Confirmable():
         """
         if confirm_timedelta is None:
             confirm_timedelta = self.__class__.CONFIRM_TIMEDELTA
+        elif type(confirm_timedelta) is int:
+            confirm_timedelta = datetime.timedelta(seconds=confirm_timedelta)
         self.set_confirm_timedelta(confirm_timedelta)
         self._confirm_datetimes = {}
 

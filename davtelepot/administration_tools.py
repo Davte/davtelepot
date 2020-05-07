@@ -13,9 +13,11 @@ import asyncio
 import datetime
 import json
 import logging
+import re
 import types
 
-from typing import Union, List
+from collections import OrderedDict
+from typing import Union, List, Tuple
 
 # Third party modules
 from sqlalchemy.exc import ResourceClosedError
@@ -27,8 +29,13 @@ from .utilities import (
     async_wrapper, CachedPage, Confirmator, extract, get_cleaned_text,
     get_user, escape_html_chars, line_drawing_unordered_list, make_button,
     make_inline_keyboard, remove_html_tags, send_part_of_text_file,
-    send_csv_file
+    send_csv_file, make_lines_of_buttons
 )
+
+# Use this parameter in SQL `LIMIT x OFFSET y` clauses
+rows_number_limit = 10
+
+command_description_parser = re.compile(r'(?P<command>\w+)(\s?-\s?(?P<description>.*))?')
 
 
 async def _forward_to(update,
@@ -970,6 +977,729 @@ async def get_package_updates(bot: Bot,
         await asyncio.sleep(monitoring_interval)
 
 
+async def _send_start_messages(bot: Bot):
+    """Send restart messages at restart."""
+    for restart_message in bot.db['restart_messages'].find(sent=None):
+        asyncio.ensure_future(
+            bot.send_message(
+                **{
+                    key: val
+                    for key, val in restart_message.items()
+                    if key in (
+                        'chat_id',
+                        'text',
+                        'parse_mode',
+                        'reply_to_message_id'
+                    )
+                }
+            )
+        )
+        bot.db['restart_messages'].update(
+            dict(
+                sent=datetime.datetime.now(),
+                id=restart_message['id']
+            ),
+            ['id'],
+            ensure=True
+        )
+    return
+
+
+async def _load_talking_sessions(bot: Bot):
+    sessions = []
+    for session in bot.db.query(
+            """SELECT *
+        FROM talking_sessions
+        WHERE NOT cancelled
+        """
+    ):
+        sessions.append(
+            dict(
+                other_user_record=bot.db['users'].find_one(
+                    id=session['user']
+                ),
+                admin_record=bot.db['users'].find_one(
+                    id=session['admin']
+                ),
+            )
+        )
+    for session in sessions:
+        await start_session(
+            bot=bot,
+            other_user_record=session['other_user_record'],
+            admin_record=session['admin_record']
+        )
+
+
+def get_current_commands(bot: Bot, language: str = None) -> List[dict]:
+    return sorted(
+        [
+            {
+                'command': name,
+                'description': bot.get_message(
+                    messages=information['description'],
+                    language=language
+                )
+            }
+            for name, information in bot.commands.items()
+            if 'description' in information
+               and information['description']
+               and 'authorization_level' in information
+               and information['authorization_level'] in ('registered_user', 'everybody',)
+        ],
+        key=(lambda c: c['command'])
+    )
+
+
+def get_custom_commands(bot: Bot, language: str = None) -> List[dict]:
+    additional_commands = [
+        {
+            'command': record['command'],
+            'description': record['description']
+        }
+        for record in bot.db['bot_father_commands'].find(
+            cancelled=None,
+            hidden=False
+        )
+    ]
+    hidden_commands_names = [
+        record['command']
+        for record in bot.db['bot_father_commands'].find(
+            cancelled=None,
+            hidden=True
+        )
+    ]
+    return sorted(
+        [
+            command
+            for command in (get_current_commands(bot=bot, language=language)
+                            + additional_commands)
+            if command['command'] not in hidden_commands_names
+        ],
+        key=(lambda c: c['command'])
+    )
+
+
+async def _father_command(bot, language):
+    modes = [
+        {
+            key: (
+                bot.get_message(messages=val,
+                                language=language)
+                if isinstance(val, dict)
+                else val
+            )
+            for key, val in mode.items()
+        }
+        for mode in bot.messages['admin']['father_command']['modes']
+    ]
+    text = "\n\n".join(
+        [
+            bot.get_message(
+                'admin', 'father_command', 'title',
+                language=language
+            )
+        ] + [
+            "{m[symbol]} {m[name]}\n{m[description]}".format(m=mode)
+            for mode in modes
+        ]
+    )
+    reply_markup = make_inline_keyboard(
+        [
+            make_button(
+                text="{m[symbol]} {m[name]}".format(m=mode),
+                prefix='father:///',
+                delimiter='|',
+                data=[mode['id']]
+            )
+            for mode in modes
+        ],
+        2
+    )
+    return dict(
+        text=text,
+        reply_markup=reply_markup
+    )
+
+
+def browse_bot_father_settings_records(bot: Bot,
+                                       language: str,
+                                       page: int = 0) -> Tuple[str, str, dict]:
+    """Return a reply keyboard to edit bot father settings records."""
+    result, text, reply_markup = '', '', None
+    records = list(
+        bot.db['bot_father_commands'].find(
+            cancelled=None,
+            _limit=(rows_number_limit + 1),
+            _offset=(page * rows_number_limit)
+        )
+    )
+    for record in bot.db.query(
+        "SELECT COUNT(*) AS c "
+        "FROM bot_father_commands "
+        "WHERE cancelled IS NULL"
+    ):
+        records_count = record['c']
+        break
+    else:
+        records_count = 0
+    text = bot.get_message(
+        'admin', 'father_command', 'settings', 'browse_records',
+        language=language,
+        record_interval=((page * rows_number_limit + 1) if records else 0,
+                         min((page + 1) * rows_number_limit, len(records)),
+                         records_count),
+        commands_list='\n'.join(
+            f"{'➖' if record['hidden'] else '➕'} {record['command']}"
+            for record in records[:rows_number_limit]
+        )
+    )
+    buttons = make_lines_of_buttons(
+        [
+            make_button(
+                text=f"{'➖' if record['hidden'] else '➕'} {record['command']}",
+                prefix='father:///',
+                delimiter='|',
+                data=['settings', 'edit', 'select', record['id']]
+            )
+            for record in records[:rows_number_limit]
+        ],
+        3
+    )
+    buttons += make_lines_of_buttons(
+        (
+            [
+                make_button(
+                    text='⬅',
+                    prefix='father:///',
+                    delimiter='|',
+                    data=['settings', 'edit', 'go', page - 1]
+                )
+            ]
+            if page > 0
+            else []
+        ) + [
+            make_button(
+                text=bot.get_message('admin', 'father_command', 'back',
+                                     language=language),
+                prefix='father:///',
+                delimiter='|',
+                data=['settings']
+            )
+        ] + (
+            [
+                make_button(
+                    text='️➡️',
+                    prefix='father:///',
+                    delimiter='|',
+                    data=['settings', 'edit', 'go', page + 1]
+                )
+            ]
+            if len(records) > rows_number_limit
+            else []
+        ),
+        3
+    )
+    reply_markup = dict(
+        inline_keyboard=buttons
+    )
+    return result, text, reply_markup
+
+
+def get_bot_father_settings_editor(mode: str,
+                                   record: OrderedDict = None):
+    """Get a coroutine to edit or create a record in bot father settings table.
+
+    Modes:
+        - add
+        - hide
+    """
+    async def bot_father_settings_editor(bot: Bot, update: dict,
+                                         language: str):
+        """Edit or create a record in bot father settings table."""
+        nonlocal record
+        if record is not None:
+            record_id = record['id']
+        else:
+            record_id = None
+        # Cancel if user used /cancel command, or remove trailing forward_slash
+        input_text = update['text']
+        if input_text.startswith('/'):
+            if language not in bot.messages['admin']['cancel']['lower']:
+                language = bot.default_language
+            if input_text.lower().endswith(bot.messages['admin']['cancel']['lower'][language]):
+                return bot.get_message(
+                    'admin', 'cancel', 'done',
+                    language=language
+                )
+            else:
+                input_text = input_text[1:]
+        if record is None:
+            # Use regex compiled pattern to search for command and description
+            re_search = command_description_parser.search(input_text)
+            if re_search is None:
+                return bot.get_message(
+                    'admin', 'error', 'text',
+                    language=language
+                )
+            re_search = re_search.groupdict()
+            command = re_search['command'].lower()
+            description = re_search['description']
+        else:
+            command = record['command']
+            description = input_text
+        error = None
+        # A description (str 3-256) is required
+        if mode in ('add', 'edit'):
+            if description is None or len(description) < 3:
+                error = 'missing_description'
+            elif type(description) is str and len(description) > 255:
+                error = 'description_too_long'
+            elif mode == 'add':
+                duplicate = bot.db['bot_father_commands'].find_one(
+                    command=command,
+                    cancelled=None
+                )
+                if duplicate:
+                    error = 'duplicate_record'
+        if error:
+            text = bot.get_message(
+                'admin', 'father_command', 'settings', 'modes',
+                'add', 'error', error,
+                language=language
+            )
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        text=bot.get_message(
+                            'admin', 'father_command', 'back',
+                            language=language
+                        ),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['settings']
+                    )
+                ]
+            )
+        else:
+            table = bot.db['bot_father_commands']
+            new_record = dict(
+                command=command,
+                description=description,
+                hidden=(mode == 'hide'),
+                cancelled=None
+            )
+            if record_id is None:
+                record_id = table.insert(
+                    new_record
+                )
+            else:
+                new_record['id'] = record_id
+                table.upsert(
+                    new_record,
+                    ['id']
+                )
+            text = bot.get_message(
+                'admin', 'father_command', 'settings', 'modes',
+                mode, ('edit' if 'id' in new_record else 'add'), 'done',
+                command=command,
+                description=(description if description else '-'),
+                language=language
+            )
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        text=bot.get_message(
+                            'admin', 'father_command', 'settings', 'modes',
+                            'edit', 'button',
+                            language=language
+                        ),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['settings', 'edit', 'select', record_id]
+                    ), make_button(
+                        text=bot.get_message(
+                            'admin', 'father_command', 'back',
+                            language=language
+                        ),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['settings']
+                    )
+                ],
+                2
+            )
+        asyncio.ensure_future(
+            bot.delete_message(update=update)
+        )
+        return dict(
+            text=text,
+            reply_markup=reply_markup
+        )
+    return bot_father_settings_editor
+
+
+async def edit_bot_father_settings_via_message(bot: Bot,
+                                               user_record: OrderedDict,
+                                               language: str,
+                                               mode: str,
+                                               record: OrderedDict = None):
+    result, text, reply_markup = '', '', None
+    modes = bot.messages['admin']['father_command']['settings']['modes']
+    if mode not in modes:
+        result = bot.get_message(
+            'admin', 'father_command', 'error',
+            language=language
+        )
+    else:
+        result = bot.get_message(
+            ('add' if record is None else 'edit'), 'popup',
+            messages=modes[mode],
+            language=language,
+            command=(record['command'] if record is not None else None)
+        )
+        text = bot.get_message(
+            ('add' if record is None else 'edit'), 'text',
+            messages=modes[mode],
+            language=language,
+            command=(record['command'] if record is not None else None)
+        )
+        reply_markup = make_inline_keyboard(
+            [
+                make_button(
+                    text=bot.get_message(
+                        'admin', 'cancel', 'button',
+                        language=language,
+                    ),
+                    prefix='father:///',
+                    delimiter='|',
+                    data=['cancel']
+                )
+            ]
+        )
+        bot.set_individual_text_message_handler(
+            get_bot_father_settings_editor(mode=mode, record=record),
+            user_id=user_record['telegram_id'],
+        )
+    return result, text, reply_markup
+
+
+async def _father_button(bot: Bot, user_record: OrderedDict,
+                         language: str, data: list):
+    """Handle BotFather button.
+
+    Operational modes
+    - main: back to main page (see _father_command)
+    - get: show commands stored by @BotFather
+    - set: edit commands stored by @BotFather
+    """
+    result, text, reply_markup = '', '', None
+    command, *data = data
+    if command == 'cancel':
+        bot.remove_individual_text_message_handler(user_id=user_record['telegram_id'])
+        result = text = bot.get_message(
+            'admin', 'cancel', 'done',
+            language=language
+        )
+        reply_markup = make_inline_keyboard(
+            [
+                make_button(
+                    text=bot.get_message('admin', 'father_command', 'back',
+                                         language=language),
+                    prefix='father:///',
+                    delimiter='|',
+                    data=['main']
+                )
+            ]
+        )
+    elif command == 'get':
+        commands = await bot.getMyCommands()
+        text = '<code>' + '\n'.join(
+            "{c[command]} - {c[description]}".format(c=command)
+            for command in commands
+        ) + '</code>'
+        reply_markup = make_inline_keyboard(
+            [
+                make_button(
+                    text=bot.get_message('admin', 'father_command', 'back',
+                                         language=language),
+                    prefix='father:///',
+                    delimiter='|',
+                    data=['main']
+                )
+            ]
+        )
+    elif command == 'main':
+        return dict(
+            text='',
+            edit=(await _father_command(bot=bot, language=language))
+        )
+    elif command == 'set':
+        stored_commands = await bot.getMyCommands()
+        current_commands = get_custom_commands(bot=bot, language=language)
+        if len(data) > 0 and data[0] == 'confirm':
+            if not Confirmator.get('set_bot_father_commands',
+                                   confirm_timedelta=3
+                                   ).confirm(user_record['id']):
+                return bot.get_message(
+                    'admin', 'confirm',
+                    language=language
+                )
+            if stored_commands == current_commands:
+                text = bot.get_message(
+                    'admin', 'father_command', 'set', 'no_change',
+                    language=language
+                )
+            else:
+                if isinstance(
+                        await bot.setMyCommands(current_commands),
+                        Exception
+                ):
+                    text = bot.get_message(
+                        'admin', 'father_command', 'set', 'error',
+                        language=language
+                    )
+                else:
+                    text = bot.get_message(
+                        'admin', 'father_command', 'set', 'done',
+                        language=language
+                    )
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        text=bot.get_message('admin', 'father_command', 'back',
+                                             language=language),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['main']
+                    )
+                ]
+            )
+        else:
+            stored_commands_names = [c['command'] for c in stored_commands]
+            current_commands_names = [c['command'] for c in current_commands]
+            # Show preview of new, edited and removed commands
+            # See 'legend' in bot.messages['admin']['father_command']['set']
+            text = bot.get_message(
+                    'admin', 'father_command', 'set', 'header',
+                    language=language
+            ) + '\n\n' + '\n\n'.join([
+                '\n'.join(
+                    ('✅ ' if c in stored_commands
+                     else '☑️ ' if c['command'] not in stored_commands_names
+                     else '✏️') + c['command']
+                    for c in current_commands
+                ),
+                '\n'.join(
+                    f'❌ {command}'
+                    for command in stored_commands_names
+                    if command not in current_commands_names
+                ),
+                bot.get_message(
+                    'admin', 'father_command', 'set', 'legend',
+                    language=language
+                )
+            ])
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        text=bot.get_message('admin', 'father_command', 'set',
+                                             'button',
+                                             language=language),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['set', 'confirm']
+                    )
+                ] + [
+                    make_button(
+                        text=bot.get_message('admin', 'father_command', 'back',
+                                             language=language),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['main']
+                    )
+                ],
+                1
+            )
+    elif command == 'settings':
+        if len(data) == 0:
+            additional_commands = '\n'.join(
+                f"{record['command']} - {record['description']}"
+                for record in bot.db['bot_father_commands'].find(
+                    cancelled=None,
+                    hidden=False
+                )
+            )
+            if not additional_commands:
+                additional_commands = '-'
+            hidden_commands = '\n'.join(
+                f"{record['command']}"
+                for record in bot.db['bot_father_commands'].find(
+                    cancelled=None,
+                    hidden=True
+                )
+            )
+            if not hidden_commands:
+                hidden_commands = '-'
+            text = bot.get_message(
+                'admin', 'father_command', 'settings', 'panel',
+                language=language,
+                additional_commands=additional_commands,
+                hidden_commands=hidden_commands
+            )
+            modes = bot.messages['admin']['father_command']['settings']['modes']
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        text=modes[code]['symbol'] + ' ' + bot.get_message(
+                            messages=modes[code]['name'],
+                            language=language
+                        ),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['settings', code]
+                    )
+                    for code, mode in modes.items()
+                ] + [
+                    make_button(
+                        text=bot.get_message('admin', 'father_command', 'back',
+                                             language=language),
+                        prefix='father:///',
+                        delimiter='|',
+                        data=['main']
+                    )
+                ],
+                2
+            )
+        elif data[0] in ('add', 'hide', ):
+            result, text, reply_markup = await edit_bot_father_settings_via_message(
+                bot=bot,
+                user_record=user_record,
+                language=language,
+                mode=data[0]
+            )
+        elif data[0] == 'edit':
+            if len(data) > 2 and data[1] == 'select':
+                selected_record = bot.db['bot_father_commands'].find_one(id=data[2])
+                if selected_record is None:
+                    return bot.get_message(
+                        'admin', 'error',
+                        language=language
+                    )
+                if len(data) == 3:
+                    text = bot.get_message(
+                        'admin', 'father_command', 'settings',
+                        'modes', 'edit', 'panel', 'text',
+                        language=language,
+                        command=selected_record['command'],
+                        description=selected_record['description'],
+                    )
+                    reply_markup = make_inline_keyboard(
+                        [
+                            make_button(
+                                text=bot.get_message(
+                                    'admin', 'father_command', 'settings',
+                                    'modes', 'edit', 'panel',
+                                    'edit_description', 'button',
+                                    language=language,
+                                ),
+                                prefix='father:///',
+                                delimiter='|',
+                                data=['settings', 'edit', 'select',
+                                      selected_record['id'], 'edit_descr']
+                            ),
+                            make_button(
+                                text=bot.get_message(
+                                    'admin', 'father_command', 'settings',
+                                    'modes', 'edit', 'panel',
+                                    'delete', 'button',
+                                    language=language,
+                                ),
+                                prefix='father:///',
+                                delimiter='|',
+                                data=['settings', 'edit', 'select',
+                                      selected_record['id'], 'del']
+                            ),
+                            make_button(
+                                text=bot.get_message(
+                                    'admin', 'father_command', 'back',
+                                    language=language,
+                                ),
+                                prefix='father:///',
+                                delimiter='|',
+                                data=['settings', 'edit']
+                            )
+                        ],
+                        2
+                    )
+                elif len(data) > 3 and data[3] == 'edit_descr':
+                    result, text, reply_markup = await edit_bot_father_settings_via_message(
+                        bot=bot,
+                        user_record=user_record,
+                        language=language,
+                        mode=data[0],
+                        record=selected_record
+                    )
+                elif len(data) > 3 and data[3] == 'del':
+                    if not Confirmator.get('set_bot_father_commands',
+                                           confirm_timedelta=3
+                                           ).confirm(user_record['id']):
+                        result = bot.get_message(
+                            'admin', 'confirm',
+                            language=language
+                        )
+                    else:
+                        bot.db['bot_father_commands'].update(
+                            dict(
+                                id=selected_record['id'],
+                                cancelled=True
+                            ),
+                            ['id']
+                        )
+                        result = bot.get_message(
+                            'admin', 'father_command', 'settings',
+                            'modes', 'edit', 'panel', 'delete',
+                            'done', 'popup',
+                            language=language
+                        )
+                        text = bot.get_message(
+                            'admin', 'father_command', 'settings',
+                            'modes', 'edit', 'panel', 'delete',
+                            'done', 'text',
+                            language=language
+                        )
+                        reply_markup = make_inline_keyboard(
+                            [
+                                make_button(
+                                    text=bot.get_message(
+                                        'admin', 'father_command',
+                                        'back',
+                                        language=language
+                                    ),
+                                    prefix='father:///',
+                                    delimiter='|',
+                                    data=['settings']
+                                )
+                            ],
+                            1
+                        )
+            elif len(data) == 1 or data[1] == 'go':
+                result, text, reply_markup = browse_bot_father_settings_records(
+                    bot=bot,
+                    language=language,
+                    page=(data[2] if len(data) > 2 else 0)
+                )
+    if text:
+        return dict(
+            text=result,
+            edit=dict(
+                text=text,
+                reply_markup=reply_markup
+            )
+        )
+    return result
+
+
 def init(telegram_bot: Bot,
          talk_messages: dict = None,
          admin_messages: dict = None,
@@ -989,60 +1719,134 @@ def init(telegram_bot: Bot,
         admin_messages = messages.default_admin_messages
     telegram_bot.messages['admin'] = admin_messages
     db = telegram_bot.db
-    if 'talking_sessions' not in db.tables:
-        db['talking_sessions'].insert(
-            dict(
-                user=0,
-                admin=0,
-                cancelled=1
-            )
+    if 'bot_father_commands' not in db.tables:
+        table = db.create_table(
+            table_name='bot_father_commands'
         )
-
-    allowed_during_maintenance = [
+        table.create_column(
+            'command',
+            db.types.string
+        )
+        table.create_column(
+            'description',
+            db.types.string
+        )
+        table.create_column(
+            'hidden',
+            db.types.boolean
+        )
+        table.create_column(
+            'cancelled',
+            db.types.boolean
+        )
+    if 'talking_sessions' not in db.tables:
+        table = db.create_table(
+            table_name='users'
+        )
+        table.create_column(
+            'user',
+            db.types.integer
+        )
+        table.create_column(
+            'admin',
+            db.types.integer
+        )
+        table.create_column(
+            'cancelled',
+            db.types.integer
+        )
+    for exception in [
         get_maintenance_exception_criterion(telegram_bot, command)
         for command in ['stop', 'restart', 'maintenance']
-    ]
+    ]:
+        telegram_bot.allow_during_maintenance(exception)
 
+    # Tasks to complete before starting bot
     @telegram_bot.additional_task(when='BEFORE')
     async def load_talking_sessions():
-        sessions = []
-        for session in db.query(
-                """SELECT *
-            FROM talking_sessions
-            WHERE NOT cancelled
-            """
-        ):
-            sessions.append(
-                dict(
-                    other_user_record=db['users'].find_one(
-                        id=session['user']
-                    ),
-                    admin_record=db['users'].find_one(
-                        id=session['admin']
-                    ),
-                )
-            )
-        for session in sessions:
-            await start_session(
-                bot=telegram_bot,
-                other_user_record=session['other_user_record'],
-                admin_record=session['admin_record']
-            )
+        return await _load_talking_sessions(bot=telegram_bot)
 
-    @telegram_bot.command(command='/talk',
+    @telegram_bot.additional_task(when='BEFORE', bot=telegram_bot)
+    async def notify_version(bot):
+        return await notify_new_version(bot=bot)
+
+    @telegram_bot.additional_task('BEFORE')
+    async def send_restart_messages():
+        return await _send_start_messages(bot=telegram_bot)
+
+    # Administration commands
+    @telegram_bot.command(command='/db',
                           aliases=[],
                           show_in_keyboard=False,
                           description=admin_messages[
-                              'talk_command']['description'],
+                              'db_command']['description'],
                           authorization_level='admin')
-    async def talk_command(bot, update, user_record):
-        return await _talk_command(bot, update, user_record)
+    async def send_bot_database(bot, update, user_record):
+        return await _send_bot_database(bot, update, user_record)
 
-    @telegram_bot.button(prefix='talk:///',
+    @telegram_bot.command(command='/errors',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'errors_command']['description'],
+                          authorization_level='admin')
+    async def errors_command(bot, update, user_record):
+        return await _errors_command(bot, update, user_record)
+
+    @telegram_bot.command(command='/father',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          **{
+                              key: value
+                              for key, value in admin_messages['father_command'].items()
+                              if key in ('description', )
+                          },
+                          authorization_level='admin')
+    async def father_command(bot, language):
+        return await _father_command(bot=bot, language=language)
+
+    @telegram_bot.button(prefix='father:///',
                          separator='|',
                          authorization_level='admin')
-    async def talk_button(bot, update, user_record, data):
-        return await _talk_button(bot, update, user_record, data)
+    async def query_button(bot, user_record, language, data):
+        return await _father_button(bot=bot,
+                                    user_record=user_record,
+                                    language=language,
+                                    data=data)
+
+    @telegram_bot.command(command='/log',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'log_command']['description'],
+                          authorization_level='admin')
+    async def log_command(bot, update, user_record):
+        return await _log_command(bot, update, user_record)
+
+    @telegram_bot.command(command='/maintenance', aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'maintenance_command']['description'],
+                          authorization_level='admin')
+    async def maintenance_command(bot, update, user_record):
+        return await _maintenance_command(bot, update, user_record)
+
+    @telegram_bot.command(command='/query',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'query_command']['description'],
+                          authorization_level='admin')
+    async def query_command(bot, update, user_record):
+        return await _query_command(bot, update, user_record)
+
+    @telegram_bot.button(prefix='db_query:///',
+                         separator='|',
+                         description=admin_messages[
+                             'query_command']['description'],
+                         authorization_level='admin')
+    async def query_button(bot, update, user_record, data):
+        return await _query_button(bot, update, user_record, data)
 
     @telegram_bot.command(command='/restart',
                           aliases=[],
@@ -1053,33 +1857,14 @@ def init(telegram_bot: Bot,
     async def restart_command(bot, update, user_record):
         return await _restart_command(bot, update, user_record)
 
-    @telegram_bot.additional_task('BEFORE')
-    async def send_restart_messages():
-        """Send restart messages at restart."""
-        for restart_message in db['restart_messages'].find(sent=None):
-            asyncio.ensure_future(
-                telegram_bot.send_message(
-                    **{
-                        key: val
-                        for key, val in restart_message.items()
-                        if key in (
-                            'chat_id',
-                            'text',
-                            'parse_mode',
-                            'reply_to_message_id'
-                        )
-                    }
-                )
-            )
-            db['restart_messages'].update(
-                dict(
-                    sent=datetime.datetime.now(),
-                    id=restart_message['id']
-                ),
-                ['id'],
-                ensure=True
-            )
-        return
+    @telegram_bot.command(command='/select',
+                          aliases=[],
+                          show_in_keyboard=False,
+                          description=admin_messages[
+                              'select_command']['description'],
+                          authorization_level='admin')
+    async def select_command(bot, update, user_record):
+        return await _query_command(bot, update, user_record)
 
     @telegram_bot.command(command='/stop',
                           aliases=[],
@@ -1098,69 +1883,20 @@ def init(telegram_bot: Bot,
     async def stop_button(bot, update, user_record, data):
         return await _stop_button(bot, update, user_record, data)
 
-    @telegram_bot.command(command='/db',
+    @telegram_bot.command(command='/talk',
                           aliases=[],
                           show_in_keyboard=False,
                           description=admin_messages[
-                              'db_command']['description'],
+                              'talk_command']['description'],
                           authorization_level='admin')
-    async def send_bot_database(bot, update, user_record):
-        return await _send_bot_database(bot, update, user_record)
+    async def talk_command(bot, update, user_record):
+        return await _talk_command(bot, update, user_record)
 
-    @telegram_bot.command(command='/query',
-                          aliases=[],
-                          show_in_keyboard=False,
-                          description=admin_messages[
-                              'query_command']['description'],
-                          authorization_level='admin')
-    async def query_command(bot, update, user_record):
-        return await _query_command(bot, update, user_record)
-
-    @telegram_bot.command(command='/select',
-                          aliases=[],
-                          show_in_keyboard=False,
-                          description=admin_messages[
-                              'select_command']['description'],
-                          authorization_level='admin')
-    async def select_command(bot, update, user_record):
-        return await _query_command(bot, update, user_record)
-
-    @telegram_bot.button(prefix='db_query:///',
+    @telegram_bot.button(prefix='talk:///',
                          separator='|',
-                         description=admin_messages[
-                             'query_command']['description'],
                          authorization_level='admin')
-    async def query_button(bot, update, user_record, data):
-        return await _query_button(bot, update, user_record, data)
-
-    @telegram_bot.command(command='/log',
-                          aliases=[],
-                          show_in_keyboard=False,
-                          description=admin_messages[
-                              'log_command']['description'],
-                          authorization_level='admin')
-    async def log_command(bot, update, user_record):
-        return await _log_command(bot, update, user_record)
-
-    @telegram_bot.command(command='/errors',
-                          aliases=[],
-                          show_in_keyboard=False,
-                          description=admin_messages[
-                              'errors_command']['description'],
-                          authorization_level='admin')
-    async def errors_command(bot, update, user_record):
-        return await _errors_command(bot, update, user_record)
-
-    for exception in allowed_during_maintenance:
-        telegram_bot.allow_during_maintenance(exception)
-
-    @telegram_bot.command(command='/maintenance', aliases=[],
-                          show_in_keyboard=False,
-                          description=admin_messages[
-                              'maintenance_command']['description'],
-                          authorization_level='admin')
-    async def maintenance_command(bot, update, user_record):
-        return await _maintenance_command(bot, update, user_record)
+    async def talk_button(bot, update, user_record, data):
+        return await _talk_button(bot, update, user_record, data)
 
     @telegram_bot.command(command='/version',
                           aliases=[],
@@ -1175,7 +1911,3 @@ def init(telegram_bot: Bot,
         return await _version_command(bot=bot,
                                       update=update,
                                       user_record=user_record)
-
-    @telegram_bot.additional_task(when='BEFORE', bot=telegram_bot)
-    async def notify_version(bot):
-        return await notify_new_version(bot=bot)

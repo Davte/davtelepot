@@ -136,6 +136,7 @@ async def print_api_methods(loop=None,
                 parameters_table = tag
                 break  # Stop searching in siblings if <table> is found
             description += tag.get_text()
+        # Methods start with a lowercase letter
         if method_name and method_name[0] == method_name[0].lower():
             methods.append(
                 TelegramApiMethod(

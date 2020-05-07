@@ -1,6 +1,24 @@
 """Default messages for bot functions."""
 
 default_admin_messages = {
+    'cancel': {
+        'button': {
+            'en': "↩️ Cancel",
+            'it': "↩️ Annulla"
+        },
+        'done': {
+            'en': "↩️ Operation cancelled",
+            'it': "↩️ Operazione annullata",
+        },
+        'lower': {
+            'en': "cancel",
+            'it': "annulla",
+        },
+    },
+    'confirm': {
+        'en': "🔄 Click again to confirm",
+        'it': "🔄 Clicka di nuovo per confermare",
+    },
     'db_command': {
         'description': {
             'en': "Ask for bot database via Telegram",
@@ -22,6 +40,12 @@ default_admin_messages = {
             'en': "Database sent.",
             'it': "Database inviato."
         }
+    },
+    'error': {
+        'text': {
+            'en': "❌️ Error!",
+            'it': "❌️ Errore!"
+        },
     },
     'errors_command': {
         'description': {
@@ -65,6 +89,302 @@ default_admin_messages = {
                   "errori.\n"
                   "L'ordine è cronologico, con i messaggi nuovi in alto."
         }
+    },
+    'father_command': {
+        'back': {
+            'en': "↩️ Back",
+            'it': "↩️ Indietro",
+        },
+        'description': {
+            'en': "Edit the @BotFather commands",
+            'it': "Modifica i comandi con @BotFather",
+        },
+        'error': {
+            'en': "❌ Error! ❌",
+            'it': "❌ Errore! ❌",
+        },
+        'modes': [
+            {
+                'id': "get",
+                'name': {
+                    'en': "See",
+                    'it': "Consulta"
+                },
+                'symbol': "ℹ️",
+                'description': {
+                    'en': "See commands stored by @BotFather",
+                    'it': "Consulta i comandi salvati su @BotFather"
+                },
+            },
+            {
+                'id': "set",
+                'name': {
+                    'en': "Change",
+                    'it': "Modifica"
+                },
+                'symbol': "✏️",
+                'description': {
+                    'en': "Change commands stored by @BotFather",
+                    'it': "Modifica i comandi salvati su @BotFather"
+                },
+            },
+            {
+                'id': "settings",
+                'name': {
+                    'en': "Settings",
+                    'it': "Impostazioni"
+                },
+                'symbol': "⚙️",
+                'description': {
+                    'en': "Set commands to hide or to add",
+                    'it': "Imposta comandi da nascondere o aggiungere"
+                },
+            },
+        ],
+        'set': {
+            'button': {
+                'en': "⚠️ Set these commands 🔧",
+                'it': "⚠️ Imposta questi comandi 🔧",
+            },
+            'done': {
+                'en': "✅ Done!",
+                'it': "✅ Fatto!",
+            },
+            'error': {
+                'en': "Something went wrong 😕",
+                'it': "Qualcosa è andato storto 😕",
+            },
+            'header': {
+                'en': "✏️ <b>Change commands stored by @BotFather 🤖</b>",
+                'it': "✏️ <b>Modifica i comandi salvati su @BotFather 🤖</b>",
+            },
+            'legend': {
+                'en': "<b>Legend</b>\n"
+                      "✅ <i>Already stored</i>\n"
+                      "✏️ <i>New description</i>\n"
+                      "☑ <i>New command</i>\n"
+                      "❌ <i>Will be removed</i>",
+                'it': "<b>Legenda</b>\n"
+                      "✅ <i>Già presente</i>\n"
+                      "✏️ <i>Nuova descrizione</i>\n"
+                      "☑ <i>Nuovo comando</i>\n"
+                      "❌ <i>Comando da eliminare</i>",
+            },
+            'no_change': {
+                'en': "❌ No change detected",
+                'it': "❌ Nessuna modifica",
+            },
+        },
+        'settings': {
+            'browse_records': {
+                'en': "✏️ <b>Edit BotFather settings</b> ⚙️\n\n"
+                      "Select a record to edit.\n\n"
+                      "{commands_list}\n\n"
+                      "<i>Legend</i>\n"
+                      "➕ Added commands\n"
+                      "➖ Hidden commands\n\n"
+                      "Showing records from {record_interval[0]} to "
+                      "{record_interval[1]} of {record_interval[2]}",
+                'it': "✏️ <b>Modifica impostazioni di BotFather</b> ⚙\n\n️"
+                      "Seleziona un'impostazione da modificare.\n\n"
+                      "{commands_list}\n\n"
+                      "<i>Legenda</i>\n"
+                      "➕ Comandi aggiunti\n"
+                      "➖ Comandi nascosti\n\n"
+                      "Record da {record_interval[0]} a "
+                      "{record_interval[1]} di {record_interval[2]}",
+            },
+            'modes': {
+                'add': {
+                    'add': {
+                        'done': {
+                            'en': "➕️️ <b>Added additional command</b>\n\n"
+                                  "Command: {command}\n"
+                                  "Description: {description}",
+                            'it': "➕️️ <b>Inserito comando aggiuntivo</b>\n\n"
+                                  "Comando: {command}\n"
+                                  "Descrizione: {description}",
+                        },
+                        'popup': {
+                            'en': "Write the command to add",
+                            'it': "Scrivimi il comando da aggiungere",
+                        },
+                        'text': {
+                            'en': "Write the command to add or /cancel this operation",
+                            'it': "Scrivimi il comando da aggiungere o /annulla",
+                        },
+                    },
+                    'description': {
+                        'en': "Add command to default list",
+                        'it': "Aggiungi un comando dalla lista autogenerata"
+                    },
+                    'edit': {
+                        'done': {
+                            'en': "✏️ <b>Edited additional command</b>\n\n"
+                                  "Command: {command}\n"
+                                  "Description: {description}",
+                            'it': "✏️ <b>Comando da nascondere modificato</b>\n\n"
+                                  "Comando: {command}\n"
+                                  "Descrizione: {description}",
+                        },
+                    },
+                    'error': {
+                        'description_too_long': {
+                            'en': "<b>Description is too long</b>\n\n"
+                                  "Description length must be 3-256 chars.",
+                            'it': "<b>Descrizione troppo lunga</b>\n\n"
+                                  "La descrizione deve essere di 3-256 caratteri.",
+                        },
+                        'duplicate_record': {
+                            'en': "<b>Duplicate record</b>\n\n"
+                                  "Command is already being added to default "
+                                  "output. Edit that record if you need to.",
+                            'it': "<b>Record già presente</b>\n\n"
+                                  "Questo comando è già aggiunto a quelli di "
+                                  "default. Modifica il record già presente se "
+                                  "necessario.",
+                        },
+                        'missing_description': {
+                            'en': "<b>Missing description</b>\n\n"
+                                  "Additional commands must have a description "
+                                  "(3-256 chars).",
+                            'it': "<b>Descrizione mancante</b>\n\n"
+                                  "I comandi aggiuntivi devono avere una "
+                                  "descrizione di 3-256 caratteri.",
+                        },
+                        'unhandled_exception': {
+                            'en': "❌ <b>Unhandled exception </b> ⚠️",
+                            'it': "❌ <b>Errore imprevisto </b> ⚠️",
+                        },
+                    },
+                    'name': {
+                        'en': "Add",
+                        'it': "Aggiungi"
+                    },
+                    'symbol': "➕️",
+                },
+                'hide': {
+                    'add': {
+                        'done': {
+                            'en': "➖ <b>Added hidden command</b>\n\n"
+                                  "Command: {command}\n",
+                            'it': "➖ <b>Comando da nascondere aggiunto</b>"
+                                  "Comando: {command}\n",
+                        },
+                        'popup': {
+                            'en': "Write the command to hide",
+                            'it': "Scrivimi il comando da nascondere",
+                        },
+                        'text': {
+                            'en': "Write the command to hide or /cancel this operation",
+                            'it': "Scrivimi il comando da nascondere o /annulla",
+                        }
+                    },
+                    'description': {
+                        'en': "Hide command from default list",
+                        'it': "Nascondi un comando dalla lista autogenerata"
+                    },
+                    'edit': {
+                        'done': {
+                            'en': "✏️ <b>Edited hidden command</b>\n\n"
+                                  "Command: {command}\n"
+                                  "Description: {description}",
+                            'it': "✏️ <b>Comando da nascondere modificato</b>\n\n"
+                                  "Comando: {command}\n"
+                                  "Descrizione: {description}",
+                        },
+                    },
+                    'name': {
+                        'en': "Hide",
+                        'it': "Nascondi"
+                    },
+                    'symbol': "➖️",
+                },
+                'edit': {
+                    'button': {
+                        'en': "✏️ Edit record",
+                        'it': "✏️ Modifica record"
+                    },
+                    'description': {
+                        'en': "Edit added or hidden commands",
+                        'it': "Modifica i comandi aggiunti o nascosti"
+                    },
+                    'edit': {
+                        'popup': {
+                            'en': "Write the new description",
+                            'it': "Scrivimi la nuova descrizione",
+                        },
+                        'text': {
+                            'en': "Write the new description for command "
+                                  "{command} or /cancel",
+                            'it': "Scrivimi la nuova descrizione per il  "
+                                  "comando {command} o /annulla",
+                        },
+                        'done': {
+                            'en': "✏️ Edit succeeded ✅\n\n"
+                                  "Command: {command}\n"""
+                                  "Description: {description}",
+                            'it': "✏️ Modifica completata ✅\n\n"
+                                  "Comando: {command}\n"""
+                                  "Descrizione: {description}",
+                        }
+                    },
+                    'name': {
+                        'en': "Edit",
+                        'it': "Modifica"
+                    },
+                    'panel': {
+                        'delete': {
+                            'button': {
+                                'en': "❌ Delete record",
+                                'it': "❌ Elimina record",
+                            },
+                            'done': {
+                                'popup': {
+                                    'en': "Record deleted ✅",
+                                    'it': "Record eliminato ✅",
+                                },
+                                'text': {
+                                    'en': "Record deleted ✅",
+                                    'it': "Record eliminato ✅",
+                                },
+                            },
+                        },
+                        'edit_description': {
+                            'button': {
+                                'en': "✏️ Edit description",
+                                'it': "✏️ Modifica descrizione",
+                            },
+                        },
+                        'text': {
+                            'en': "✏️ Edit record ✅\n\n"
+                                  "Command: {command}\n"""
+                                  "Description: {description}",
+                            'it': "✏️ Modifica record\n\n"
+                                  "Comando: {command}\n"""
+                                  "Descrizione: {description}",
+                        },
+                    },
+                    'symbol': "✏️",
+                },
+            },
+            'panel': {
+                'en': "🤖 <b>@BotFather settings</b> ⚙️\n\n"
+                      "➕ <i>Additional commands</i>\n"
+                      "{additional_commands}\n\n"
+                      "➖ <i>Hidden commands</i>\n"
+                      "{hidden_commands}",
+                'it': "⚙️ <b>Impostazioni di @BotFather</b> 🤖\n\n"
+                      "➕ <i>Comandi aggiuntivi</i>\n"
+                      "{additional_commands}\n\n"
+                      "➖ <i>Comandi nascosti</i>\n"
+                      "{hidden_commands}",
+            },
+        },
+        'title': {
+            'en': "🤖 <b>BotFather</b>",
+            'it': "🤖 <b>BotFather</b>",
+        },
     },
     'log_command': {
         'description': {
