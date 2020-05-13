@@ -162,7 +162,7 @@ async def _suggestions_button(bot: davtelepot.bot.Bot, update, user_record, data
             )['suggestion']
         suggestion_message = bot.get_message(
             'suggestions', 'suggestions_command', 'received_suggestion', 'text',
-            user=bot.Role.get_user_role_panel(registered_user)[0],
+            user=bot.Role.get_user_role_text(user_record=registered_user),
             suggestion=suggestion_text,
             bot=bot,
             update=update, user_record=user_record,
