@@ -830,6 +830,46 @@ async def get_last_commit():
     return last_commit
 
 
+async def get_new_versions(bot: Bot,
+                           notification_interval: datetime.timedelta = None) -> dict:
+    """Get new versions of packages in bot.packages.
+
+    Result: {"name": {"current": "0.1", "new": "0.2"}}
+    """
+    if notification_interval is None:
+        notification_interval = datetime.timedelta(seconds=0)
+    news = dict()
+    for package in bot.packages:
+        package_web_page = CachedPage.get(
+            f'https://pypi.python.org/pypi/{package.__name__}/json',
+            cache_time=2,
+            mode='json'
+        )
+        web_page = await package_web_page.get_page()
+        if web_page is None or isinstance(web_page, Exception):
+            logging.error(f"Cannot get updates for {package.__name__}, "
+                          "skipping...")
+            continue
+        new_version = web_page['info']['version']
+        current_version = package.__version__
+        notification_record = bot.db['updates_notifications'].find_one(
+            package=package.__name__,
+            order_by=['-id'],
+            _limit=1
+        )
+        if (
+                new_version != current_version
+                and (notification_record is None
+                     or notification_record['notified_at']
+                     < datetime.datetime.now() - notification_interval)
+        ):
+            news[package.__name__] = {
+                'current': current_version,
+                'new': new_version
+            }
+    return news
+
+
 async def _version_command(bot: Bot, update, user_record):
     last_commit = await get_last_commit()
     text = bot.get_message(
@@ -842,7 +882,12 @@ async def _version_command(bot: Bot, update, user_record):
         f"<code>{package.__version__}</code>"
         for package in bot.packages
     )
-    return text
+    temporary_message = await bot.send_message(
+        text=text + '\n\n⏳ Checking for updates... ☑️',
+        update=update
+    )
+    news = await get_new_versions(bot=bot)
+    print(news)
 
 
 async def notify_new_version(bot: Bot):
@@ -918,35 +963,8 @@ async def get_package_updates(bot: Bot,
             seconds=notification_interval
         )
     while 1:
-        news = dict()
-        for package in bot.packages:
-            package_web_page = CachedPage.get(
-                f'https://pypi.python.org/pypi/{package.__name__}/json',
-                cache_time=2,
-                mode='json'
-            )
-            web_page = await package_web_page.get_page()
-            if web_page is None or isinstance(web_page, Exception):
-                logging.error(f"Cannot get updates for {package.__name__}, "
-                              "skipping...")
-                continue
-            new_version = web_page['info']['version']
-            current_version = package.__version__
-            notification_record = bot.db['updates_notifications'].find_one(
-                package=package.__name__,
-                order_by=['-id'],
-                _limit=1
-            )
-            if (
-                    new_version != current_version
-                    and (notification_record is None
-                         or notification_record['notified_at']
-                         < datetime.datetime.now() - notification_interval)
-            ):
-                news[package.__name__] = {
-                    'current': current_version,
-                    'new': new_version
-                }
+        news = await get_new_versions(bot=bot,
+                                      notification_interval=notification_interval)
         if news:
             for admin in bot.administrators:
                 text = bot.get_message(
