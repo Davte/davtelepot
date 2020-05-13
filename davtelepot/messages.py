@@ -649,9 +649,9 @@ default_authorization_messages = {
         },
         'instructions': {
             'en': "Reply with this command to a user or write "
-                  "<code>/auth username</code> to edit their permissions.",
+                  "<code>/{command} username</code> to edit their permissions.",
             'it': "Usa questo comando in risposta a un utente "
-                  "oppure scrivi <code>/auth username</code> per "
+                  "oppure scrivi <code>/{command} username</code> per "
                   "cambiarne il grado di autorizzazione."
         },
         'unknown_user': {
