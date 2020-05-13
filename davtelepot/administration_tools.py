@@ -884,10 +884,27 @@ async def _version_command(bot: Bot, update, user_record):
     )
     temporary_message = await bot.send_message(
         text=text + '\n\n⏳ Checking for updates... ☑️',
-        update=update
+        update=update,
+        send_default_keyboard=False
     )
     news = await get_new_versions(bot=bot)
-    print(news)
+    if not news:
+        text += '\n\n⌛️ All packages are updated! ✅'
+    else:
+        text += '\n\n' + bot.get_message(
+            'admin', 'updates_available', 'header',
+            user_record=user_record
+        ) + '\n\n'
+        text += '\n'.join(
+            f"<b>{package}</b>: "
+            f"<code>{versions['current']}</code> —> "
+            f"<code>{versions['new']}</code>"
+            for package, versions in news.items()
+        )
+    await bot.edit_message_text(
+        text=text,
+        update=temporary_message
+    )
 
 
 async def notify_new_version(bot: Bot):
