@@ -1,16 +1,15 @@
 """Make a self-consistent bot help section."""
 
-# Third party modules
-from davtelepot.utilities import (
+# Project modules
+from .bot import Bot
+from .messages import default_help_messages
+from .utilities import (
     get_cleaned_text, make_inline_keyboard,
     make_lines_of_buttons, make_button
 )
 
-# Project modules
-from .messages import default_help_messages
 
-
-def get_commands_description(bot, update, user_record):
+def get_commands_description(bot: Bot, update, user_record):
     """Get a string description of `bot` commands.
 
     Show only commands available for `update` sender.
@@ -31,7 +30,11 @@ def get_commands_description(bot, update, user_record):
             commands[command_role.code] = []
         commands[command_role.code].append(
             "/{command}{authorization_level}: {description}".format(
-                command=command,
+                command=bot.get_message(
+                    messages=details['language_labelled_commands'],
+                    default_message=command,
+                    user_record=user_record, update=update
+                ),
                 authorization_level=(
                     f" <i>[{command_role.plural}]</i>"
                     if command_role.code != bot.Role.default_role_code

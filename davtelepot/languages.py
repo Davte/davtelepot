@@ -140,26 +140,9 @@ class MultiLanguageObject(object):
         result = messages or self.messages
         for field in fields:
             if field not in result:
-                logging.debug(
-                    "Please define self.message{f}".format(
-                        f=''.join(
-                            '[\'{field}\']'.format(
-                                field=field
-                            )
-                            for field in fields
-                        )
-                    )
-                )
-                return default_message or self.missing_message
-            result = result[field]
-        if language not in result:
-            # For specific languages, try generic ones
-            language = language.partition('-')[0]
-            if language not in result:
-                language = 'en'
-                if language not in result:
+                if not default_message:
                     logging.debug(
-                        "Please define self.message{f}['en']".format(
+                        "Please define self.message{f}".format(
                             f=''.join(
                                 '[\'{field}\']'.format(
                                     field=field
@@ -168,6 +151,25 @@ class MultiLanguageObject(object):
                             )
                         )
                     )
+                return default_message or self.missing_message
+            result = result[field]
+        if language not in result:
+            # For specific languages, try generic ones
+            language = language.partition('-')[0]
+            if language not in result:
+                language = 'en'
+                if language not in result:
+                    if not default_message:
+                        logging.debug(
+                            "Please define self.message{f}['en']".format(
+                                f=''.join(
+                                    '[\'{field}\']'.format(
+                                        field=field
+                                    )
+                                    for field in fields
+                                )
+                            )
+                        )
                     return default_message or self.missing_message
         if type(result) is str:
             return result
