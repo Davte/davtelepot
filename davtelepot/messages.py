@@ -1010,9 +1010,9 @@ default_unknown_command_message = {
 default_useful_tools_messages = {
     'length_command': {
         'description': {
-            'en': "Use this command in reply to a message to get its length.",
+            'en': "Use this command in reply to a message to get its length",
             'it': "Usa questo comando in risposta a un messaggio per sapere "
-                  "quanti caratteri contenga.",
+                  "quanti caratteri contenga",
         },
         'help_section': {
             'description': {
@@ -1043,6 +1043,12 @@ default_useful_tools_messages = {
                   "</i><code>{n}</code><i> characters long.</i>",
             'it': "<i>Questo messaggio contiene </i><code>{n}</code><i> "
                   "caratteri secondo i miei calcoli.</i>",
+        },
+    },
+    'ping_command': {
+        'description': {
+            'en': "Check if bot is online",
+            'it': "Verifica se il bot è online",
         },
     },
 }
