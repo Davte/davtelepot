@@ -1,12 +1,42 @@
 """General purpose functions for Telegram bots."""
 
 # Standard library
+import json
+
 from collections import OrderedDict
 
 # Project modules
+from .api import TelegramError
 from .bot import Bot
 from .messages import default_useful_tools_messages
 from .utilities import get_cleaned_text, recursive_dictionary_update
+
+
+async def _message_info_command(bot: Bot, update: dict, language: str):
+    """Provide information about selected update.
+
+    Selected update: the message `update` is sent in reply to. If `update` is
+        not a reply to anything, it gets selected.
+    The update containing the command, if sent in reply, is deleted.
+    """
+    if 'reply_to_message' in update:
+        selected_update = update['reply_to_message']
+    else:
+        selected_update = update
+    await bot.send_message(
+        text=bot.get_message(
+            'useful_tools', 'info_command', 'result',
+            language=language,
+            info=json.dumps(selected_update, indent=2)
+        ),
+        update=update,
+        reply_to_message_id=selected_update['message_id'],
+    )
+    if selected_update != update:
+        try:
+            await bot.delete_message(update=update)
+        except TelegramError:
+            pass
 
 
 async def _length_command(bot: Bot, update: dict, user_record: OrderedDict):
@@ -73,32 +103,40 @@ def init(telegram_bot: Bot, useful_tools_messages=None):
     )
     telegram_bot.messages['useful_tools'] = useful_tools_messages
 
-    @telegram_bot.command(
-        command='/length',
-        aliases=None,
-        reply_keyboard_button=None,
-        show_in_keyboard=False,
-        **{
-            key: val
-            for key, val in useful_tools_messages['length_command'].items()
-            if key in ('description', 'help_section', 'language_labelled_commands')
-        },
-        authorization_level='everybody'
-    )
+    @telegram_bot.command(command='/info',
+                          aliases=None,
+                          reply_keyboard_button=None,
+                          show_in_keyboard=False,
+                          **{key: val for key, val
+                             in useful_tools_messages['info_command'].items()
+                             if key in ('description', 'help_section',
+                                        'language_labelled_commands')},
+                          authorization_level='moderator')
+    async def message_info_command(bot, update, language):
+        return await _message_info_command(bot=bot,
+                                           update=update,
+                                           language=language)
+
+    @telegram_bot.command(command='/length',
+                          aliases=None,
+                          reply_keyboard_button=None,
+                          show_in_keyboard=False,
+                          **{key: val for key, val
+                             in useful_tools_messages['length_command'].items()
+                             if key in ('description', 'help_section',
+                                        'language_labelled_commands')},
+                          authorization_level='everybody')
     async def length_command(bot, update, user_record):
         return await _length_command(bot=bot, update=update, user_record=user_record)
 
-    @telegram_bot.command(
-        command='/ping',
-        aliases=None,
-        reply_keyboard_button=None,
-        show_in_keyboard=False,
-        **{
-            key: val
-            for key, val in useful_tools_messages['ping_command'].items()
-            if key in ('description', 'help_section', 'language_labelled_commands')
-        },
-        authorization_level='everybody'
-    )
+    @telegram_bot.command(command='/ping',
+                          aliases=None,
+                          reply_keyboard_button=None,
+                          show_in_keyboard=False,
+                          **{key: val for key, val
+                             in useful_tools_messages['ping_command'].items()
+                             if key in ('description', 'help_section',
+                                        'language_labelled_commands')},
+                          authorization_level='everybody')
     async def ping_command(bot, update):
         return await _ping_command(bot=bot, update=update)
