@@ -3,7 +3,7 @@
 Usage:
 ```
 import davtelepot
-my_bot = davtelepot.Bot.get('my_token', 'my_database.db')
+my_bot = davtelepot.bot.Bot(token='my_token', database_url='my_database.db')
 davtelepot.admin_tools.init(my_bot)
 ```
 """
@@ -1070,7 +1070,11 @@ def get_current_commands(bot: Bot, language: str = None) -> List[dict]:
     return sorted(
         [
             {
-                'command': name,
+                'command': bot.get_message(
+                    messages=information['language_labelled_commands'],
+                    default_message=name,
+                    language=language
+                ),
                 'description': bot.get_message(
                     messages=information['description'],
                     language=language

@@ -778,6 +778,19 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             ).group(0)  # Get the first group of characters matching pattern
             if command in self.commands:
                 replier = self.commands[command]['handler']
+            elif command in [
+                description['language_labelled_commands'][language]
+                for c, description in self.commands.items()
+                if 'language_labelled_commands' in description
+                   and language in description['language_labelled_commands']
+            ]:
+                replier = [
+                    description['handler']
+                    for c, description in self.commands.items()
+                    if 'language_labelled_commands' in description
+                       and language in description['language_labelled_commands']
+                       and command == description['language_labelled_commands'][language]
+                ][0]
             elif 'chat' in update and update['chat']['id'] > 0:
                 reply = dict(text=self.unknown_command_message)
         else:  # Handle command aliases and text parsers
@@ -2153,6 +2166,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         if language_labelled_commands is None:
             language_labelled_commands = dict()
+        language_labelled_commands = {
+            key: val.strip('/').lower()
+            for key, val in language_labelled_commands.items()
+        }
         # Handle language-labelled commands:
         #   choose one main command and add others to `aliases`
         if isinstance(command, dict) and len(command) > 0:
@@ -2164,31 +2181,25 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             else:
                 for command in language_labelled_commands.values():
                     break
-            if aliases is None:
-                aliases = []
-            aliases += [
-                alias
-                for alias in language_labelled_commands.values()
-                if alias != command
-            ]
+        if aliases is None:
+            aliases = []
         if not isinstance(command, str):
             raise TypeError(f'Command `{command}` is not a string')
         if isinstance(reply_keyboard_button, dict):
             for button in reply_keyboard_button.values():
                 if button not in aliases:
                     aliases.append(button)
-        if aliases:
-            if not isinstance(aliases, list):
-                raise TypeError(f'Aliases is not a list: `{aliases}`')
-            if not all(
-                [
-                    isinstance(alias, str)
-                    for alias in aliases
-                ]
-            ):
-                raise TypeError(
-                    f'Aliases {aliases} is not a list of strings string'
-                )
+        if not isinstance(aliases, list):
+            raise TypeError(f'Aliases is not a list: `{aliases}`')
+        if not all(
+            [
+                isinstance(alias, str)
+                for alias in aliases
+            ]
+        ):
+            raise TypeError(
+                f'Aliases {aliases} is not a list of strings'
+            )
         if isinstance(help_section, dict):
             if 'authorization_level' not in help_section:
                 help_section['authorization_level'] = authorization_level

@@ -98,7 +98,7 @@ def extract(text, starter=None, ender=None):
 
 
 def make_button(text=None, callback_data='',
-                prefix='', delimiter='|', data=[]):
+                prefix='', delimiter='|', data=None):
     """Return a Telegram bot API-compliant button.
 
     callback_data can be either a ready-to-use string or a
@@ -107,6 +107,8 @@ def make_button(text=None, callback_data='',
         it gets truncated at the last delimiter before that limit.
     If absent, text is the same as callback_data.
     """
+    if data is None:
+        data = []
     if len(data):
         callback_data += delimiter.join(map(str, data))
     callback_data = "{p}{c}".format(
@@ -170,7 +172,7 @@ async def async_get(url, mode='json', **kwargs):
         del kwargs['mode']
     return await async_request(
         url,
-        type='get',
+        method='get',
         mode=mode,
         **kwargs
     )
@@ -188,13 +190,13 @@ async def async_post(url, mode='html', **kwargs):
     """
     return await async_request(
         url,
-        type='post',
+        method='post',
         mode=mode,
         **kwargs
     )
 
 
-async def async_request(url, type='get', mode='json', encoding=None, errors='strict',
+async def async_request(url, method='get', mode='json', encoding=None, errors='strict',
                         **kwargs):
     """Make an async html request.
 
@@ -214,7 +216,7 @@ async def async_request(url, type='get', mode='json', encoding=None, errors='str
         async with aiohttp.ClientSession() as s:
             async with (
                 s.get(url, timeout=30)
-                if type == 'get'
+                if method == 'get'
                 else s.post(url, timeout=30, data=kwargs)
             ) as r:
                 if mode in ['html', 'json', 'string']:
@@ -246,12 +248,14 @@ async def async_request(url, type='get', mode='json', encoding=None, errors='str
     return result
 
 
-def json_read(file_, default={}, encoding='utf-8', **kwargs):
+def json_read(file_, default=None, encoding='utf-8', **kwargs):
     """Return json parsing of `file_`, or `default` if file does not exist.
 
     `encoding` refers to how the file should be read.
     `kwargs` will be passed to json.load()
     """
+    if default is None:
+        default = {}
     if not os.path.isfile(file_):
         return default
     with open(file_, "r", encoding=encoding) as f:
@@ -268,7 +272,7 @@ def json_write(what, file_, encoding='utf-8', **kwargs):
         return json.dump(what, f, indent=4, **kwargs)
 
 
-def csv_read(file_, default=[], encoding='utf-8',
+def csv_read(file_, default=None, encoding='utf-8',
              delimiter=',', quotechar='"', **kwargs):
     """Return csv parsing of `file_`, or `default` if file does not exist.
 
@@ -277,6 +281,8 @@ def csv_read(file_, default=[], encoding='utf-8',
     `quotechar` is the string delimiter.
     `kwargs` will be passed to csv.reader()
     """
+    if default is None:
+        default = []
     if not os.path.isfile(file_):
         return default
     result = []
@@ -299,7 +305,7 @@ def csv_read(file_, default=[], encoding='utf-8',
     return result
 
 
-def csv_write(info=[], file_='output.csv', encoding='utf-8',
+def csv_write(info=None, file_='output.csv', encoding='utf-8',
               delimiter=',', quotechar='"', **kwargs):
     """Store `info` in CSV `file_`.
 
@@ -309,6 +315,8 @@ def csv_write(info=[], file_='output.csv', encoding='utf-8',
     `encoding` refers to how the file should be written.
     `kwargs` will be passed to csv.writer()
     """
+    if info is None:
+        info = []
     assert (
         type(info) is list
         and len(info) > 0
@@ -403,19 +411,19 @@ class MyOD(collections.OrderedDict):
         return None
 
 
-def line_drawing_unordered_list(l):
+def line_drawing_unordered_list(list_):
     """Draw an old-fashioned unordered list.
 
-    Unorderd list example
+    Unordered list example
     ├ An element
     ├ Another element
     └Last element
     """
     result = ""
-    if l:
-        for x in l[:-1]:
+    if list_:
+        for x in list_[:-1]:
             result += "├ {}\n".format(x)
-        result += "└ {}".format(l[-1])
+        result += "└ {}".format(list_[-1])
     return result
 
 
@@ -444,7 +452,7 @@ def datetime_to_str(d):
     return '{:%Y-%m-%d %H:%M:%S.%f}'.format(d)
 
 
-class MyCounter():
+class MyCounter:
     """Counter object, with a `lvl` method incrementing `n` property."""
 
     def __init__(self):
@@ -523,7 +531,7 @@ def forwarded(by=None):
     Decorator: such decorated functions have effect only if update
         is forwarded from someone (you can specify `by` whom).
     """
-    def is_forwarded_by(update, by):
+    def is_forwarded_by(update):
         if 'forward_from' not in update:
             return False
         if by and update['forward_from']['id'] != by:
@@ -533,11 +541,11 @@ def forwarded(by=None):
     def decorator(view_func):
         if asyncio.iscoroutinefunction(view_func):
             async def decorated(update):
-                if is_forwarded_by(update, by):
+                if is_forwarded_by(update):
                     return await view_func(update)
         else:
             def decorated(update):
-                if is_forwarded_by(update, by):
+                if is_forwarded_by(update):
                     return view_func(update)
         return decorated
     return decorator
@@ -549,7 +557,7 @@ def chat_selective(chat_id=None):
     Such decorated functions have effect only if update comes from
         a specific (if `chat_id` is given) or generic chat.
     """
-    def check_function(update, chat_id):
+    def check_function(update):
         if 'chat' not in update:
             return False
         if chat_id:
@@ -560,17 +568,17 @@ def chat_selective(chat_id=None):
     def decorator(view_func):
         if asyncio.iscoroutinefunction(view_func):
             async def decorated(update):
-                if check_function(update, chat_id):
+                if check_function(update):
                     return await view_func(update)
         else:
             def decorated(update):
-                if check_function(update, chat_id):
+                if check_function(update):
                     return view_func(update)
         return decorated
     return decorator
 
 
-async def sleep_until(when):
+async def sleep_until(when: Union[datetime.datetime, datetime.timedelta]):
     """Sleep until now > `when`.
 
     `when` could be a datetime.datetime or a datetime.timedelta instance.
@@ -587,6 +595,8 @@ async def sleep_until(when):
         delta = when - datetime.datetime.now()
     elif isinstance(when, datetime.timedelta):
         delta = when
+    else:
+        delta = datetime.timedelta(seconds=1)
     if delta.days >= 0:
         await asyncio.sleep(
             delta.seconds
@@ -672,30 +682,40 @@ ARTICOLI[4] = {
 }
 
 
-class Gettable():
+class Gettable:
     """Gettable objects can be retrieved from memory without being duplicated.
 
     Key is the primary key.
-    Use classmethod get to instantiate (or retrieve) Gettable objects.
+    Use class method get to instantiate (or retrieve) Gettable objects.
     Assign SubClass.instances = {}, otherwise Gettable.instances will
         contain SubClass objects.
     """
 
     instances = {}
 
+    def __init__(self, *args, key=None, **kwargs):
+        if key is None:
+            key = args[0]
+        if key not in self.__class__.instances:
+            self.__class__.instances[key] = self
+
     @classmethod
-    def get(cls, key, *args, **kwargs):
+    def get(cls, *args, key=None, **kwargs):
         """Instantiate and/or retrieve Gettable object.
 
         SubClass.instances is searched if exists.
         Gettable.instances is searched otherwise.
         """
+        if key is None:
+            key = args[0]
+        else:
+            kwargs['key'] = key
         if key not in cls.instances:
-            cls.instances[key] = cls(key, *args, **kwargs)
+            cls.instances[key] = cls(*args, **kwargs)
         return cls.instances[key]
 
 
-class Confirmable():
+class Confirmable:
     """Confirmable objects are provided with a confirm instance method.
 
     It evaluates True if it was called within self._confirm_timedelta,
@@ -715,6 +735,7 @@ class Confirmable():
             confirm_timedelta = self.__class__.CONFIRM_TIMEDELTA
         elif type(confirm_timedelta) is int:
             confirm_timedelta = datetime.timedelta(seconds=confirm_timedelta)
+        self._confirm_timedelta = None
         self.set_confirm_timedelta(confirm_timedelta)
         self._confirm_datetimes = {}
 
@@ -756,18 +777,18 @@ class Confirmable():
         return True
 
 
-class HasBot():
+class HasBot:
     """Objects having a Bot subclass object as `.bot` attribute.
 
     HasBot objects have a .bot and .db properties for faster access.
     """
 
-    bot = None
+    _bot = None
 
     @property
     def bot(self):
         """Class bot."""
-        return self.__class__.bot
+        return self.__class__._bot
 
     @property
     def db(self):
@@ -777,11 +798,11 @@ class HasBot():
     @classmethod
     def set_bot(cls, bot):
         """Change class bot."""
-        cls.bot = bot
+        cls._bot = bot
 
 
 class CachedPage(Gettable):
-    """Cache a webpage and return it during CACHE_TIME, otherwise refresh.
+    """Cache a web page and return it during CACHE_TIME, otherwise refresh.
 
     Usage:
     cached_page = CachedPage.get(
@@ -815,6 +836,7 @@ class CachedPage(Gettable):
         self._page = None
         self._last_update = datetime.datetime.now() - self.cache_time
         self._async_get_kwargs = async_get_kwargs
+        super().__init__(key=url)
 
     @property
     def url(self):
@@ -847,7 +869,7 @@ class CachedPage(Gettable):
         return datetime.datetime.now() > self.last_update + self.cache_time
 
     async def refresh(self):
-        """Update cached webpage."""
+        """Update cached web page."""
         try:
             self._page = await async_get(self.url, **self.async_get_kwargs)
             self._last_update = datetime.datetime.now()
@@ -860,11 +882,10 @@ class CachedPage(Gettable):
                 ),
                 exc_info=False
             )  # Set exc_info=True to debug
-            return 1
         return 1
 
     async def get_page(self):
-        """Refresh if necessary and return webpage."""
+        """Refresh if necessary and return web page."""
         if self.is_old:
             await self.refresh()
         return self.page
@@ -878,14 +899,17 @@ class Confirmator(Gettable, Confirmable):
     def __init__(self, key, *args, confirm_timedelta=None):
         """Call Confirmable.__init__ passing `confirm_timedelta`."""
         Confirmable.__init__(self, confirm_timedelta)
+        Gettable.__init__(self, key=key, *args)
 
 
-def get_cleaned_text(update, bot=None, replace=[], strip='/ @'):
+def get_cleaned_text(update, bot=None, replace=None, strip='/ @'):
     """Clean `update`['text'] and return it.
 
     Strip `bot`.name and items to be `replace`d from the beginning of text.
     Strip `strip` characters from both ends.
     """
+    if replace is None:
+        replace = []
     if bot is not None:
         replace.append(
             '@{.name}'.format(
@@ -1120,9 +1144,6 @@ WEEKDAY_NAMES_ENG = ["Monday", "Tuesday", "Wednesday", "Thursday",
 
 
 def _period_parser(text, result):
-    succeeded = False
-    if text in ('every', 'ogni',):
-        succeeded = True
     if text.title() in WEEKDAY_NAMES_ITA + WEEKDAY_NAMES_ENG:
         day_code = (WEEKDAY_NAMES_ITA + WEEKDAY_NAMES_ENG).index(text.title())
         if day_code > 6:
@@ -1196,7 +1217,8 @@ def parse_datetime_interval_string(text):
     parsers = []
     result_text, result_datetime, result_timedelta = [], None, None
     is_quoted_text = False
-    text = re.sub('\s\s+', ' ', text)  # Replace multiple spaces with single space character
+    # Replace multiple spaces with single space character
+    text = re.sub(r'\s\s+', ' ', text)
     for word in text.split(' '):
         if word.count('"') % 2:
             is_quoted_text = not is_quoted_text
@@ -1247,7 +1269,7 @@ def parse_datetime_interval_string(text):
             recurring_event = True
         type_ = parser['type_']
         for result in parser['result']:
-            if not result['ok']:
+            if not isinstance(result, dict) or not result['ok']:
                 continue
             if recurring_event and 'weekly' in result and result['weekly']:
                 weekly = True
@@ -1363,11 +1385,11 @@ def beautydt(dt):
     now = datetime.datetime.now()
     gap = dt - now
     gap_days = (dt.date() - now.date()).days
-    result = "{dt:alle %H:%M}".format(
+    result = "alle {dt:%H:%M}".format(
         dt=dt
     )
     if abs(gap) < datetime.timedelta(minutes=30):
-        result += "{dt::%S}".format(dt=dt)
+        result += ":{dt:%S}".format(dt=dt)
     if -2 <= gap_days <= 2:
         result += " di {dg}".format(
             dg=DAY_GAPS[gap_days]
@@ -1493,16 +1515,16 @@ def get_line_by_content(text, key):
     return
 
 
-def str_to_int(string):
+def str_to_int(string_):
     """Cast str to int, ignoring non-numeric characters."""
-    string = ''.join(
+    string_ = ''.join(
         char
-        for char in string
+        for char in string_
         if char.isnumeric()
     )
-    if len(string) == 0:
-        string = '0'
-    return int(string)
+    if len(string_) == 0:
+        string_ = '0'
+    return int(string_)
 
 
 def starting_with_or_similar_to(a, b):
@@ -1581,18 +1603,21 @@ def make_inline_query_answer(answer):
     return answer
 
 
+# noinspection PyUnusedLocal
 async def dummy_coroutine(*args, **kwargs):
-    """Accept everthing as argument and do nothing."""
+    """Accept everything as argument and do nothing."""
     return
 
 
 async def send_csv_file(bot, chat_id, query, caption=None,
-                        file_name='File.csv', user_record=None, update=dict()):
+                        file_name='File.csv', user_record=None, update=None):
     """Run a query on `bot` database and send result as CSV file to `chat_id`.
 
     Optional parameters `caption` and `file_name` may be passed to this
         function.
     """
+    if update is None:
+        update = dict()
     try:
         with bot.db as db:
             record = db.query(
@@ -1627,7 +1652,7 @@ async def send_csv_file(bot, chat_id, query, caption=None,
 
 async def send_part_of_text_file(bot, chat_id, file_path, caption=None,
                                  file_name='File.txt', user_record=None,
-                                 update=dict(),
+                                 update=None,
                                  reversed_=True,
                                  limit=None):
     """Send `lines` lines of text file via `bot` in `chat_id`.
@@ -1637,10 +1662,12 @@ async def send_part_of_text_file(bot, chat_id, file_path, caption=None,
         way to allow `reversed` files, but it is inefficient and requires a lot
         of memory.
     """
+    if update is None:
+        update = dict()
     try:
         with open(file_path, 'r') as log_file:
             lines = log_file.readlines()
-            if reversed:
+            if reversed_:
                 lines = lines[::-1]
             if limit:
                 lines = lines[:limit]
