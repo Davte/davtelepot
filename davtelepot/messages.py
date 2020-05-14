@@ -1008,6 +1008,27 @@ default_unknown_command_message = {
 }
 
 default_useful_tools_messages = {
+    'info_command': {
+        'description': {
+            'en': "Use this command in reply to get information about a message",
+            'it': "Usa questo comando in risposta per ottenere informazioni "
+                  "su un messaggio",
+        },
+        'help_section': None,
+        'instructions': {
+            'en': "Use this command in reply to a message to get information "
+                  "about it.",
+            'it': "Usa questo comando in risposta per ottenere informazioni "
+                  "su un messaggio.",
+        },
+        'result': {
+            'en': "<i>Here is the information about the selected "
+                  "message:</i>\n\n"
+                  "<code>{info}</code>",
+            'it': "<i>Ecco le informazioni sul messaggio selezionato:</i>\n\n"
+                  "<code>{info}</code>",
+        },
+    },
     'length_command': {
         'description': {
             'en': "Use this command in reply to a message to get its length",
