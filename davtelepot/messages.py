@@ -1072,4 +1072,32 @@ default_useful_tools_messages = {
             'it': "Verifica se il bot è online",
         },
     },
+    'when_command': {
+        'description': {
+            'en': "Use this command in reply to get information about a message",
+            'it': "Usa questo comando in risposta per ottenere informazioni "
+                  "su un messaggio",
+        },
+        'help_section': None,
+        'forwarded_message': {
+            'en': "<b>— Original message —</b>",
+            'it': "<b>— Messaggio originale —</b>",
+        },
+        'instructions': {
+            'en': "Use this command in reply to a message to get its original "
+                  "sending time.",
+            'it': "Usa questo comando in risposta per ottenere l'ora di invio "
+                  "di un messaggio.",
+        },
+        'language_labelled_commands': {
+            'en': "when",
+            'it': "quando",
+        },
+        'who_when': {
+            'en': "👤 {who}\n"
+                  "🗓 {when:%Y-%m-%d ore %H:%M:%S}",
+            'it': "👤 {who}\n"
+                  "🗓 {when:%Y-%m-%d ore %H:%M:%S}",
+        },
+    }
 }

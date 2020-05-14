@@ -1,6 +1,7 @@
 """General purpose functions for Telegram bots."""
 
 # Standard library
+import datetime
 import json
 
 from collections import OrderedDict
@@ -9,7 +10,7 @@ from collections import OrderedDict
 from .api import TelegramError
 from .bot import Bot
 from .messages import default_useful_tools_messages
-from .utilities import get_cleaned_text, recursive_dictionary_update
+from .utilities import get_cleaned_text, recursive_dictionary_update, get_user
 
 
 async def _message_info_command(bot: Bot, update: dict, language: str):
@@ -89,6 +90,53 @@ async def _ping_command(bot: Bot, update: dict):
     return "<i>Pong!</i>"
 
 
+async def _when_command(bot: Bot, update: dict, language: str):
+    reply_markup = None
+    text = ''
+    if 'reply_to_message' not in update:
+        return bot.get_message(
+            'useful_tools', 'when_command', 'instructions',
+            language=language
+        )
+    update = update['reply_to_message']
+    date = (
+        datetime.datetime.fromtimestamp(update['date'])
+        if 'date' in update
+        else None
+    )
+    text += bot.get_message(
+        'useful_tools', 'when_command', 'who_when',
+        language=language,
+        who=get_user(update['from']),
+        when=date
+    )
+    if 'forward_date' in update:
+        original_datetime= (
+            datetime.datetime.fromtimestamp(update['forward_date'])
+            if 'forward_from' in update
+            else None
+        )
+        text += "\n\n" + bot.get_message(
+            'useful_tools', 'when_command', 'forwarded_message',
+            language=language,
+            who=get_user(update['forward_from']),
+            when=original_datetime
+        ) + "\n"
+        text += bot.get_message(
+            'useful_tools', 'when_command', 'who_when',
+            language=language,
+            who=get_user(update['forward_from']),
+            when=original_datetime
+        )
+    await bot.send_message(
+        text=text,
+        reply_markup=reply_markup,
+        reply_to_message_id=update['message_id'],
+        disable_notification=True,
+        chat_id=update['chat']['id']
+    )
+
+
 def init(telegram_bot: Bot, useful_tools_messages=None):
     """Define commands for `telegram_bot`.
 
@@ -140,3 +188,15 @@ def init(telegram_bot: Bot, useful_tools_messages=None):
                           authorization_level='everybody')
     async def ping_command(bot, update):
         return await _ping_command(bot=bot, update=update)
+
+    @telegram_bot.command(command='/when',
+                          aliases=None,
+                          reply_keyboard_button=None,
+                          show_in_keyboard=False,
+                          **{key: val for key, val
+                             in useful_tools_messages['when_command'].items()
+                             if key in ('description', 'help_section',
+                                        'language_labelled_commands')},
+                          authorization_level='everybody')
+    async def when_command(bot, update, language):
+        return await _when_command(bot=bot, update=update, language=language)
