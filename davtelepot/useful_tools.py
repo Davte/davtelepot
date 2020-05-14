@@ -6,11 +6,31 @@ from collections import OrderedDict
 # Project modules
 from .bot import Bot
 from .messages import default_useful_tools_messages
-from .utilities import recursive_dictionary_update
+from .utilities import get_cleaned_text, recursive_dictionary_update
 
 
 async def _length_command(bot: Bot, update: dict, user_record: OrderedDict):
-    if 'reply_to_message' not in update:
+    message_text = get_cleaned_text(
+        update=update,
+        bot=bot,
+        replace=[
+            alias
+            for alias in bot.messages[
+                'useful_tools'
+            ][
+                'length_command'
+            ][
+                'language_labelled_commands'
+            ].values()
+        ]
+    )
+    if message_text:
+        text = bot.get_message(
+            'useful_tools', 'length_command', 'result',
+            user_record=user_record, update=update,
+            n=len(message_text)
+        )
+    elif 'reply_to_message' not in update:
         text = bot.get_message(
             'useful_tools', 'length_command', 'instructions',
             user_record=user_record, update=update
@@ -29,6 +49,14 @@ async def _length_command(bot: Bot, update: dict, user_record: OrderedDict):
         parse_mode='HTML',
         reply_to_message_id=reply_to_message_id
     )
+
+
+async def _ping_command(bot: Bot, update: dict):
+    """Return `pong` only in private chat."""
+    chat_id = bot.get_chat_id(update=update)
+    if chat_id < 0:
+        return
+    return "<i>Pong!</i>"
 
 
 def init(telegram_bot: Bot, useful_tools_messages=None):
@@ -59,3 +87,18 @@ def init(telegram_bot: Bot, useful_tools_messages=None):
     )
     async def length_command(bot, update, user_record):
         return await _length_command(bot=bot, update=update, user_record=user_record)
+
+    @telegram_bot.command(
+        command='/ping',
+        aliases=None,
+        reply_keyboard_button=None,
+        show_in_keyboard=False,
+        **{
+            key: val
+            for key, val in useful_tools_messages['ping_command'].items()
+            if key in ('description', 'help_section', 'language_labelled_commands')
+        },
+        authorization_level='everybody'
+    )
+    async def ping_command(bot, update):
+        return await _ping_command(bot=bot, update=update)
