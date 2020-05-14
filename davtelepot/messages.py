@@ -1006,3 +1006,43 @@ default_unknown_command_message = {
     'en': "Unknown command! Touch /help to read the guide and available commands.",
     'it': "Comando sconosciuto! Fai /help per leggere la guida e i comandi."
 }
+
+default_useful_tools_messages = {
+    'length_command': {
+        'description': {
+            'en': "Use this command in reply to a message to get its length.",
+            'it': "Usa questo comando in risposta a un messaggio per sapere "
+                  "quanti caratteri contenga.",
+        },
+        'help_section': {
+            'description': {
+                'en': "Use the /length command in reply to a message to get "
+                      "its length.\n"
+                      "Beware that emojis may count as multiple characters.",
+                'it': "Usa il comando /caratteri in risposta a un messaggio "
+                      "per sapere quanti caratteri contenga.\n"
+                      "Attenzione alle emoji, che contano come più caratteri.",
+            },
+            'label': {
+                'en': "Length #️⃣",
+                'it': "Caratteri #️⃣"
+            },
+            'name': "length",
+        },
+        'instructions': {
+            'en': "Use this command in reply to a message to get its length.",
+            'it': "Usa questo comando in risposta a un messaggio per sapere "
+                  "quanti caratteri contenga.",
+        },
+        'language_labelled_commands': {
+            'en': "length",
+            'it': "caratteri",
+        },
+        'result': {
+            'en': "<i>According to my calculations, this message is "
+                  "</i><code>{n}</code><i> characters long.</i>",
+            'it': "<i>Questo messaggio contiene </i><code>{n}</code><i> "
+                  "caratteri secondo i miei calcoli.</i>",
+        },
+    },
+}

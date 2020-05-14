@@ -1682,3 +1682,21 @@ async def send_part_of_text_file(bot, chat_id, file_path, caption=None,
                 )
     except Exception as e:
         return e
+
+
+def recursive_dictionary_update(one: dict, other: dict) -> dict:
+    """Extension of `dict.update()` method.
+
+    For each key of `other`, if key is not in `one` or the values differ, set
+        `one[key]` to `other[key]`. If the value is a dict, apply this function
+        recursively.
+    """
+    for key, val in other.items():
+        if key not in one:
+            one[key] = val
+        elif one[key] != val:
+            if isinstance(val, dict):
+                one[key] = recursive_dictionary_update(one[key], val)
+            else:
+                one[key] = val
+    return one
