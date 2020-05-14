@@ -11,10 +11,12 @@ __author__ = "Davide Testa"
 __email__ = "davide@davte.it"
 __credits__ = ["Marco Origlia", "Nick Lee @Nickoala"]
 __license__ = "GNU General Public License v3.0"
-__version__ = "2.5.12"
+__version__ = "2.5.13"
 __maintainer__ = "Davide Testa"
 __contact__ = "t.me/davte"
 
-from . import administration_tools, authorization, bot, helper, languages, suggestions, utilities
+from . import (administration_tools, authorization, bot, helper, languages,
+               suggestions, useful_tools, utilities)
 
-__all__ = [administration_tools, authorization, bot, helper, languages, suggestions, utilities]
+__all__ = [administration_tools, authorization, bot, helper, languages,
+           suggestions, useful_tools, utilities]
