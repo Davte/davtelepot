@@ -43,7 +43,7 @@ import re
 import sys
 
 from collections import OrderedDict
-from typing import Callable
+from typing import Callable, Union, Dict
 
 # Third party modules
 from aiohttp import web
@@ -2100,10 +2100,14 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             help_section['authorization_level'] = 'admin'
         self.messages['help_sections'][help_section['name']] = help_section
 
-    def command(self, command, aliases=None, reply_keyboard_button=None,
+    def command(self,
+                command: Union[str, Dict[str, str]],
+                aliases=None,
+                reply_keyboard_button=None,
                 show_in_keyboard=False, description="",
                 help_section=None,
-                authorization_level='admin'):
+                authorization_level='admin',
+                language_labelled_commands: Dict[str, str] = None):
         """Associate a bot command with a custom handler function.
 
         Decorate command handlers like this:
@@ -2114,7 +2118,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             ```
         When a message text starts with `/command[@bot_name]`, or with an
             alias, it gets passed to the decorated function.
-        `command` is the command name (with or without /).
+        `command` is the command name (with or without /). Language-labeled
+            commands are supported in the form of {'en': 'command', ...}
         `aliases` is a list of aliases; each will call the command handler
             function; the first alias will appear as button in
             reply keyboard if `reply_keyboard_button` is not set.
@@ -2142,7 +2147,30 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
           }
         `authorization_level` is the lowest authorization level needed to run
             the command.
+
+        For advanced examples see `davtelepot.helper` or other modules
+            (suggestions, administration_tools, ...).
         """
+        if language_labelled_commands is None:
+            language_labelled_commands = dict()
+        # Handle language-labelled commands:
+        #   choose one main command and add others to `aliases`
+        if isinstance(command, dict) and len(command) > 0:
+            language_labelled_commands = command.copy()
+            if 'main' in language_labelled_commands:
+                command = language_labelled_commands['main']
+            elif self.default_language in language_labelled_commands:
+                command = language_labelled_commands[self.default_language]
+            else:
+                for command in language_labelled_commands.values():
+                    break
+            if aliases is None:
+                aliases = []
+            aliases += [
+                alias
+                for alias in language_labelled_commands.values()
+                if alias != command
+            ]
         if not isinstance(command, str):
             raise TypeError(f'Command `{command}` is not a string')
         if isinstance(reply_keyboard_button, dict):
@@ -2192,7 +2220,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             self.commands[command] = dict(
                 handler=decorated_command_handler,
                 description=description,
-                authorization_level=authorization_level
+                authorization_level=authorization_level,
+                language_labelled_commands=language_labelled_commands
             )
             if type(description) is dict:
                 self.messages['commands'][command] = dict(
