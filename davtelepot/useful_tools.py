@@ -10,34 +10,134 @@ from collections import OrderedDict
 from .api import TelegramError
 from .bot import Bot
 from .messages import default_useful_tools_messages
-from .utilities import get_cleaned_text, recursive_dictionary_update, get_user
+from .utilities import (get_cleaned_text, get_user, make_button,
+                        make_inline_keyboard, recursive_dictionary_update, )
 
 
-async def _message_info_command(bot: Bot, update: dict, language: str):
-    """Provide information about selected update.
+calc_buttons = OrderedDict()
+calc_buttons[0] = dict(
+    value=0,
+    symbol='0️⃣',
+    order=13
+)
+calc_buttons[1] = dict(
+    value=1,
+    symbol='1️⃣',
+    order=9
+)
+calc_buttons[2] = dict(
+    value=2,
+    symbol='2️⃣',
+    order=10
+)
+calc_buttons[3] = dict(
+    value=3,
+    symbol='3️⃣',
+    order=11
+)
+calc_buttons[4] = dict(
+    value=4,
+    symbol='4️⃣',
+    order=5
+)
+calc_buttons[5] = dict(
+    value=5,
+    symbol='5️⃣',
+    order=6
+)
+calc_buttons[6] = dict(
+    value=6,
+    symbol='6️⃣',
+    order=7
+)
+calc_buttons[7] = dict(
+    value=7,
+    symbol='7️⃣',
+    order=1
+)
+calc_buttons[8] = dict(
+    value=8,
+    symbol='8️⃣',
+    order=2
+)
+calc_buttons[9] = dict(
+    value=9,
+    symbol='9️⃣',
+    order=3
+)
+calc_buttons['plus'] = dict(
+    value='+',
+    symbol='➕️',
+    order=4
+)
+calc_buttons['minus'] = dict(
+    value='-',
+    symbol='➖',
+    order=8
+)
+calc_buttons['times'] = dict(
+    value='*',
+    symbol='✖️',
+    order=12
+)
+calc_buttons['divided'] = dict(
+    value='/',
+    symbol='➗',
+    order=16
+)
+calc_buttons['point'] = dict(
+    value='.',
+    symbol='.',
+    order=14
+)
+calc_buttons['enter'] = dict(
+    value='\n',
+    symbol='↩',
+    order=15
+)
 
-    Selected update: the message `update` is sent in reply to. If `update` is
-        not a reply to anything, it gets selected.
-    The update containing the command, if sent in reply, is deleted.
-    """
-    if 'reply_to_message' in update:
-        selected_update = update['reply_to_message']
-    else:
-        selected_update = update
-    await bot.send_message(
-        text=bot.get_message(
-            'useful_tools', 'info_command', 'result',
-            language=language,
-            info=json.dumps(selected_update, indent=2)
-        ),
-        update=update,
-        reply_to_message_id=selected_update['message_id'],
+
+def get_calculator_keyboard():
+    return make_inline_keyboard(
+        [
+            make_button(
+                text=button['symbol'],
+                prefix='calc:///',
+                delimiter='|',
+                data=[button['value']]
+            )
+            for button in sorted(calc_buttons.values(), key=lambda b: b['order'])
+        ],
+        4
     )
-    if selected_update != update:
-        try:
-            await bot.delete_message(update=update)
-        except TelegramError:
-            pass
+
+
+async def _calculate_command(bot: Bot,
+                             update: dict,
+                             language: str,
+                             command_name: str = 'calc'):
+    reply_markup = None
+    if 'reply_to_message' in update:
+        update = update['reply_to_message']
+    command_aliases = [command_name]
+    if command_name in bot.commands:
+        command_aliases += list(
+            bot.commands[command_name]['language_labelled_commands'].values()
+        ) + bot.commands[command_name]['aliases']
+    text = get_cleaned_text(bot=bot,
+                            update=update,
+                            replace=command_aliases)
+    if not text:
+        text = bot.get_message(
+            'useful_tools', 'calculate_command', 'instructions',
+            language=language
+        )
+        reply_markup = get_calculator_keyboard()
+    else:
+        text = 'pass'
+    await bot.send_message(text=text,
+                           update=update,
+                           reply_markup=reply_markup)
 
 
 async def _length_command(bot: Bot, update: dict, user_record: OrderedDict):
@@ -82,6 +182,33 @@ async def _length_command(bot: Bot, update: dict, user_record: OrderedDict):
     )
 
 
+async def _message_info_command(bot: Bot, update: dict, language: str):
+    """Provide information about selected update.
+
+    Selected update: the message `update` is sent in reply to. If `update` is
+        not a reply to anything, it gets selected.
+    The update containing the command, if sent in reply, is deleted.
+    """
+    if 'reply_to_message' in update:
+        selected_update = update['reply_to_message']
+    else:
+        selected_update = update
+    await bot.send_message(
+        text=bot.get_message(
+            'useful_tools', 'info_command', 'result',
+            language=language,
+            info=json.dumps(selected_update, indent=2)
+        ),
+        update=update,
+        reply_to_message_id=selected_update['message_id'],
+    )
+    if selected_update != update:
+        try:
+            await bot.delete_message(update=update)
+        except TelegramError:
+            pass
+
+
 async def _ping_command(bot: Bot, update: dict):
     """Return `pong` only in private chat."""
     chat_id = bot.get_chat_id(update=update)
@@ -111,7 +238,7 @@ async def _when_command(bot: Bot, update: dict, language: str):
         when=date
     )
     if 'forward_date' in update:
-        original_datetime= (
+        original_datetime = (
             datetime.datetime.fromtimestamp(update['forward_date'])
             if 'forward_from' in update
             else None
@@ -150,6 +277,21 @@ def init(telegram_bot: Bot, useful_tools_messages=None):
         useful_tools_messages
     )
     telegram_bot.messages['useful_tools'] = useful_tools_messages
+
+    @telegram_bot.command(command='/calc',
+                          aliases=None,
+                          reply_keyboard_button=None,
+                          show_in_keyboard=False,
+                          **{key: val for key, val
+                             in useful_tools_messages['calculate_command'].items()
+                             if key in ('description', 'help_section',
+                                        'language_labelled_commands')},
+                          authorization_level='moderator')
+    async def calculate_command(bot, update, language):
+        return await _calculate_command(bot=bot,
+                                        update=update,
+                                        language=language,
+                                        command_name='calc')
 
     @telegram_bot.command(command='/info',
                           aliases=None,

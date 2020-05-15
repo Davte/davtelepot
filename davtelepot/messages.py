@@ -1008,6 +1008,27 @@ default_unknown_command_message = {
 }
 
 default_useful_tools_messages = {
+    'calculate_command': {
+        'description': {
+            'en': "Do calculations",
+            'it': "Calcola",
+        },
+        'help_section': None,
+        'instructions': {
+            'en': "🔢 Calculator 🧮\n\n"
+                  "Enter an algebraic expression after /calc to get its "
+                  "result, or use the command in reply to a message containing "
+                  "an expression, or use the keyboard below.\n",
+            'it': "🔢 Calcolatrice 🧮\n\n"
+                  "Inserisci un'espressione algebrica dopo /calcola per "
+                  "ottenerne il risultato, oppure usa il comando in risposta, "
+                  "o ancora usa la tastiera qui sotto.\n",
+        },
+        'language_labelled_commands': {
+            'en': "calculate",
+            'it': "calcola",
+        },
+    },
     'info_command': {
         'description': {
             'en': "Use this command in reply to get information about a message",
