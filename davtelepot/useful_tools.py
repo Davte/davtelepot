@@ -5,6 +5,7 @@ import datetime
 import json
 
 from collections import OrderedDict
+from typing import List, Union
 
 # Project modules
 from .api import TelegramError
@@ -14,87 +15,122 @@ from .utilities import (get_cleaned_text, get_user, make_button,
                         make_inline_keyboard, recursive_dictionary_update, )
 
 
-calc_buttons = OrderedDict()
-calc_buttons[0] = dict(
-    value=0,
-    symbol='0️⃣',
-    order=13
-)
-calc_buttons[1] = dict(
-    value=1,
-    symbol='1️⃣',
-    order=9
-)
-calc_buttons[2] = dict(
-    value=2,
-    symbol='2️⃣',
-    order=10
-)
-calc_buttons[3] = dict(
-    value=3,
-    symbol='3️⃣',
-    order=11
-)
-calc_buttons[4] = dict(
-    value=4,
-    symbol='4️⃣',
-    order=5
-)
-calc_buttons[5] = dict(
-    value=5,
-    symbol='5️⃣',
-    order=6
-)
-calc_buttons[6] = dict(
-    value=6,
-    symbol='6️⃣',
-    order=7
-)
-calc_buttons[7] = dict(
-    value=7,
-    symbol='7️⃣',
-    order=1
-)
-calc_buttons[8] = dict(
-    value=8,
-    symbol='8️⃣',
-    order=2
-)
-calc_buttons[9] = dict(
-    value=9,
-    symbol='9️⃣',
-    order=3
-)
-calc_buttons['plus'] = dict(
-    value='+',
-    symbol='➕️',
-    order=4
-)
-calc_buttons['minus'] = dict(
-    value='-',
-    symbol='➖',
-    order=8
-)
-calc_buttons['times'] = dict(
-    value='*',
-    symbol='✖️',
-    order=12
-)
-calc_buttons['divided'] = dict(
-    value='/',
-    symbol='➗',
-    order=16
-)
-calc_buttons['point'] = dict(
-    value='.',
-    symbol='.',
-    order=14
-)
-calc_buttons['enter'] = dict(
-    value='\n',
-    symbol='↩',
-    order=15
-)
+def get_calc_buttons() -> OrderedDict:
+    buttons = OrderedDict()
+    buttons['pow'] = dict(
+        value='**',
+        symbol='**',
+        order='A1',
+    )
+    buttons['floordiv'] = dict(
+        value='//',
+        symbol='//',
+        order='A2',
+    )
+    buttons['mod'] = dict(
+        value='%',
+        symbol='mod',
+        order='A3',
+    )
+    buttons['info'] = dict(
+        value='info',
+        symbol='ℹ️',
+        order='A4',
+    )
+    buttons[0] = dict(
+        value=0,
+        symbol='0️⃣',
+        order='E1',
+    )
+    buttons[1] = dict(
+        value=1,
+        symbol='1️⃣',
+        order='D1',
+    )
+    buttons[2] = dict(
+        value=2,
+        symbol='2️⃣',
+        order='D2',
+    )
+    buttons[3] = dict(
+        value=3,
+        symbol='3️⃣',
+        order='D3',
+    )
+    buttons[4] = dict(
+        value=4,
+        symbol='4️⃣',
+        order='C1',
+    )
+    buttons[5] = dict(
+        value=5,
+        symbol='5️⃣',
+        order='C2',
+    )
+    buttons[6] = dict(
+        value=6,
+        symbol='6️⃣',
+        order='C3',
+    )
+    buttons[7] = dict(
+        value=7,
+        symbol='7️⃣',
+        order='B1',
+    )
+    buttons[8] = dict(
+        value=8,
+        symbol='8️⃣',
+        order='B2',
+    )
+    buttons[9] = dict(
+        value=9,
+        symbol='9️⃣',
+        order='B3',
+    )
+    buttons['plus'] = dict(
+        value='+',
+        symbol='➕️',
+        order='B4',
+    )
+    buttons['minus'] = dict(
+        value='-',
+        symbol='➖',
+        order='C4',
+    )
+    buttons['times'] = dict(
+        value='*',
+        symbol='✖️',
+        order='D4',
+    )
+    buttons['divided'] = dict(
+        value='/',
+        symbol='➗',
+        order='E4',
+    )
+    buttons['point'] = dict(
+        value='.',
+        symbol='.',
+        order='E2',
+    )
+    buttons['000'] = dict(
+        value='*1000',
+        symbol='0️⃣0️⃣0️⃣',
+        order='E3',
+    )
+    buttons['enter'] = dict(
+        value='\n',
+        symbol='✅',
+        order='F1',
+    )
+    buttons['del'] = dict(
+        value='del',
+        symbol='⬅️',
+        order='F2',
+    )
+    return buttons
+
+
+calc_buttons = get_calc_buttons()
 
 
 def get_calculator_keyboard():
@@ -109,6 +145,32 @@ def get_calculator_keyboard():
             for button in sorted(calc_buttons.values(), key=lambda b: b['order'])
         ],
         4
+    )
+
+
+async def _calculate_button(bot: Bot,
+                            language: str,
+                            data: List[Union[int, str]]):
+    result, text, reply_markup = '', '', None
+    if len(data) == 1:
+        input_value = data[0]
+        if input_value == 'del':
+            pass
+        elif input_value == 'info':
+            pass
+        elif input_value in [button['value'] for button in calc_buttons.values()]:
+            pass
+        else:
+            pass  # Error!
+    # Edit the update with the button if a new text is specified
+    if not text:
+        return result
+    return dict(
+        text=result,
+        edit=dict(
+            text=text,
+            reply_markup=reply_markup
+        )
     )
 
 
@@ -286,12 +348,18 @@ def init(telegram_bot: Bot, useful_tools_messages=None):
                              in useful_tools_messages['calculate_command'].items()
                              if key in ('description', 'help_section',
                                         'language_labelled_commands')},
-                          authorization_level='moderator')
+                          authorization_level='everybody')
     async def calculate_command(bot, update, language):
         return await _calculate_command(bot=bot,
                                         update=update,
                                         language=language,
                                         command_name='calc')
+
+    @telegram_bot.button(prefix='calc:///',
+                         separator='|',
+                         authorization_level='everybody')
+    async def calculate_button(bot, language, data):
+        return await _calculate_button(bot=bot, language=language, data=data)
 
     @telegram_bot.command(command='/info',
                           aliases=None,
@@ -301,7 +369,7 @@ def init(telegram_bot: Bot, useful_tools_messages=None):
                              in useful_tools_messages['info_command'].items()
                              if key in ('description', 'help_section',
                                         'language_labelled_commands')},
-                          authorization_level='moderator')
+                          authorization_level='everybody')
     async def message_info_command(bot, update, language):
         return await _message_info_command(bot=bot,
                                            update=update,
