@@ -1028,6 +1028,14 @@ default_useful_tools_messages = {
             'en': "calculate",
             'it': "calcola",
         },
+        'use_buttons': {
+            'en': "Use buttons to enter an algebraic expression.\n\n"
+                  "<i>The input will be displayed after you stop typing for a "
+                  "while.</i>",
+            'it': "Usa i pulsanti per comporre un'espressione algebrica.\n\n"
+                  "<i>L'espressione verrà mostrata quando smetterai di "
+                  "digitare per un po'.</i>",
+        },
     },
     'info_command': {
         'description': {
