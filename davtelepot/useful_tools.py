@@ -38,8 +38,8 @@ def get_calc_buttons() -> OrderedDict:
     )
     buttons['_'] = dict(
         value='_',
-        symbol='_️',
-        order='A4',
+        symbol='MR',
+        order='B5',
     )
     buttons[0] = dict(
         value='0',
@@ -129,35 +129,30 @@ def get_calc_buttons() -> OrderedDict:
     buttons['del'] = dict(
         value='del',
         symbol='⬅️',
-        order='F2',
+        order='E5',
     )
     buttons['('] = dict(
         value='(',
         symbol='(️',
-        order='A5',
+        order='A4',
     )
     buttons[')'] = dict(
         value=')',
         symbol=')️',
-        order='B5',
+        order='A5',
     )
-    buttons['m'] = dict(
-        value=')',
-        symbol=')️',
+    buttons['info'] = dict(
+        value='info',
+        symbol='ℹ️️',
         order='C5',
     )
 
-    buttons['u'] = dict(
-        value=')',
-        symbol=')️',
+    buttons['parser'] = dict(
+        value='parser',
+        symbol='💬️',
         order='D5',
     )
 
-    buttons['d'] = dict(
-        value=')',
-        symbol=')️',
-        order='E5',
-    )
     return buttons
 
 
@@ -225,9 +220,11 @@ async def _calculate_button(bot: Bot,
             'useful_tools', 'calculate_command', 'use_buttons',
             language=language
         )
-        reply_markup = get_calculator_keyboard(additional_data=[record_id])
     else:
         record_id = data[0]
+    reply_markup = get_calculator_keyboard(
+        additional_data=([record_id] if record_id else None)
+    )
     if record_id not in bot.shared_data['calc']:
         bot.shared_data['calc'][record_id] = []
         asyncio.ensure_future(
@@ -236,7 +233,35 @@ async def _calculate_button(bot: Bot,
                               language=language)
         )
     update['data'] = data
-    bot.shared_data['calc'][record_id].append(update)
+    if len(data) and data[-1] in ('info', 'parser'):
+        command = data[-1]
+        if command == 'parser':
+            reply_markup = None
+            bot.set_individual_text_message_handler(
+                handler=_calculate_command,
+                user_id=user_record['telegram_id']
+            )
+        elif command == 'info':
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        text='Ok',
+                        prefix='calc:///',
+                        delimiter='|',
+                        data=[record_id, 'back']
+                    )
+                ]
+            )
+        text = bot.get_message(
+            'useful_tools', 'calculate_command', (
+                'special_keys' if command == 'info'
+                else 'message_input' if command == 'parser'
+                else ''
+            ),
+            language=language
+        )
+    else:
+        bot.shared_data['calc'][record_id].append(update)
     # Edit the update with the button if a new text is specified
     if not text:
         return
@@ -309,7 +334,7 @@ async def calculate_session(bot: Bot,
     while queue_len != len(queue):
         queue_len = len(queue)
         await asyncio.sleep(buffer_seconds)
-    last_entry = max(queue, key=lambda u: u['id'])
+    last_entry = max(queue, key=lambda u: u['id'], default=None)
     # Delete record-associated queue
     queue = queue.copy()
     del bot.shared_data['calc'][record_id]
@@ -336,6 +361,8 @@ async def calculate_session(bot: Bot,
         input_value = data[1]
         if input_value == 'del':
             expression = expression[:-1]
+        elif input_value == 'back':
+            pass
         elif input_value in calc_buttons:
             expression += calc_buttons[input_value]['value']
         else:
@@ -362,6 +389,8 @@ async def calculate_session(bot: Bot,
             'useful_tools', 'calculate_command', 'instructions',
             language=language
         )
+    if last_entry is None:
+        return
     await bot.edit_message_text(
         text=text,
         update=last_entry,

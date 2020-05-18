@@ -1015,14 +1015,16 @@ default_useful_tools_messages = {
         },
         'help_section': None,
         'instructions': {
-            'en': "🔢 Calculator 🧮\n\n"
+            'en': "🔢 <b>Calculator</b> 🧮\n\n"
                   "Enter an algebraic expression after /calc to get its "
                   "result, or use the command in reply to a message containing "
-                  "an expression, or use the keyboard below.\n",
-            'it': "🔢 Calcolatrice 🧮\n\n"
+                  "an expression, or use the keyboard below.\n\n"
+                  "- <code>ℹ️</code>: show information about special keys\n",
+            'it': "🔢 <b>Calcolatrice</b> 🧮\n\n"
                   "Inserisci un'espressione algebrica dopo /calcola per "
                   "ottenerne il risultato, oppure usa il comando in risposta, "
-                  "o ancora usa la tastiera qui sotto.\n",
+                  "o ancora usa la tastiera qui sotto.\n\n"
+                  "- <code>ℹ️</code>: mostra informazioni sui tasti speciali\n",
         },
         'invalid_expression': {
             'en': "Invalid expression: {error}",
@@ -1031,6 +1033,32 @@ default_useful_tools_messages = {
         'language_labelled_commands': {
             'en': "calculate",
             'it': "calcola",
+        },
+        'message_input': {
+            'en': "🔢 <b>Calculator</b> 🧮\n\n"
+                  "<i>Enter an expression</i>",
+            'it': "🔢 <b>Calcolatrice</b> 🧮\n\n"
+                  "<i>Mandami l'espressione</i>",
+        },
+        'special_keys': {
+            'en': "<b>Special keys</b>\n"
+                  "- <code>**</code>: exponentiation\n"
+                  "- <code>//</code>: floor division\n"
+                  "- <code>mod</code>: modulus (remainder of division)\n"
+                  "- <code>MR</code>: result of last expression\n"
+                  "- <code>ℹ️</code>: show this help message\n"
+                  "- <code>💬</code>: write your expression in a message\n"
+                  "- <code>⬅️</code>: delete last character\n"
+                  "- <code>✅</code>: start a new line (and a new expression)\n",
+            'it': "<b>Tasti speciali</b>\n"
+                  "- <code>**</code>: elevamento a potenza\n"
+                  "- <code>//</code>: quoziente della divisione\n"
+                  "- <code>mod</code>: resto della divisione\n"
+                  "- <code>MR</code>: risultato dell'espressione precedente\n"
+                  "- <code>ℹ️</code>: mostra questo messaggio\n"
+                  "- <code>💬</code>: invia un messaggio con l'espressione\n"
+                  "- <code>⬅️</code>: cancella ultimo carattere\n"
+                  "- <code>✅</code>: vai a capo (inizia una nuova espressione)\n",
         },
         'use_buttons': {
             'en': "Use buttons to enter an algebraic expression.\n\n"
