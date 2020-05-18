@@ -7,6 +7,7 @@ import datetime
 import json
 import logging
 import operator
+import re
 
 from collections import OrderedDict
 from typing import List, Union
@@ -182,6 +183,16 @@ def get_operators() -> dict:
 
 calc_buttons = get_calc_buttons()
 operators = get_operators()
+operators_spacer = re.compile(r"(\d)\s*([+\-*%]|/{1,2})\s*(\d)")
+spaced_operators = r"\1 \2 \3"
+operators_space_remover = re.compile(r"(\d)\s*(\*\*)\s*(\d)")
+un_spaced_operators = r"\1\2\3"
+
+
+def prettify_expression(expression):
+    expression = operators_spacer.sub(spaced_operators, expression)
+    expression = operators_space_remover.sub(un_spaced_operators, expression)
+    return expression
 
 
 def get_calculator_keyboard(additional_data: list = None):
@@ -367,6 +378,7 @@ async def calculate_session(bot: Bot,
             expression += calc_buttons[input_value]['value']
         else:
             logging.error(f"Invalid input from calculator button: {input_value}")
+    expression = prettify_expression(expression)
     if record:
         bot.db['calculations'].update(
             dict(
@@ -449,6 +461,7 @@ async def _calculate_command(bot: Bot,
                 id=record_id
             )
             expression = f"{record['expression'] or ''}\n{text}"
+        expression = prettify_expression(expression)
         bot.db['calculations'].update(
             dict(
                 id=record_id,
