@@ -870,7 +870,8 @@ async def get_new_versions(bot: Bot,
     return news
 
 
-async def _version_command(bot: Bot, update, user_record):
+async def _version_command(bot: Bot, update: dict,
+                           user_record: OrderedDict, language: str):
     last_commit = await get_last_commit()
     text = bot.get_message(
         'admin', 'version_command', 'header',
@@ -883,13 +884,19 @@ async def _version_command(bot: Bot, update, user_record):
         for package in bot.packages
     )
     temporary_message = await bot.send_message(
-        text=text + '\n\n⏳ Checking for updates... ☑️',
+        text=text + '\n\n' + bot.get_message(
+            'admin', 'version_command', 'checking_for_updates',
+            language=language
+        ),
         update=update,
         send_default_keyboard=False
     )
     news = await get_new_versions(bot=bot)
     if not news:
-        text += '\n\n⌛️ All packages are updated! ✅'
+        text += '\n\n' + bot.get_message(
+            'admin', 'version_command', 'all_packages_updated',
+            language=language
+        )
     else:
         text += '\n\n' + bot.get_message(
             'admin', 'updates_available', 'header',
@@ -1997,7 +2004,8 @@ def init(telegram_bot: Bot,
                              },
                           show_in_keyboard=False,
                           authorization_level='admin')
-    async def version_command(bot, update, user_record):
+    async def version_command(bot, update, user_record, language):
         return await _version_command(bot=bot,
                                       update=update,
-                                      user_record=user_record)
+                                      user_record=user_record,
+                                      language=language)

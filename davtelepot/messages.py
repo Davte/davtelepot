@@ -617,20 +617,28 @@ default_admin_messages = {
         },
     },
     'version_command': {
-        'reply_keyboard_button': {
-            'en': "Version #️⃣",
-            'it': "Versione #️⃣",
+        'all_packages_updated': {
+            'en': "⌛️ All packages are updated! ✅",
+            'it': "⌛️ Tutti i pacchetti sono aggiornati! ✅",
+        },
+        'checking_for_updates': {
+            'en': "⏳ Checking for updates... ☑️",
+            'it': "⏳ Sto cercando aggiornamenti... ☑️",
         },
         'description': {
             'en': "Get packages version and source code last commit",
             'it': "Chiedi la versione dei pacchetti e del codice sorgente",
         },
-        'help_section': None,
         'header': {
             'en': "ℹ️ Version information #️⃣\n\n"
                   "Last commit: <code>{last_commit}</code>",
             'it': "ℹ️ Informazioni sulle versioni dei pacchetti #️⃣\n\n"
                   "Ultimo commit: <code>{last_commit}</code>"
+        },
+        'help_section': None,
+        'reply_keyboard_button': {
+            'en': "Version #️⃣",
+            'it': "Versione #️⃣",
         },
     },
 }
