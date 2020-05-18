@@ -1024,6 +1024,10 @@ default_useful_tools_messages = {
                   "ottenerne il risultato, oppure usa il comando in risposta, "
                   "o ancora usa la tastiera qui sotto.\n",
         },
+        'invalid_expression': {
+            'en': "Invalid expression: {error}",
+            'it': "Espressione non valida: {error}",
+        },
         'language_labelled_commands': {
             'en': "calculate",
             'it': "calcola",
@@ -1035,6 +1039,14 @@ default_useful_tools_messages = {
             'it': "Usa i pulsanti per comporre un'espressione algebrica.\n\n"
                   "<i>L'espressione verrà mostrata quando smetterai di "
                   "digitare per un po'.</i>",
+        },
+        'result': {
+            'en': "🔢 <b>Calculator</b> 🧮\n\n"
+                  "<i>Expressions evaluation:</i>\n\n"
+                  "{expressions}",
+            'it': "🔢 <b>Calcolatrice</b> 🧮\n\n"
+                  "<i>Risultato delle espresisoni:</i>\n\n"
+                  "{expressions}",
         },
     },
     'info_command': {
