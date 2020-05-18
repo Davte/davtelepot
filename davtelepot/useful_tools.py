@@ -186,12 +186,21 @@ operators = get_operators()
 operators_spacer = re.compile(r"(\d)\s*([+\-*%]|/{1,2})\s*(\d)")
 spaced_operators = r"\1 \2 \3"
 operators_space_remover = re.compile(r"(\d)\s*(\*\*)\s*(\d)")
-un_spaced_operators = r"\1\2\3"
+non_spaced_operators = r"\1\2\3"
+multiple_newlines_regex = re.compile(r"[\n|\r][\n|\s]{2,}")
+multiple_spaces_regex = re.compile(r"\s{2,}")
 
 
 def prettify_expression(expression):
+    """Make expression cleaner to read.
+
+    Place a single space around binary operators `+,-,*,%,/,//`, no space
+        around `**`, single newlines and single spaces.
+    """
     expression = operators_spacer.sub(spaced_operators, expression)
-    expression = operators_space_remover.sub(un_spaced_operators, expression)
+    expression = operators_space_remover.sub(non_spaced_operators, expression)
+    expression = multiple_newlines_regex.sub('\n', expression)
+    expression = multiple_spaces_regex.sub(' ', expression)
     return expression
 
 
@@ -353,6 +362,7 @@ async def calculate_session(bot: Bot,
     record = bot.db['calculations'].find_one(
         id=record_id
     )
+    old_expression = record['expression']
     if record is None:
         logging.error("Invalid record identifier!")
         return
@@ -389,19 +399,22 @@ async def calculate_session(bot: Bot,
             ['id']
         )
     if expression:
-        text = bot.get_message(
-            'useful_tools', 'calculate_command', 'result',
-            language=language,
-            expressions=evaluate_expressions(bot=bot,
-                                             expressions=expression,
-                                             language=language)
-        )
+        if expression.strip(' \n') != old_expression.strip(' \n'):
+            text = bot.get_message(
+                'useful_tools', 'calculate_command', 'result',
+                language=language,
+                expressions=evaluate_expressions(bot=bot,
+                                                 expressions=expression,
+                                                 language=language)
+            )
+        else:
+            text = ''
     else:
         text = bot.get_message(
             'useful_tools', 'calculate_command', 'instructions',
             language=language
         )
-    if last_entry is None:
+    if last_entry is None or not text:
         return
     await bot.edit_message_text(
         text=text,
