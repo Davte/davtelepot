@@ -131,6 +131,33 @@ def get_calc_buttons() -> OrderedDict:
         symbol='⬅️',
         order='F2',
     )
+    buttons['('] = dict(
+        value='(',
+        symbol='(️',
+        order='A5',
+    )
+    buttons[')'] = dict(
+        value=')',
+        symbol=')️',
+        order='B5',
+    )
+    buttons['m'] = dict(
+        value=')',
+        symbol=')️',
+        order='C5',
+    )
+
+    buttons['u'] = dict(
+        value=')',
+        symbol=')️',
+        order='D5',
+    )
+
+    buttons['d'] = dict(
+        value=')',
+        symbol=')️',
+        order='E5',
+    )
     return buttons
 
 
@@ -176,7 +203,7 @@ def get_calculator_keyboard(additional_data: list = None):
             for code, button in sorted(calc_buttons.items(),
                                        key=lambda b: b[1]['order'])
         ],
-        4
+        5
     )
 
 
@@ -344,9 +371,9 @@ async def calculate_session(bot: Bot,
 
 async def _calculate_command(bot: Bot,
                              update: dict,
+                             user_record: OrderedDict,
                              language: str,
                              command_name: str = 'calc'):
-    reply_markup = None
     if 'reply_to_message' in update:
         update = update['reply_to_message']
     command_aliases = [command_name]
@@ -364,7 +391,13 @@ async def _calculate_command(bot: Bot,
         )
         reply_markup = get_calculator_keyboard()
     else:
-        # TODO: make a new calc record
+        record_id = bot.db['calculations'].insert(
+            dict(
+                user_id=user_record['id'],
+                created=datetime.datetime.now(),
+                expression=text
+            )
+        )
         text = bot.get_message(
             'useful_tools', 'calculate_command', 'result',
             language=language,
@@ -372,6 +405,7 @@ async def _calculate_command(bot: Bot,
                                              expressions=text,
                                              language=language)
         )
+        reply_markup = get_calculator_keyboard(additional_data=[record_id])
     await bot.send_message(text=text,
                            update=update,
                            reply_markup=reply_markup)
@@ -547,9 +581,10 @@ def init(telegram_bot: Bot, useful_tools_messages=None):
                              if key in ('description', 'help_section',
                                         'language_labelled_commands')},
                           authorization_level='everybody')
-    async def calculate_command(bot, update, language):
+    async def calculate_command(bot, update, user_record, language):
         return await _calculate_command(bot=bot,
                                         update=update,
+                                        user_record=user_record,
                                         language=language,
                                         command_name='calc')
 
