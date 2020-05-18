@@ -362,7 +362,7 @@ async def calculate_session(bot: Bot,
     record = bot.db['calculations'].find_one(
         id=record_id
     )
-    old_expression = record['expression']
+    old_expression = record['expression'] or ''
     if record is None:
         logging.error("Invalid record identifier!")
         return
