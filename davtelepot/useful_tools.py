@@ -238,7 +238,7 @@ async def _calculate_button(bot: Bot,
         if command == 'parser':
             reply_markup = None
             bot.set_individual_text_message_handler(
-                handler=_calculate_command,
+                handler=wrap_calculate_command(record_id=record_id),
                 user_id=user_record['telegram_id']
             )
         elif command == 'info':
@@ -398,11 +398,26 @@ async def calculate_session(bot: Bot,
     )
 
 
+def wrap_calculate_command(record_id: int = None, command_name: str = 'calc'):
+    async def wrapped_calculate_command(bot: Bot,
+                                        update: dict,
+                                        user_record: OrderedDict,
+                                        language: str,):
+        return await _calculate_command(bot=bot,
+                                        update=update,
+                                        user_record=user_record,
+                                        language=language,
+                                        command_name=command_name,
+                                        record_id=record_id)
+    return wrapped_calculate_command
+
+
 async def _calculate_command(bot: Bot,
                              update: dict,
                              user_record: OrderedDict,
                              language: str,
-                             command_name: str = 'calc'):
+                             command_name: str = 'calc',
+                             record_id: int = None):
     if 'reply_to_message' in update:
         update = update['reply_to_message']
     command_aliases = [command_name]
@@ -420,18 +435,33 @@ async def _calculate_command(bot: Bot,
         )
         reply_markup = get_calculator_keyboard()
     else:
-        record_id = bot.db['calculations'].insert(
-            dict(
-                user_id=user_record['id'],
-                created=datetime.datetime.now(),
-                expression=text
+        if record_id is None:
+            record_id = bot.db['calculations'].insert(
+                dict(
+                    user_id=user_record['id'],
+                    created=datetime.datetime.now(),
+                    expression=text
+                )
             )
+            expression = text
+        else:
+            record = bot.db['calculations'].find_one(
+                id=record_id
+            )
+            expression = f"{record['expression'] or ''}\n{text}"
+        bot.db['calculations'].update(
+            dict(
+                id=record_id,
+                modified=datetime.datetime.now(),
+                expression=expression
+            ),
+            ['id']
         )
         text = bot.get_message(
             'useful_tools', 'calculate_command', 'result',
             language=language,
             expressions=evaluate_expressions(bot=bot,
-                                             expressions=text,
+                                             expressions=expression,
                                              language=language)
         )
         reply_markup = get_calculator_keyboard(additional_data=[record_id])
