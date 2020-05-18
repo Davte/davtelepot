@@ -2232,7 +2232,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 handler=decorated_command_handler,
                 description=description,
                 authorization_level=authorization_level,
-                language_labelled_commands=language_labelled_commands
+                language_labelled_commands=language_labelled_commands,
+                aliases=aliases
             )
             if type(description) is dict:
                 self.messages['commands'][command] = dict(
