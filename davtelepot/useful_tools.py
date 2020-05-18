@@ -360,7 +360,7 @@ async def calculate_session(bot: Bot,
             return
         input_value = data[1]
         if input_value == 'del':
-            expression = expression[:-1]
+            expression = expression[:-1].strip()
         elif input_value == 'back':
             pass
         elif input_value in calc_buttons:
