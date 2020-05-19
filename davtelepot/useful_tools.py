@@ -183,12 +183,19 @@ def get_operators() -> dict:
 
 calc_buttons = get_calc_buttons()
 operators = get_operators()
-operators_spacer = re.compile(r"(\d)\s*([+\-*%]|/{1,2})\s*(\d)")
+
+operators_spacer = re.compile(r"([\d\(\)])\s*([+\-*%]|/{1,2})\s*([\d\(\)])")
 spaced_operators = r"\1 \2 \3"
-operators_space_remover = re.compile(r"(\d)\s*(\*\*)\s*(\d)")
+operators_space_remover = re.compile(r"([\d\(\)])\s*(\*\*)\s*([\d\(\)])")
 non_spaced_operators = r"\1\2\3"
 multiple_newlines_regex = re.compile(r"[\n|\r][\n|\s]{2,}")
-multiple_spaces_regex = re.compile(r"\s{2,}")
+multiple_spaces_regex = re.compile(r"[^\S\n\r]{2,}")
+parentheses_regex_list = [
+    {'pattern': re.compile(r"[^\S\n\r]*(\()[^\S\n\r]*(\d)"),
+     'replace': r" \1\2"},
+    {'pattern': re.compile(r"(\d)[^\S\n\r]*(\))"),
+     'replace': r"\1\2"}
+]
 
 
 def prettify_expression(expression):
@@ -196,11 +203,17 @@ def prettify_expression(expression):
 
     Place a single space around binary operators `+,-,*,%,/,//`, no space
         around `**`, single newlines and single spaces.
+        No space after `(` or before `)`.
+        No space at the beginning or ending of a line.
     """
     expression = operators_spacer.sub(spaced_operators, expression)
     expression = operators_space_remover.sub(non_spaced_operators, expression)
+    for regex in parentheses_regex_list:
+        expression = regex['pattern'].sub(regex['replace'], expression)
     expression = multiple_newlines_regex.sub('\n', expression)
     expression = multiple_spaces_regex.sub(' ', expression)
+    expression = expression.replace('\n ', '\n')
+    expression = expression.replace(' \n', '\n')
     return expression
 
 
