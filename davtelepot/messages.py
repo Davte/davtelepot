@@ -1,5 +1,22 @@
 """Default messages for bot functions."""
 
+davtelepot_messages = {
+    'long_message': {
+        'file_name': {
+            'en': "Long message.html",
+            'it': "Messaggio lungo.html",
+        },
+        'caption': {
+            'en': "<b>Long message</b>\n\n"
+                  "This message is too long to be sent as individual "
+                  "messages.",
+            'it': "<b>Messaggio lungo</b>\n\n"
+                  "Questo messaggio è troppo lungo per essere inviato come "
+                  "messaggi separati.",
+        }
+    }
+}
+
 default_admin_messages = {
     'cancel': {
         'button': {

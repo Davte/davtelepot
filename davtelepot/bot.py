@@ -52,6 +52,7 @@ from aiohttp import web
 from .api import TelegramBot, TelegramError
 from .database import ObjectWithDatabase
 from .languages import MultiLanguageObject
+from .messages import davtelepot_messages
 from .utilities import (
     async_get, escape_html_chars, extract, get_secure_key,
     make_inline_query_answer, make_lines_of_buttons, remove_html_tags
@@ -82,6 +83,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     _authorization_denied_message = None
     _unknown_command_message = None
     TELEGRAM_MESSAGES_MAX_LEN = 4096
+    _max_message_length = 3 * (TELEGRAM_MESSAGES_MAX_LEN - 100)
     _default_inline_query_answer = [
         dict(
             type='article',
@@ -120,6 +122,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         TelegramBot.__init__(self, token)
         ObjectWithDatabase.__init__(self, database_url=database_url)
         MultiLanguageObject.__init__(self)
+        self.messages['davtelepot'] = davtelepot_messages
         self._path = None
         self.preliminary_tasks = []
         self.final_tasks = []
@@ -128,6 +131,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self._certificate = certificate
         self._max_connections = max_connections
         self._allowed_updates = allowed_updates
+        self._max_message_length = None
         self._session_token = get_secure_key(length=10)
         self._name = None
         self._telegram_id = None
@@ -398,6 +402,17 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         Empty list to allow all updates.
         """
         return self._allowed_updates or []
+
+    @property
+    def max_message_length(self) -> int:
+        return self._max_message_length or self.__class__._max_message_length
+
+    @classmethod
+    def set_class_max_message_length(cls, max_message_length: int):
+        cls._max_message_length = max_message_length
+
+    def set_max_message_length(self, max_message_length: int):
+        self._max_message_length = max_message_length
 
     @property
     def name(self):
@@ -1178,6 +1193,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             update = update['message']
         if chat_id is None and 'chat' in update:
             chat_id = self.get_chat_id(update)
+        if user_record is None:
+            user_record = self.db['users'].find_one(telegram_id=chat_id)
         if reply_to_update and 'message_id' in update:
             reply_to_message_id = update['message_id']
         if (
@@ -1195,12 +1212,28 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             return
         parse_mode = str(parse_mode)
         if isinstance(text, dict):
-            if user_record is None:
-                user_record = self.db['users'].find_one(telegram_id=chat_id)
             text = self.get_message(
                 update=update,
                 user_record=user_record,
                 messages=text
+            )
+        if len(text) > self.max_message_length:
+            message_file = io.StringIO(text)
+            message_file.name = self.get_message(
+                'davtelepot', 'long_message', 'file_name',
+                update=update,
+                user_record=user_record,
+            )
+            return await self.send_document(
+                chat_id=chat_id,
+                document=message_file,
+                caption=self.get_message(
+                    'davtelepot', 'long_message', 'caption',
+                    update=update,
+                    user_record=user_record,
+                ),
+                use_stored_file_id=False,
+                parse_mode='HTML'
             )
         text_chunks = self.split_message_text(
             text=text,
