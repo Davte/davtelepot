@@ -184,9 +184,9 @@ def get_operators() -> dict:
 calc_buttons = get_calc_buttons()
 operators = get_operators()
 
-operators_spacer = re.compile(r"([\d\(\)])\s*([+\-*%]|/{1,2})\s*([\d\(\)])")
+operators_spacer = re.compile(r"([\d()])\s*([+\-*%]|/{1,2})\s*([\d()])")
 spaced_operators = r"\1 \2 \3"
-operators_space_remover = re.compile(r"([\d\(\)])\s*(\*\*)\s*([\d\(\)])")
+operators_space_remover = re.compile(r"([\d()])\s*(\*\*)\s*([\d()])")
 non_spaced_operators = r"\1\2\3"
 multiple_newlines_regex = re.compile(r"[\n|\r][\n|\s]{2,}")
 multiple_spaces_regex = re.compile(r"[^\S\n\r]{2,}")
