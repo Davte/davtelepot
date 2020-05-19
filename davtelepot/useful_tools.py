@@ -184,16 +184,16 @@ def get_operators() -> dict:
 calc_buttons = get_calc_buttons()
 operators = get_operators()
 
-operators_spacer = re.compile(r"([\d\(\)])\s*([+\-*%]|/{1,2})\s*([\d\(\)])")
+operators_spacer = re.compile(r"([\d()_])\s*([+\-*%]|/{1,2})\s*([\d()_])")
 spaced_operators = r"\1 \2 \3"
-operators_space_remover = re.compile(r"([\d\(\)])\s*(\*\*)\s*([\d\(\)])")
+operators_space_remover = re.compile(r"([\d()_])\s*(\*\*)\s*([\d()_])")
 non_spaced_operators = r"\1\2\3"
 multiple_newlines_regex = re.compile(r"[\n|\r][\n|\s]{2,}")
 multiple_spaces_regex = re.compile(r"[^\S\n\r]{2,}")
 parentheses_regex_list = [
-    {'pattern': re.compile(r"[^\S\n\r]*(\()[^\S\n\r]*(\d)"),
+    {'pattern': re.compile(r"[^\S\n\r]*(\()[^\S\n\r]*([\d_])"),
      'replace': r" \1\2"},
-    {'pattern': re.compile(r"(\d)[^\S\n\r]*(\))"),
+    {'pattern': re.compile(r"([\d_])[^\S\n\r]*(\))"),
      'replace': r"\1\2"}
 ]
 
@@ -214,7 +214,7 @@ def prettify_expression(expression):
     expression = multiple_spaces_regex.sub(' ', expression)
     expression = expression.replace('\n ', '\n')
     expression = expression.replace(' \n', '\n')
-    return expression
+    return expression.strip(' ')
 
 
 def get_calculator_keyboard(additional_data: list = None):
@@ -360,7 +360,7 @@ def evaluate_expressions(bot: Bot,
 async def calculate_session(bot: Bot,
                             record_id: int,
                             language: str,
-                            buffer_seconds: Union[int, float] = 1):
+                            buffer_seconds: Union[int, float] = .5):
     # Wait until input ends
     queue = bot.shared_data['calc'][record_id]
     queue_len = None
