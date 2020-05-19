@@ -360,7 +360,7 @@ def evaluate_expressions(bot: Bot,
 async def calculate_session(bot: Bot,
                             record_id: int,
                             language: str,
-                            buffer_seconds: Union[int, float] = 1):
+                            buffer_seconds: Union[int, float] = .5):
     # Wait until input ends
     queue = bot.shared_data['calc'][record_id]
     queue_len = None
