@@ -381,11 +381,8 @@ async def calculate_session(bot: Bot,
         return
     expression = record['expression'] or ''
     reply_markup = get_calculator_keyboard(additional_data=[record['id']])
-
-    # It would be nice to do:
-    # for update in sorted(queue, key=lambda u: u['id'])
-    # Alas, 'id's are not progressive... Telegram's fault!
-    for i, update in enumerate(queue):
+    # Process updates in order of arrival (according to Telegram servers)
+    for i, update in enumerate(sorted(queue, key=lambda u: u['update_id'])):
         if i % 5 == 0:
             await asyncio.sleep(.1)
         data = update['data']

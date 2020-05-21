@@ -596,11 +596,16 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     async def message_router(self, update, user_record, language):
         """Route Telegram `message` update to appropriate message handler."""
-        for key, value in update.items():
-            if key in self.message_handlers:
-                return await self.message_handlers[key](update=update,
-                                                        user_record=user_record,
-                                                        language=language)
+        bot = self
+        for key in self.message_handlers:
+            if key in update:
+                return await self.message_handlers[key](**{
+                    name: argument
+                    for name, argument in locals().items()
+                    if name in inspect.signature(
+                        self.message_handlers[key]
+                    ).parameters
+                })
         logging.error(
             f"The following message update was received: {update}\n"
             "However, this message type is unknown."
@@ -2933,7 +2938,11 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """Set `handler` as router for `event`."""
         self.routing_table[event] = handler
 
-    async def route_update(self, update):
+    def set_message_handler(self, message_type: str, handler: Callable):
+        """Set `handler` for `message_type`."""
+        self.message_handlers[message_type] = handler
+
+    async def route_update(self, raw_update):
         """Pass `update` to proper method.
 
         Update objects have two keys:
@@ -2952,20 +2961,25 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         if (
             self.under_maintenance
-            and not self.is_allowed_during_maintenance(update)
+            and not self.is_allowed_during_maintenance(raw_update)
         ):
-            return await self.handle_update_during_maintenance(update)
-        for key, value in update.items():
-            if key in self.routing_table:
-                user_record = self.get_user_record(update=value)
+            return await self.handle_update_during_maintenance(raw_update)
+        for key in self.routing_table:
+            if key in raw_update:
+                update = raw_update[key]
+                update['update_id'] = raw_update['update_id']
+                user_record = self.get_user_record(update=update)
                 language = self.get_language(update=update,
                                              user_record=user_record)
-                return await self.routing_table[key](
-                    update=value,
-                    user_record=user_record,
-                    language=language
-                )
-        logging.error(f"Unknown type of update.\n{update}")
+                bot = self
+                return await self.routing_table[key](**{
+                    name: argument
+                    for name, argument in locals().items()
+                    if name in inspect.signature(
+                        self.routing_table[key]
+                    ).parameters
+                })
+        logging.error(f"Unknown type of update.\n{raw_update}")
 
     def additional_task(self, when='BEFORE', *args, **kwargs):
         """Add a task before at app start or cleanup.
