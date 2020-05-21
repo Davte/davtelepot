@@ -789,9 +789,10 @@ def get_maintenance_exception_criterion(bot, allowed_command):
     """
 
     def criterion(update):
-        if 'message' not in update:
+        if 'message' in update:
+            update = update['message']
+        if 'text' not in update:
             return False
-        update = update['message']
         text = get_cleaned_text(update, bot, [])
         if (
                 'from' not in update
