@@ -75,12 +75,12 @@ default_admin_messages = {
         },
         'no_log': {
             'en': "Sorry but no errors log file is set.\n"
-                  "To set it, use `bot.set_errors_file_name` instance method"
+                  "To set it, use `bot.set_errors_file_name` instance method "
                   "or `Bot.set_class_errors_file_name` class method.",
             'it': "Spiacente ma il file di log degli errori non è stato "
                   "impostato.\n"
                   "Per impostarlo, usa il metodo d'istanza "
-                  "`bot.set_errors_file_name` o il metodo di classe"
+                  "`bot.set_errors_file_name` o il metodo di classe "
                   "`Bot.set_class_errors_file_name`."
         },
         'empty_log': {
