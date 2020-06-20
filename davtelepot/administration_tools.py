@@ -524,7 +524,7 @@ async def _stop_button(bot: Bot,
     return result
 
 
-async def _send_bot_database(bot, update, user_record):
+async def _send_bot_database(bot: Bot, user_record: OrderedDict, language: str):
     if not all(
             [
                 bot.db_url.endswith('.db'),
@@ -533,20 +533,21 @@ async def _send_bot_database(bot, update, user_record):
     ):
         return bot.get_message(
             'admin', 'db_command', 'not_sqlite',
-            update=update, user_record=user_record,
+            language=language,
             db_type=bot.db_url.partition(':///')[0]
         )
-    await bot.send_document(
+    sent_update = await bot.send_document(
         chat_id=user_record['telegram_id'],
         document_path=extract(bot.db.url, starter='sqlite:///'),
         caption=bot.get_message(
             'admin', 'db_command', 'file_caption',
-            update=update, user_record=user_record
+            language=language
         )
     )
     return bot.get_message(
-        'admin', 'db_command', 'db_sent',
-        update=update, user_record=user_record
+        'admin', 'db_command',
+        ('error' if isinstance(sent_update, Exception) else 'db_sent'),
+        language=language
     )
 
 
@@ -1879,8 +1880,10 @@ def init(telegram_bot: Bot,
                           description=admin_messages[
                               'db_command']['description'],
                           authorization_level='admin')
-    async def send_bot_database(bot, update, user_record):
-        return await _send_bot_database(bot, update, user_record)
+    async def send_bot_database(bot, user_record, language):
+        return await _send_bot_database(bot=bot,
+                                        user_record=user_record,
+                                        language=language)
 
     @telegram_bot.command(command='/errors',
                           aliases=[],
