@@ -1840,7 +1840,7 @@ def init(telegram_bot: Bot,
         )
     if 'talking_sessions' not in db.tables:
         table = db.create_table(
-            table_name='users'
+            table_name='talking_sessions'
         )
         table.create_column(
             'user',
