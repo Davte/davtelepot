@@ -37,9 +37,21 @@ default_admin_messages = {
         'it': "🔄 Clicka di nuovo per confermare",
     },
     'db_command': {
+        'db_sent': {
+            'en': "Database sent.",
+            'it': "Database inviato.",
+        },
         'description': {
             'en': "Ask for bot database via Telegram",
-            'it': "Ricevi il database del bot via Telegram"
+            'it': "Ricevi il database del bot via Telegram",
+        },
+        'error': {
+            'en': "Error sending database.",
+            'it': "Errore durante l'invio del database.",
+        },
+        'file_caption': {
+            'en': "Here is bot database.",
+            'it': "Ecco il database!"
         },
         'not_sqlite': {
             'en': "Only SQLite databases may be sent via Telegram, since they "
@@ -49,14 +61,6 @@ default_admin_messages = {
                   "in quanto composti di un solo file.\n"
                   "Questo bot ha invece un database `{db_type}`."
         },
-        'file_caption': {
-            'en': "Here is bot database.",
-            'it': "Ecco il database!"
-        },
-        'db_sent': {
-            'en': "Database sent.",
-            'it': "Database inviato."
-        }
     },
     'error': {
         'text': {

@@ -544,13 +544,9 @@ async def _send_bot_database(bot: Bot, user_record: OrderedDict, language: str):
             language=language
         )
     )
-    if isinstance(sent_update, Exception):
-        return bot.get_message(
-            'admin', 'db_command', 'db_sent',
-            language=language
-        )
     return bot.get_message(
-        'admin', 'db_command', 'db_sent',
+        'admin', 'db_command',
+        ('error' if isinstance(sent_update, Exception) else 'db_sent'),
         language=language
     )
 
