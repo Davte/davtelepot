@@ -97,6 +97,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     ]
     _log_file_name = None
     _errors_file_name = None
+    _documents_max_dimension = 50 * 1000 * 1000  # 50 MB
 
     def __init__(
         self, token, hostname='', certificate=None, max_connections=40,
@@ -233,6 +234,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.shared_data = dict()
         self.Role = None
         self.packages = [sys.modules['davtelepot']]
+        self._documents_max_dimension = None
         # Add `users` table with its fields if missing
         if 'users' not in self.db.tables:
             table = self.db.create_table(
@@ -593,6 +595,18 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     @property
     def administrators(self):
         return self._get_administrators(self)
+
+    @classmethod
+    def set_class_documents_max_dimension(cls, documents_max_dimension: int):
+        cls._documents_max_dimension = documents_max_dimension
+
+    def set_documents_max_dimension(self, documents_max_dimension: int):
+        self._documents_max_dimension = documents_max_dimension
+
+    @property
+    def documents_max_dimension(self) -> int:
+        return int(self._documents_max_dimension
+                   or self.__class__._documents_max_dimension)
 
     async def message_router(self, update, user_record, language):
         """Route Telegram `message` update to appropriate message handler."""
@@ -1796,25 +1810,26 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         # This buffered_file trick is necessary for two reasons
         # 1. File operations must be blocking, but sendDocument is a coroutine
         # 2. A `with` statement is not possible here
-        # `buffered_file` must be closed at all costs!
-        buffered_file = None
         if 'message' in update:
             update = update['message']
         if chat_id is None and 'chat' in update:
             chat_id = self.get_chat_id(update)
         if reply_to_update and 'message_id' in update:
             reply_to_message_id = update['message_id']
-        if (
-            send_default_keyboard
-            and reply_markup is None
-            and type(chat_id) is int
-            and chat_id > 0
-            and caption != self.authorization_denied_message
-        ):
-            reply_markup = self.get_keyboard(
-                update=update,
-                telegram_id=chat_id,
-            )
+        if chat_id > 0:
+            user_record = self.db['users'].find_one(telegram_id=chat_id)
+            language = self.get_language(update=update, user_record=user_record)
+            if (
+                send_default_keyboard
+                and reply_markup is None
+                and type(chat_id) is int
+                and caption != self.authorization_denied_message
+            ):
+                reply_markup = self.get_keyboard(
+                    user_record=user_record
+                )
+        else:
+            language = self.default_language
         if document_path is not None:
             with self.db as db:
                 already_sent = db['sent_documents'].find_one(
@@ -1839,16 +1854,58 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             ),
                             'rb'  # Read bytes
                         ) as file_:
-                            buffered_file = io.BytesIO(file_.read())
-                            buffered_file.name = (
+                            file_size = os.fstat(file_.fileno()).st_size
+                            document_chunks = (
+                                    int(
+                                        file_size
+                                        / self.documents_max_dimension
+                                    ) + 1
+                            )
+                            original_document_name = (
                                 document_name
                                 or file_.name
                                 or 'Document'
                             )
-                            document = buffered_file
+                            original_caption = caption
+                            if '/' in original_document_name:
+                                original_document_name = os.path.basename(
+                                    os.path.abspath(original_document_name)
+                                )
+                            for i in range(document_chunks):
+                                buffered_file = io.BytesIO(
+                                    file_.read(self.documents_max_dimension)
+                                )
+                                if document_chunks > 1:
+                                    part = self.get_message(
+                                        'davtelepot', 'part',
+                                        language=language
+                                    )
+                                    caption = f"{original_caption} - {part} {i + 1}/{document_chunks}"
+                                    buffered_file.name = (
+                                        f"{original_document_name} - "
+                                        f"{part} {i + 1}"
+                                    )
+                                else:
+                                    buffered_file.name = original_document_name
+                                sent_document = await self.send_document(
+                                    chat_id=chat_id,
+                                    document=buffered_file,
+                                    thumb=thumb,
+                                    caption=caption,
+                                    parse_mode=parse_mode,
+                                    disable_notification=disable_notification,
+                                    reply_to_message_id=reply_to_message_id,
+                                    reply_markup=reply_markup,
+                                    update=update,
+                                    reply_to_update=reply_to_update,
+                                    send_default_keyboard=send_default_keyboard,
+                                    use_stored_file_id=use_stored_file_id
+                                )
+                            return sent_document
                     except FileNotFoundError as e:
                         if buffered_file:
                             buffered_file.close()
+                            buffered_file = None
                         return e
         else:
             use_stored_file_id = False
@@ -1882,9 +1939,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                         ),
                         ['path']
                     )
-        finally:
-            if buffered_file:
-                buffered_file.close()
         if (
             type(sent_update) is dict
             and 'document' in sent_update

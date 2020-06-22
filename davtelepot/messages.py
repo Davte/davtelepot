@@ -14,7 +14,11 @@ davtelepot_messages = {
                   "Questo messaggio è troppo lungo per essere inviato come "
                   "messaggi separati.",
         }
-    }
+    },
+    'part': {
+        'en': "part",
+        'it': "parte",
+    },
 }
 
 default_admin_messages = {
