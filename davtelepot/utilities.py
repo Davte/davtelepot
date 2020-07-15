@@ -1714,8 +1714,10 @@ async def aio_subprocess_shell(command: str) -> Tuple[str, str]:
             command
         )
         stdout, stderr = await _subprocess.communicate()
-        stdout = stdout.decode().strip()
-        stderr = stderr.decode().strip()
+        if stdout:
+            stdout = stdout.decode().strip()
+        if stderr:
+            stderr = stderr.decode().strip()
     except Exception as e:
         logging.error(
             "Exception {e}:\n{o}\n{er}".format(
