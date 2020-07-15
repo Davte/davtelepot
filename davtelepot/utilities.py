@@ -18,7 +18,7 @@ import time
 from difflib import SequenceMatcher
 
 # Third party modules
-from typing import Union
+from typing import Tuple, Union
 
 import aiohttp
 from aiohttp import web
@@ -1700,3 +1700,28 @@ def recursive_dictionary_update(one: dict, other: dict) -> dict:
             else:
                 one[key] = val
     return one
+
+
+async def aio_subprocess_shell(command: str) -> Tuple[str, str]:
+    """Run `command` in a subprocess shell.
+
+    Await for the subprocess to end and return standard error and output.
+    On error, log errors.
+    """
+    stdout, stderr = None, None
+    try:
+        _subprocess = await asyncio.create_subprocess_shell(
+            command
+        )
+        stdout, stderr = await _subprocess.communicate()
+        stdout = stdout.decode().strip()
+        stderr = stderr.decode().strip()
+    except Exception as e:
+        logging.error(
+            "Exception {e}:\n{o}\n{er}".format(
+                e=e,
+                o=(stdout.decode().strip() if stdout else ''),
+                er=(stderr.decode().strip() if stderr else '')
+            )
+        )
+    return stdout, stderr
