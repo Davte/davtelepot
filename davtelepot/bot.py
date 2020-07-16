@@ -501,6 +501,11 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
             for command, element in self.commands.items()
             if 'reply_keyboard_button' in element
+               and self.authorization_function(
+                    update=update,
+                    user_record=user_record,
+                    authorization_level=element['authorization_level']
+                )
         ]
         if len(buttons) == 0:
             return
