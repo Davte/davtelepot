@@ -5,7 +5,8 @@ from .bot import Bot
 from .messages import default_help_messages
 from .utilities import (
     get_cleaned_text, make_inline_keyboard,
-    make_lines_of_buttons, make_button
+    make_lines_of_buttons, make_button,
+    recursive_dictionary_update
 )
 
 
@@ -245,10 +246,15 @@ async def _start_command(bot, update, user_record):
     return
 
 
-def init(telegram_bot, help_messages=None):
+def init(telegram_bot: Bot, help_messages: dict = None):
     """Assign parsers, commands, buttons and queries to given `bot`."""
     if help_messages is None:
         help_messages = default_help_messages
+    else:
+        help_messages = recursive_dictionary_update(
+            default_help_messages.copy(),
+            help_messages.copy()
+        )
     telegram_bot.messages['help'] = help_messages
 
     @telegram_bot.command("/start", authorization_level='everybody')
