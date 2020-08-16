@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Get current directory
-this_script_directory=$(cd `dirname $0` && pwd)
+this_script_directory=$(cd "$(dirname "$0")" && pwd)
+packenv="";
 
 # Python virtual environment directory: packenv variable in my_config.sh
 source $this_script_directory/my_config.sh;
