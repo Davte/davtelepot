@@ -1609,8 +1609,9 @@ async def dummy_coroutine(*args, **kwargs):
     return
 
 
-async def send_csv_file(bot, chat_id, query, caption=None,
-                        file_name='File.csv', user_record=None, update=None):
+async def send_csv_file(bot, chat_id: int, query: str, caption: str = None,
+                        file_name: str = 'File.csv', language: str = None,
+                        user_record=None, update=None):
     """Run a query on `bot` database and send result as CSV file to `chat_id`.
 
     Optional parameters `caption` and `file_name` may be passed to this
@@ -1618,6 +1619,9 @@ async def send_csv_file(bot, chat_id, query, caption=None,
     """
     if update is None:
         update = dict()
+    if language is None:
+        language = bot.get_language(update=update,
+                                    user_record=user_record)
     try:
         with bot.db as db:
             record = db.query(
@@ -1633,14 +1637,14 @@ async def send_csv_file(bot, chat_id, query, caption=None,
     except Exception as e:
         text = "{message}\n{e}".format(
             message=bot.get_message('admin', 'query_button', 'error',
-                                    user_record=user_record, update=update),
+                                    language=language),
             e=e
         )
     for x, y in {'&lt;': '<', '\n': '\r\n'}.items():
         text = text.replace(x, y)
     if len(text) == 0:
         text = bot.get_message('admin', 'query_button', 'empty_file',
-                               user_record=user_record, update=update)
+                               language=language)
     with io.BytesIO(text.encode('utf-8')) as f:
         f.name = file_name
         return await bot.send_document(
