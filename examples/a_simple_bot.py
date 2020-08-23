@@ -46,7 +46,7 @@ import sys
 try:
     from davtelepot.bot import Bot
     from davtelepot.utilities import (
-        get_cleaned_text, make_inline_keyboard, make_button
+        get_cleaned_text, get_user, make_inline_keyboard, make_button
     )
 except ImportError:
     logging.error(
@@ -64,23 +64,27 @@ except ImportError:
 path = os.path.dirname(os.path.abspath(__file__))
 
 
-def initialize_bot(bot):
+def initialize_bot(telegram_bot):
     """Take a bot and set commands."""
-    bot.set_callback_data_separator('|')
+    telegram_bot.set_callback_data_separator('|')
 
-    @bot.command(command='foo', aliases=['Foo'], show_in_keyboard=True,
-                 description="Reply 'bar' to 'foo'",
-                 authorization_level='everybody')
+    @telegram_bot.command(command='foo', aliases=['Foo'],
+                          show_in_keyboard=True,
+                          description="Reply 'bar' to 'foo'",
+                          authorization_level='everybody')
     async def foo_command(bot, update, user_record):
-        return 'Bar!'
+        return (
+            "Bar!\n\n"
+            f"You wrote: {update['text']}\n"
+            f"I am @{bot.name} and you are {get_user(user_record)}"
+        )
 
-    def is_bar_text_message(text):
-        return text.startswith('bar')
+    def is_bar_text_message(lowered_text):
+        return lowered_text.startswith('bar')
 
-    @bot.parser(condition=is_bar_text_message,
-                description='Reply Foo to users who write Bar',
-                authorization_level='everybody',
-                argument='text')
+    @telegram_bot.parser(condition=is_bar_text_message,
+                         description='Reply Foo to users who write Bar',
+                         authorization_level='everybody')
     async def bar_parser(bot, update):
         text_except_foo = get_cleaned_text(update, bot, ['bar'])
         return f"Foo!\n{text_except_foo}"
@@ -99,16 +103,16 @@ def initialize_bot(bot):
             3
         )
 
-    @bot.command(command='buttons')
+    @telegram_bot.command(command='buttons')
     async def buttons_command():
         return dict(
             text="Press a button!",
             reply_markup=get_keyboard()
         )
 
-    @bot.button(prefix='button:///', separator='|',
-                authorization_level='everybody')
-    async def buttons_button(bot, update, user_record, data):
+    @telegram_bot.button(prefix='button:///', separator='|',
+                         authorization_level='everybody')
+    async def buttons_button(data):
         button_number = data[0]
         return dict(
             edit=dict(
@@ -120,12 +124,12 @@ def initialize_bot(bot):
     def starts_with_a(text):
         return text.startswith('a')
 
-    @bot.query(
+    @telegram_bot.query(
         condition=starts_with_a,
         description='Mirror query text if it starts with letter `a`',
         authorization_level='everybody'
     )
-    async def inline_query(bot, update, user_record):
+    async def inline_query(update):
         return dict(
             type='article',
             id=10,
@@ -135,7 +139,7 @@ def initialize_bot(bot):
             )
         )
 
-    bot.set_default_inline_query_answer(
+    telegram_bot.set_default_inline_query_answer(
         dict(
             type='article',
             id=0,
@@ -146,7 +150,7 @@ def initialize_bot(bot):
         )
     )
 
-    bot.set_unknown_command_message(
+    telegram_bot.set_unknown_command_message(
         "<b>Currently supported features</b>\n\n"
         "- /foo (or text starting with `foo`): replies `Bar!`.\n"
         "- Text starting with `bar`: replies `Foo!` followed by the rest of "
@@ -177,10 +181,10 @@ def _main():
     )
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setFormatter(log_formatter)
-    consoleHandler.setLevel(logging.DEBUG)
-    root_logger.addHandler(consoleHandler)
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_formatter)
+    console_handler.setLevel(logging.DEBUG)
+    root_logger.addHandler(console_handler)
 
     # Instantiate, initialize and make `simple_bot` run.
     simple_bot = Bot(token=simple_bot_token, database_url=f"{path}/bot.db")

@@ -28,7 +28,7 @@ except ImportError:
 from a_simple_bot import initialize_bot
 
 # Get path of current script
-os.path.dirname(os.path.abspath(__file__))
+path = os.path.dirname(os.path.abspath(__file__))
 
 
 def _main():
@@ -96,10 +96,10 @@ def _main():
     )
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setFormatter(log_formatter)
-    consoleHandler.setLevel(logging.DEBUG)
-    root_logger.addHandler(consoleHandler)
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_formatter)
+    console_handler.setLevel(logging.DEBUG)
+    root_logger.addHandler(console_handler)
 
     # Instantiate, initialize and make bots run.
     webhook_bot = Bot(
