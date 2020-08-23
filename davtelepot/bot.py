@@ -2423,8 +2423,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                     'reply_keyboard_button'] = _reply_keyboard_button
         return command_decorator
 
-    def parser(self, condition, description='', authorization_level='admin',
-               argument='text'):
+    def parser(self, condition, description='', authorization_level='admin'):
         """Define a text message parser.
 
         Decorate command handlers like this:
@@ -2475,7 +2474,6 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 handler=decorated_parser,
                 description=description,
                 authorization_level=authorization_level,
-                argument=argument
             )
         return parser_decorator
 
