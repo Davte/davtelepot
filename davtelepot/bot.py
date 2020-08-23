@@ -807,7 +807,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     async def text_message_handler(self, update, user_record, language=None):
         """Handle `text` message update."""
         replier, reply = None, None
-        text = update['text'].lower()
+        text = update['text']
+        lowered_text = text.lower()
         user_id = update['from']['id'] if 'from' in update else None
         if user_id in self.individual_text_message_handlers:
             replier = self.individual_text_message_handlers[user_id]
@@ -818,7 +819,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             # Commands can use latin letters, numbers and underscores.
             command = re.search(
                 r"([A-z_1-9]){1,32}",  # Command pattern (without leading `/`)
-                text
+                lowered_text
             ).group(0)  # Get the first group of characters matching pattern
             if command in self.commands:
                 replier = self.commands[command]['handler']
@@ -840,18 +841,16 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         else:  # Handle command aliases and text parsers
             # Aliases are case insensitive: text and alias are both .lower()
             for alias, function in self.command_aliases.items():
-                if text.startswith(alias.lower()):
+                if lowered_text.startswith(alias.lower()):
                     replier = function
                     break
             # Text message update parsers
             for check_function, parser in self.text_message_parsers.items():
-                if (
-                    parser['argument'] == 'text'
-                    and check_function(text)
-                ) or (
-                    parser['argument'] == 'update'
-                    and check_function(update)
-                ):
+                if check_function(
+                        **{name: argument
+                           for name, argument in locals().items()
+                           if name in inspect.signature(
+                                check_function).parameters}):
                     replier = parser['handler']
                     break
         if replier:
