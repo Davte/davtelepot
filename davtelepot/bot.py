@@ -934,10 +934,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     async def photo_message_handler(self, update, user_record, language=None):
         """Handle `photo` message update."""
-        logging.info(
-            "A photo message update was received, "
-            "but this handler does nothing yet."
-        )
+        return await self.general_handler(update=update,
+                                          user_record=user_record,
+                                          language=language,
+                                          update_type='photo')
 
     async def sticker_message_handler(self, update, user_record, language=None):
         """Handle `sticker` message update."""
@@ -1003,6 +1003,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         user_id = update['from']['id'] if 'from' in update else None
         if update_type not in self.individual_handlers:
             self.individual_handlers[update_type] = dict()
+        if update_type not in self.handlers:
+            self.handlers[update_type] = OrderedDict()
         if user_id in self.individual_handlers[update_type]:
             replier = self.individual_handlers[update_type][user_id]
             del self.individual_handlers[update_type][user_id]
