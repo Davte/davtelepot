@@ -1,6 +1,8 @@
 """Make a self-consistent bot help section."""
 
 # Project modules
+from collections import OrderedDict
+
 from .bot import Bot
 from .messages import default_help_messages
 from .utilities import (
@@ -234,14 +236,16 @@ async def _help_button(bot, update, user_record, data):
     return result
 
 
-async def _start_command(bot, update, user_record):
+async def _start_command(bot: Bot, update: dict,
+                         user_record: OrderedDict, language: str):
     text = get_cleaned_text(update=update, bot=bot, replace=['start'])
     if not text:
         return await _help_command(bot, update, user_record)
     update['text'] = text
     await bot.text_message_handler(
         update=update,
-        user_record=None
+        user_record=user_record,
+        language=language
     )
     return
 
@@ -258,8 +262,9 @@ def init(telegram_bot: Bot, help_messages: dict = None):
     telegram_bot.messages['help'] = help_messages
 
     @telegram_bot.command("/start", authorization_level='everybody')
-    async def start_command(bot, update, user_record):
-        return await _start_command(bot, update, user_record)
+    async def start_command(bot, update, user_record, language):
+        return await _start_command(bot=bot, update=update,
+                                    user_record=user_record, language=language)
 
     @telegram_bot.command(command='/help', aliases=['00help'],
                           reply_keyboard_button=help_messages['help_command'][
