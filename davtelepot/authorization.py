@@ -315,6 +315,7 @@ def get_authorization_function(bot: Bot):
 async def _authorization_command(bot: Bot,
                                  update: dict,
                                  user_record: OrderedDict,
+                                 language: str,
                                  mode: str = 'auth'):
     db = bot.db
     text = get_cleaned_text(bot=bot, update=update, replace=[mode])
@@ -407,6 +408,17 @@ async def _authorization_command(bot: Bot,
             user_record=user_record,
             admin_record=admin_record
         )
+        if bot.db['user_profile_photos'].find_one(user_id=user_record['id']):
+            buttons.append(
+                make_button(
+                    text=bot.get_message('authorization', 'auth_button',
+                                         'profile_picture_button',
+                                         language=language),
+                    prefix='auth:///',
+                    delimiter='|',
+                    data=['picture', user_record['id']]
+                )
+            )
         reply_markup = make_inline_keyboard(buttons, 1)
     return dict(
         text=result,
@@ -418,6 +430,7 @@ async def _authorization_command(bot: Bot,
 async def _authorization_button(bot: Bot,
                                 update: dict,
                                 user_record: OrderedDict,
+                                language: str,
                                 data: Union[str, List[Union[int, str]]]):
     if len(data) == 0:
         data = ['']
@@ -435,6 +448,17 @@ async def _authorization_button(bot: Bot,
             user_record=other_user_record,
             admin_record=user_record
         )
+        if bot.db['user_profile_photos'].find_one(user_id=other_user_record['id']):
+            buttons.append(
+                make_button(
+                    text=bot.get_message('authorization', 'auth_button',
+                                         'profile_picture_button',
+                                         language=language),
+                    prefix='auth:///',
+                    delimiter='|',
+                    data=['picture', user_record['id']]
+                )
+            )
         reply_markup = make_inline_keyboard(buttons, 1)
     elif command in ['set'] and len(arguments) > 1:
         other_user_id, new_privileges, *_ = arguments
@@ -507,7 +531,41 @@ async def _authorization_button(bot: Bot,
                 user_record=other_user_record,
                 admin_record=user_record
             )
+            if bot.db['user_profile_photos'].find_one(user_id=other_user_record['id']):
+                buttons.append(
+                    make_button(
+                        text=bot.get_message('authorization', 'auth_button',
+                                             'profile_picture_button',
+                                             language=language),
+                        prefix='auth:///',
+                        delimiter='|',
+                        data=['picture', user_record['id']]
+                    )
+                )
             reply_markup = make_inline_keyboard(buttons, 1)
+    elif command in ['picture'] and len(arguments) > 0:
+        photo_record = bot.db['user_profile_photos'].find_one(
+            user_id=arguments[0],
+            order_by=['-update_datetime'],
+        )
+        other_user_record = bot.db['users'].find_one(id=arguments[0])
+        if photo_record is None:
+            result = bot.get_message('admin', 'error', 'text',
+                                     language=language)
+        else:
+            caption, buttons = bot.Role.get_user_role_text_and_buttons(
+                user_record=other_user_record,
+                admin_record=user_record
+            )
+            await bot.sendPhoto(
+                chat_id=user_record['telegram_id'],
+                photo=photo_record['telegram_file_id'],
+                caption=caption,
+                reply_markup=make_inline_keyboard(
+                    buttons=buttons
+                ),
+                parse_mode='HTML'
+            )
     if text:
         return dict(
             text=result,
@@ -570,18 +628,24 @@ def init(telegram_bot: Bot,
                                   authorization_messages['auth_command']['description']
                           ),
                           authorization_level='moderator')
-    async def authorization_command(bot, update, user_record):
-        return await _authorization_command(bot, update, user_record)
+    async def authorization_command(bot, update, user_record, language):
+        return await _authorization_command(bot=bot, update=update,
+                                            user_record=user_record,
+                                            language=language)
 
     @telegram_bot.button('auth:///',
                          description=authorization_messages['auth_button']['description'],
                          separator='|',
                          authorization_level='moderator')
-    async def authorization_button(bot, update, user_record, data):
-        return await _authorization_button(bot, update, user_record, data)
+    async def authorization_button(bot, update, user_record, language, data):
+        return await _authorization_button(bot=bot, update=update,
+                                           user_record=user_record,
+                                           language=language, data=data)
 
     @telegram_bot.command('/ban', aliases=[], show_in_keyboard=False,
                           description=authorization_messages['ban_command']['description'],
                           authorization_level='moderator')
-    async def ban_command(bot, update, user_record):
-        return await _authorization_command(bot, update, user_record, mode='ban')
+    async def ban_command(bot, update, user_record, language):
+        return await _authorization_command(bot=bot, update=update,
+                                            user_record=user_record,
+                                            language=language, mode='ban')

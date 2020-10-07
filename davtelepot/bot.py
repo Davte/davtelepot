@@ -3162,18 +3162,25 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         while 1:
             await asyncio.sleep(interval)
+            users_profile_pictures_to_update = OrderedDict()
+            now = datetime.datetime.now()
             # Iterate through a copy since asyncio.sleep(0) is awaited at each
             # cycle iteration.
             for telegram_id, user in self.recent_users.copy().items():
                 new_record = dict()
                 with self.db as db:
                     user_record = db['users'].find_one(telegram_id=telegram_id)
-                    for key in [
-                        'first_name',
-                        'last_name',
-                        'username',
-                        'language_code'
-                    ]:
+                    user_picture_record = db['user_profile_photos'].find_one(
+                        user_id=user_record['id'],
+                        order_by=['-update_datetime']
+                    )
+                    # If user profile picture needs to be updated, add it to the OD
+                    if (user_picture_record is None
+                            or user_picture_record['update_datetime']
+                            < now - datetime.timedelta(days=1)):
+                        users_profile_pictures_to_update[telegram_id] = user_picture_record
+                    for key in ('first_name', 'last_name',
+                                'username', 'language_code', ):
                         new_record[key] = (user[key] if key in user else None)
                         if (
                             (
@@ -3206,6 +3213,37 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 if telegram_id in self.recent_users:
                     del self.recent_users[telegram_id]
                 await asyncio.sleep(0)
+            # Update user profile pictures
+            for telegram_id, user_picture_record in users_profile_pictures_to_update.items():
+                try:
+                    user_profile_photos = await self.getUserProfilePhotos(
+                        user_id=telegram_id,
+                        offset=0,
+                        limit=1
+                    )
+                    if (user_profile_photos is not None
+                            and 'photos' in user_profile_photos
+                            and len(user_profile_photos['photos'])):
+                        current_photo = user_profile_photos['photos'][0][0]
+                        if (user_picture_record is None
+                                or current_photo['file_id']
+                                != user_picture_record['telegram_file_id']):
+                            db['user_profile_photos'].insert(dict(
+                                user_id=user_record['id'],
+                                telegram_file_id=current_photo['file_id'],
+                                update_datetime=now
+                            ))
+                        else:
+                            db['user_profile_photos'].upsert(
+                                dict(
+                                    user_id=user_record['id'],
+                                    telegram_file_id=current_photo['file_id'],
+                                    update_datetime=now
+                                ),
+                                ['user_id', 'telegram_file_id']
+                            )
+                except Exception as e:
+                    logging.error(e)
 
     def get_user_record(self, update):
         """Get user_record of update sender.
