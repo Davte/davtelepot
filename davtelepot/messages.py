@@ -709,17 +709,25 @@ default_authorization_messages = {
         }
     },
     'auth_button': {
-        'description': {
-            'en': "Edit user permissions",
-            'it': "Cambia il grado di autorizzazione di un utente"
+        'appointed': {
+            'en': "Permission granted",
+            'it': "Permesso conferito"
+        },
+        'back_to_user': {
+            'en': "Back to user",
+            'it': "Torna all'utente"
         },
         'confirm': {
             'en': "Are you sure?",
             'it': "Sicuro sicuro?"
         },
-        'back_to_user': {
-            'en': "Back to user",
-            'it': "Torna all'utente"
+        'description': {
+            'en': "Edit user permissions",
+            'it': "Cambia il grado di autorizzazione di un utente"
+        },
+        'no_change': {
+            'en': "No change suggested!",
+            'it': "È già così!"
         },
         'permission_denied': {
             'user': {
@@ -732,14 +740,10 @@ default_authorization_messages = {
                 'it': "Non hai l'autorità di conferire questo permesso!"
             }
         },
-        'no_change': {
-            'en': "No change suggested!",
-            'it': "È già così!"
+        'profile_picture_button': {
+            'en': "🖼 Profile picture",
+            'it': "🖼 Foto profilo",
         },
-        'appointed': {
-            'en': "Permission granted",
-            'it': "Permesso conferito"
-        }
     },
 }
 
