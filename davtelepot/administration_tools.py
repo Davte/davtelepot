@@ -1824,11 +1824,11 @@ def init(telegram_bot: Bot,
         )
         table.create_column(
             'command',
-            db.types.string
+            db.types.string(100)
         )
         table.create_column(
             'description',
-            db.types.string
+            db.types.string(300)
         )
         table.create_column(
             'hidden',

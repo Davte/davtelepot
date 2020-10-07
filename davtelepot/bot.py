@@ -255,23 +255,39 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
             table.create_column(
                 'username',
-                self.db.types.string
+                self.db.types.string(64)
             )
             table.create_column(
                 'first_name',
-                self.db.types.string
+                self.db.types.string(64)
             )
             table.create_column(
                 'last_name',
-                self.db.types.string
+                self.db.types.string(64)
             )
             table.create_column(
                 'language_code',
-                self.db.types.string
+                self.db.types.string(8)
             )
             table.create_column(
                 'selected_language_code',
-                self.db.types.string
+                self.db.types.string(8)
+            )
+        if 'user_profile_photos' not in self.db.tables:
+            table = self.db.create_table(
+                table_name='user_profile_photos'
+            )
+            table.create_column(
+                'user_id',
+                self.db.types.integer
+            )
+            table.create_column(
+                'telegram_file_id',
+                self.db.types.string(128)
+            )
+            table.create_column(
+                'update_datetime',
+                self.db.types.datetime
             )
         return
 

@@ -26,7 +26,7 @@ class ObjectWithDatabase(object):
         """Instantiate object and open connection with database."""
         if database_url is None:
             database_url = 'database.db'
-        if ':///' not in database_url:
+        if '://' not in database_url:
             # Default database engine is sqlite, which operates on a
             # single-file database having `.db` extension
             if not database_url.endswith('.db'):
