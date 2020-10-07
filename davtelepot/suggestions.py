@@ -262,7 +262,7 @@ def init(telegram_bot: davtelepot.bot.Bot, suggestion_messages=None):
         )
         table.create_column(
             'suggestion',
-            types.text
+            types.string(2048)
         )
         table.create_column(
             'created',

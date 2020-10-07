@@ -664,7 +664,7 @@ def init(telegram_bot: Bot, useful_tools_messages=None):
         )
         table.create_column(
             'expression',
-            types.string
+            types.string(8192)
         )
 
     @telegram_bot.command(command='/calc',
