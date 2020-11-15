@@ -15,8 +15,8 @@ __version__ = "2.6.19"
 __maintainer__ = "Davide Testa"
 __contact__ = "t.me/davte"
 
-from . import (administration_tools, authorization, bot, helper, languages,
-               suggestions, useful_tools, utilities)
+from . import (administration_tools, api, authorization, bot, helper, languages,
+               messages, suggestions, useful_tools, utilities)
 
-__all__ = [administration_tools, authorization, bot, helper, languages,
-           suggestions, useful_tools, utilities]
+__all__ = [administration_tools, api, authorization, bot, helper, languages,
+           messages, suggestions, useful_tools, utilities]

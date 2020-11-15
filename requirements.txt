@@ -1,3 +1,5 @@
 aiohttp
 bs4
 dataset
+beautifulsoup4
+SQLAlchemy

@@ -23,7 +23,7 @@ from typing import Union, List, Tuple
 from sqlalchemy.exc import ResourceClosedError
 
 # Project modules
-from . import messages
+from .messages import default_admin_messages, default_talk_messages
 from .bot import Bot
 from .utilities import (
     async_wrapper, CachedPage, Confirmator, extract, get_cleaned_text,
@@ -362,7 +362,10 @@ async def _talk_button(bot: Bot,
                 len(arguments) < 1
                 or type(arguments[0]) is not int
         ):
-            result = "Errore!"
+            result = bot.get_message(
+                'talk', 'error', 'text',
+                update=update, user_record=user_record
+            )
         else:
             with bot.db as db:
                 other_user_record = db['users'].find_one(
@@ -381,7 +384,10 @@ async def _talk_button(bot: Bot,
                 len(arguments) < 1
                 or type(arguments[0]) is not int
         ):
-            result = "Errore!"
+            result = bot.get_message(
+                'talk', 'error', 'text',
+                update=update, user_record=user_record
+            )
         elif not Confirmator.get('stop_bots').confirm(telegram_id):
             result = bot.get_message(
                 'talk', 'end_session',
@@ -1705,7 +1711,7 @@ async def _father_button(bot: Bot, user_record: OrderedDict,
                                 prefix='father:///',
                                 delimiter='|',
                                 data=['settings', 'edit', 'select',
-                                      selected_record['id'], 'edit_descr']
+                                      selected_record['id'], 'edit_description']
                             ),
                             make_button(
                                 text=bot.get_message(
@@ -1731,7 +1737,7 @@ async def _father_button(bot: Bot, user_record: OrderedDict,
                         ],
                         2
                     )
-                elif len(data) > 3 and data[3] == 'edit_descr':
+                elif len(data) > 3 and data[3] == 'edit_description':
                     result, text, reply_markup = await edit_bot_father_settings_via_message(
                         bot=bot,
                         user_record=user_record,
@@ -1812,10 +1818,10 @@ def init(telegram_bot: Bot,
     )
     asyncio.ensure_future(get_package_updates(telegram_bot))
     if talk_messages is None:
-        talk_messages = messages.default_talk_messages
+        talk_messages = default_talk_messages
     telegram_bot.messages['talk'] = talk_messages
     if admin_messages is None:
-        admin_messages = messages.default_admin_messages
+        admin_messages = default_admin_messages
     telegram_bot.messages['admin'] = admin_messages
     db = telegram_bot.db
     if 'bot_father_commands' not in db.tables:

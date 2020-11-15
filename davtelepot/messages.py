@@ -985,6 +985,12 @@ default_talk_messages = {
         'en': 'End session?',
         'it': 'Chiudere la sessione?',
     },
+    'error': {
+        'text': {
+            'en': "❌️ Error!",
+            'it': "❌️ Errore!"
+        },
+    },
     'help_text': {
         'en': 'Press the button to search for user.',
         'it': 'Premi il pulsante per scegliere un utente.',

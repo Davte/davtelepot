@@ -3225,9 +3225,14 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             and 'photos' in user_profile_photos
                             and len(user_profile_photos['photos'])):
                         current_photo = user_profile_photos['photos'][0][0]
-                        if (user_picture_record is None
-                                or current_photo['file_id']
-                                != user_picture_record['telegram_file_id']):
+                        if (
+                                user_picture_record is None
+                                or (
+                                        isinstance(user_picture_record, dict)
+                                        and current_photo['file_id']
+                                        != user_picture_record['telegram_file_id']
+                                )
+                        ):
                             db['user_profile_photos'].insert(dict(
                                 user_id=user_record['id'],
                                 telegram_file_id=current_photo['file_id'],
