@@ -21,7 +21,6 @@ from difflib import SequenceMatcher
 from typing import Tuple, Union
 
 import aiohttp
-from aiohttp import web
 from bs4 import BeautifulSoup
 
 
@@ -1566,7 +1565,7 @@ def run_aiohttp_server(app, *args, **kwargs):
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    web.run_app(app, *args, **kwargs)
+    aiohttp.web.run_app(app, *args, **kwargs)
 
 
 def custom_join(_list, joiner, final=None):
