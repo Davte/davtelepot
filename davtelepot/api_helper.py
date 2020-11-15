@@ -10,7 +10,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 # Project modules
-from . import api
+from .api import TelegramBot
 
 api_url = "https://core.telegram.org/bots/api"
 
@@ -105,7 +105,7 @@ async def print_api_methods(loop=None,
     """Get information from Telegram bot API web page."""
     if loop is None:
         loop = asyncio.get_event_loop()
-    implemented_methods = dir(api.TelegramBot)
+    implemented_methods = dir(TelegramBot)
     async with aiohttp.ClientSession(
         loop=loop,
         timeout=aiohttp.ClientTimeout(
