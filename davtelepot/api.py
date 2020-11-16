@@ -1464,3 +1464,75 @@ class TelegramBot:
             'setStickerSetThumb',
             parameters=locals()
         )
+
+    async def logOut(self):
+        """Log out from the cloud Bot API server.
+
+        Use this method to log out from the cloud Bot API server
+        before launching the bot locally.
+        You must log out the bot before running it locally, otherwise there
+        is no guarantee that the bot will receive updates.
+        After a successful call, you can immediately log in on a local server,
+        but will not be able to log in back to the cloud Bot API server
+        for 10 minutes.
+        Returns True on success. Requires no parameters.
+        See https://core.telegram.org/bots/api#logout for details.
+        """
+        return await self.api_request(
+            'logOut',
+            parameters=locals()
+        )
+
+    async def close(self):
+        """Close bot instance in local server.
+
+        Use this method to close the bot instance before moving it from one
+        local server to another.
+        You need to delete the webhook before calling this method to ensure
+        that the bot isn't launched again after server restart.
+        The method will return error 429 in the first 10 minutes after the
+        bot is launched. Returns True on success.
+        Requires no parameters.
+        See https://core.telegram.org/bots/api#close for details.
+        """
+        return await self.api_request(
+            'close',
+            parameters=locals()
+        )
+
+    async def copyMessage(self, chat_id: Union[int, str],
+                          from_chat_id: Union[int, str],
+                          message_id: int,
+                          caption: str = None,
+                          parse_mode: str = None,
+                          caption_entities: list = None,
+                          disable_notification: bool = None,
+                          reply_to_message_id: int = None,
+                          allow_sending_without_reply: bool = None,
+                          reply_markup=None):
+        """Use this method to copy messages of any kind.
+
+        The method is analogous to the method forwardMessages, but the copied
+        message doesn't have a link to the original message.
+        Returns the MessageId of the sent message on success.
+        See https://core.telegram.org/bots/api#copymessage for details.
+        """
+        return await self.api_request(
+            'copyMessage',
+            parameters=locals()
+        )
+
+    async def unpinAllChatMessages(self, chat_id: Union[int, str]):
+        """Use this method to clear the list of pinned messages in a chat.
+
+        If the chat is not a private chat, the bot must be an administrator
+        in the chat for this to work and must have the 'can_pin_messages'
+        admin right in a supergroup or 'can_edit_messages' admin right in a
+        channel.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#unpinallchatmessages for details.
+        """
+        return await self.api_request(
+            'unpinAllChatMessages',
+            parameters=locals()
+        )
