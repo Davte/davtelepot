@@ -60,6 +60,8 @@ from .utilities import (
 
 # Do not log aiohttp `INFO` and `DEBUG` levels
 logging.getLogger('aiohttp').setLevel(logging.WARNING)
+# Same with chardet
+logging.getLogger('chardet').setLevel(logging.WARNING)
 
 
 # Some methods are not implemented yet: that's the reason behind the following statement
