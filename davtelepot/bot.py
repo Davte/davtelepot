@@ -43,7 +43,7 @@ import re
 import sys
 
 from collections import OrderedDict
-from typing import Callable, Union, Dict
+from typing import Callable, List, Union, Dict
 
 # Third party modules
 from aiohttp import web
@@ -1278,16 +1278,19 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             return await method(update=update, *args, **kwargs)
         raise Exception("Unsupported keyword arguments for `Bot().reply`.")
 
-    async def send_message(self, chat_id=None, text=None,
-                           parse_mode='HTML',
-                           disable_web_page_preview=None,
-                           disable_notification=None,
-                           reply_to_message_id=None,
+    async def send_message(self, chat_id: Union[int, str] = None,
+                           text: str = None,
+                           entities: List[dict] = None,
+                           parse_mode: str = 'HTML',
+                           disable_web_page_preview: bool = None,
+                           disable_notification: bool = None,
+                           reply_to_message_id: int = None,
+                           allow_sending_without_reply: bool = None,
                            reply_markup=None,
-                           update=None,
-                           reply_to_update=False,
-                           send_default_keyboard=True,
-                           user_record=None):
+                           update: dict = None,
+                           reply_to_update: bool = False,
+                           send_default_keyboard: bool = True,
+                           user_record: OrderedDict = None):
         """Send text via message(s).
 
         This method wraps lower-level `TelegramBot.sendMessage` method.
@@ -1357,9 +1360,11 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 chat_id=chat_id,
                 text=text_chunk,
                 parse_mode=parse_mode,
+                entities=entities,
                 disable_web_page_preview=disable_web_page_preview,
                 disable_notification=disable_notification,
                 reply_to_message_id=reply_to_message_id,
+                allow_sending_without_reply=allow_sending_without_reply,
                 reply_markup=_reply_markup
             )
         return sent_message_update
@@ -1376,13 +1381,16 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             self.final_tasks.remove(task)
         return
 
-    async def edit_message_text(self, text,
-                                chat_id=None, message_id=None,
-                                inline_message_id=None,
-                                parse_mode='HTML',
-                                disable_web_page_preview=None,
+    async def edit_message_text(self, text: str,
+                                chat_id: Union[int, str] = None,
+                                message_id: int = None,
+                                inline_message_id: str = None,
+                                parse_mode: str = 'HTML',
+                                entities: List[dict] = None,
+                                disable_web_page_preview: bool = None,
+                                allow_sending_without_reply: bool = None,
                                 reply_markup=None,
-                                update=None):
+                                update: dict = None):
         """Edit message text, sending new messages if necessary.
 
         This method wraps lower-level `TelegramBot.editMessageText` method.
@@ -1418,6 +1426,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                     message_id=message_id,
                     inline_message_id=inline_message_id,
                     parse_mode=parse_mode,
+                    entities=entities,
                     disable_web_page_preview=disable_web_page_preview,
                     reply_markup=(reply_markup if is_last else None)
                 )
@@ -1433,7 +1442,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                         text=text_chunk,
                         chat_id=chat_id,
                         parse_mode=parse_mode,
+                        entities=entities,
                         disable_web_page_preview=disable_web_page_preview,
+                        allow_sending_without_reply=allow_sending_without_reply,
                         reply_markup=(reply_markup if is_last else None),
                         update=updates[-1],
                         reply_to_update=True,
@@ -1512,16 +1523,18 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             **message_identifier
         )
 
-    async def send_photo(self, chat_id=None, photo=None,
-                         caption=None,
-                         parse_mode=None,
-                         disable_notification=None,
-                         reply_to_message_id=None,
+    async def send_photo(self, chat_id: Union[int, str], photo,
+                         caption: str = None,
+                         parse_mode: str = None,
+                         caption_entities: List[dict] = None,
+                         disable_notification: bool = None,
+                         reply_to_message_id: int = None,
+                         allow_sending_without_reply: bool = None,
                          reply_markup=None,
-                         update=None,
-                         reply_to_update=False,
-                         send_default_keyboard=True,
-                         use_stored_file_id=True):
+                         update: dict = None,
+                         reply_to_update: bool = False,
+                         send_default_keyboard: bool = True,
+                         use_stored_file_id: bool = True):
         """Send photos.
 
         This method wraps lower-level `TelegramBot.sendPhoto` method.
@@ -1594,8 +1607,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 photo=photo,
                 caption=caption,
                 parse_mode=parse_mode,
+                caption_entities=caption_entities,
                 disable_notification=disable_notification,
                 reply_to_message_id=reply_to_message_id,
+                allow_sending_without_reply=allow_sending_without_reply,
                 reply_markup=reply_markup
             )
             if isinstance(sent_update, Exception):
@@ -1629,20 +1644,22 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return sent_update
 
-    async def send_audio(self, chat_id=None, audio=None,
-                         caption=None,
-                         duration=None,
-                         performer=None,
-                         title=None,
+    async def send_audio(self, chat_id: Union[int, str], audio,
+                         caption: str = None,
+                         parse_mode: str = None,
+                         caption_entities: List[dict] = None,
+                         duration: int = None,
+                         performer: str = None,
+                         title: str = None,
                          thumb=None,
-                         parse_mode=None,
-                         disable_notification=None,
-                         reply_to_message_id=None,
+                         disable_notification: bool = None,
+                         reply_to_message_id: int = None,
+                         allow_sending_without_reply: bool = None,
                          reply_markup=None,
-                         update=None,
-                         reply_to_update=False,
-                         send_default_keyboard=True,
-                         use_stored_file_id=True):
+                         update: dict = None,
+                         reply_to_update: bool = False,
+                         send_default_keyboard: bool = True,
+                         use_stored_file_id: bool = True):
         """Send audio files.
 
         This method wraps lower-level `TelegramBot.sendAudio` method.
@@ -1714,13 +1731,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 chat_id=chat_id,
                 audio=audio,
                 caption=caption,
+                parse_mode=parse_mode,
+                caption_entities=caption_entities,
                 duration=duration,
                 performer=performer,
                 title=title,
                 thumb=thumb,
-                parse_mode=parse_mode,
                 disable_notification=disable_notification,
                 reply_to_message_id=reply_to_message_id,
+                allow_sending_without_reply=allow_sending_without_reply,
                 reply_markup=reply_markup
             )
             if isinstance(sent_update, Exception):
@@ -1753,17 +1772,19 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return sent_update
 
-    async def send_voice(self, chat_id=None, voice=None,
-                         caption=None,
-                         duration=None,
-                         parse_mode=None,
-                         disable_notification=None,
-                         reply_to_message_id=None,
+    async def send_voice(self, chat_id: Union[int, str], voice,
+                         caption: str = None,
+                         parse_mode: str = None,
+                         caption_entities: List[dict] = None,
+                         duration: int = None,
+                         disable_notification: bool = None,
+                         reply_to_message_id: int = None,
+                         allow_sending_without_reply: bool = None,
                          reply_markup=None,
-                         update=None,
-                         reply_to_update=False,
-                         send_default_keyboard=True,
-                         use_stored_file_id=True):
+                         update: dict = None,
+                         reply_to_update: bool = False,
+                         send_default_keyboard: bool = True,
+                         use_stored_file_id: bool = True):
         """Send voice messages.
 
         This method wraps lower-level `TelegramBot.sendVoice` method.
@@ -1835,10 +1856,12 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 chat_id=chat_id,
                 voice=voice,
                 caption=caption,
-                duration=duration,
                 parse_mode=parse_mode,
+                caption_entities=caption_entities,
+                duration=duration,
                 disable_notification=disable_notification,
                 reply_to_message_id=reply_to_message_id,
+                allow_sending_without_reply=allow_sending_without_reply,
                 reply_markup=reply_markup
             )
             if isinstance(sent_update, Exception):
@@ -1871,16 +1894,22 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return sent_update
 
-    async def send_document(self, chat_id=None, document=None, thumb=None,
-                            caption=None, parse_mode=None,
-                            disable_notification=None,
-                            reply_to_message_id=None, reply_markup=None,
-                            document_path=None,
-                            document_name=None,
-                            update=None,
-                            reply_to_update=False,
-                            send_default_keyboard=True,
-                            use_stored_file_id=False):
+    async def send_document(self, chat_id: Union[int, str], document,
+                            thumb=None,
+                            caption: str = None,
+                            parse_mode: str = None,
+                            caption_entities: List[dict] = None,
+                            disable_content_type_detection: bool = None,
+                            disable_notification: bool = None,
+                            reply_to_message_id: int = None,
+                            allow_sending_without_reply: bool = None,
+                            reply_markup=None,
+                            document_path: str = None,
+                            document_name: str = None,
+                            update: dict = None,
+                            reply_to_update: bool = False,
+                            send_default_keyboard: bool = True,
+                            use_stored_file_id: bool = False):
         """Send a document.
 
         This method wraps lower-level `TelegramBot.sendDocument` method.
@@ -2014,8 +2043,11 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 thumb=thumb,
                 caption=caption,
                 parse_mode=parse_mode,
+                caption_entities=caption_entities,
+                disable_content_type_detection=disable_content_type_detection,
                 disable_notification=disable_notification,
                 reply_to_message_id=reply_to_message_id,
+                allow_sending_without_reply=allow_sending_without_reply,
                 reply_markup=reply_markup
             )
             if isinstance(sent_update, Exception):
