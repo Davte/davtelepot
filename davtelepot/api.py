@@ -7,10 +7,11 @@ A simple aiohttp asynchronous web client is used to make requests.
 # Standard library modules
 import asyncio
 import datetime
+import io
 import json
 import logging
 
-from typing import Union, List
+from typing import Dict, Union, List, IO
 
 # Third party modules
 import aiohttp
@@ -199,6 +200,19 @@ class TelegramBot:
                 data.add_field(key, value)
         return data
 
+    @staticmethod
+    def prepare_file_object(file: Union[str, IO, dict, None]
+                            ) -> Union[Dict[str, IO], None]:
+        if type(file) is str:
+            try:
+                file = open(file, 'r')
+            except FileNotFoundError as e:
+                logging.error(f"{e}")
+                file = None
+        if isinstance(file, io.IOBase):
+            file = dict(file=file)
+        return file
+
     def get_session(self, api_method):
         """According to API method, return proper session and information.
 
@@ -368,7 +382,10 @@ class TelegramBot:
             'getMe',
         )
 
-    async def getUpdates(self, offset, timeout, limit, allowed_updates):
+    async def getUpdates(self, offset: int = None,
+                         limit: int = None,
+                         timeout: int = None,
+                         allowed_updates: List[str] = None):
         """Get a list of updates starting from `offset`.
 
         If there are no updates, keep the request hanging until `timeout`.
@@ -382,20 +399,17 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def setWebhook(self, url=None, certificate=None,
-                         max_connections=None, allowed_updates=None):
+    async def setWebhook(self, url: str,
+                         certificate: Union[str, IO] = None,
+                         ip_address: str = None,
+                         max_connections: int = None,
+                         allowed_updates: List[str] = None,
+                         drop_pending_updates: bool = None):
         """Set or remove a webhook. Telegram will post to `url` new updates.
 
         See https://core.telegram.org/bots/api#setwebhook for details.
         """
-        if type(certificate) is str:
-            try:
-                certificate = dict(
-                    file=open(certificate, 'r')
-                )
-            except FileNotFoundError as e:
-                logging.error(f"{e}\nCertificate set to `None`")
-                certificate = None
+        certificate = self.prepare_file_object(certificate)
         result = await self.api_request(
             'setWebhook',
             parameters=locals()
@@ -404,13 +418,14 @@ class TelegramBot:
             certificate['file'].close()
         return result
 
-    async def deleteWebhook(self):
+    async def deleteWebhook(self, drop_pending_updates: bool = None):
         """Remove webhook integration and switch back to getUpdate.
 
         See https://core.telegram.org/bots/api#deletewebhook for details.
         """
         return await self.api_request(
             'deleteWebhook',
+            parameters=locals()
         )
 
     async def getWebhookInfo(self):
@@ -422,11 +437,13 @@ class TelegramBot:
             'getWebhookInfo',
         )
 
-    async def sendMessage(self, chat_id, text,
-                          parse_mode=None,
-                          disable_web_page_preview=None,
-                          disable_notification=None,
-                          reply_to_message_id=None,
+    async def sendMessage(self, chat_id: Union[int, str], text: str,
+                          parse_mode: str = None,
+                          entities: List[dict] = None,
+                          disable_web_page_preview: bool = None,
+                          disable_notification: bool = None,
+                          reply_to_message_id: int = None,
+                          allow_sending_without_reply: bool = None,
                           reply_markup=None):
         """Send a text message. On success, return it.
 
@@ -437,8 +454,10 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def forwardMessage(self, chat_id, from_chat_id, message_id,
-                             disable_notification=None):
+    async def forwardMessage(self, chat_id: Union[int, str],
+                             from_chat_id: Union[int, str],
+                             message_id: int,
+                             disable_notification: bool = None):
         """Forward a message.
 
         See https://core.telegram.org/bots/api#forwardmessage for details.
@@ -448,11 +467,13 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendPhoto(self, chat_id, photo,
-                        caption=None,
-                        parse_mode=None,
-                        disable_notification=None,
-                        reply_to_message_id=None,
+    async def sendPhoto(self, chat_id: Union[int, str], photo,
+                        caption: str = None,
+                        parse_mode: str = None,
+                        caption_entities: List[dict] = None,
+                        disable_notification: bool = None,
+                        reply_to_message_id: int = None,
+                        allow_sending_without_reply: bool = None,
                         reply_markup=None):
         """Send a photo from file_id, HTTP url or file.
 
@@ -463,15 +484,17 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendAudio(self, chat_id, audio,
-                        caption=None,
-                        parse_mode=None,
-                        duration=None,
-                        performer=None,
-                        title=None,
+    async def sendAudio(self, chat_id: Union[int, str], audio,
+                        caption: str = None,
+                        parse_mode: str = None,
+                        caption_entities: List[dict] = None,
+                        duration: int = None,
+                        performer: str = None,
+                        title: str = None,
                         thumb=None,
-                        disable_notification=None,
-                        reply_to_message_id=None,
+                        disable_notification: bool = None,
+                        reply_to_message_id: int = None,
+                        allow_sending_without_reply: bool = None,
                         reply_markup=None):
         """Send an audio file from file_id, HTTP url or file.
 
@@ -482,12 +505,15 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendDocument(self, chat_id, document,
+    async def sendDocument(self, chat_id: Union[int, str], document,
                            thumb=None,
-                           caption=None,
-                           parse_mode=None,
-                           disable_notification=None,
-                           reply_to_message_id=None,
+                           caption: str = None,
+                           parse_mode: str = None,
+                           caption_entities: List[dict] = None,
+                           disable_content_type_detection: bool = None,
+                           disable_notification: bool = None,
+                           reply_to_message_id: int = None,
+                           allow_sending_without_reply: bool = None,
                            reply_markup=None):
         """Send a document from file_id, HTTP url or file.
 
@@ -498,16 +524,18 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendVideo(self, chat_id, video,
-                        duration=None,
-                        width=None,
-                        height=None,
+    async def sendVideo(self, chat_id: Union[int, str], video,
+                        duration: int = None,
+                        width: int = None,
+                        height: int = None,
                         thumb=None,
-                        caption=None,
-                        parse_mode=None,
-                        supports_streaming=None,
-                        disable_notification=None,
-                        reply_to_message_id=None,
+                        caption: str = None,
+                        parse_mode: str = None,
+                        caption_entities: List[dict] = None,
+                        supports_streaming: bool = None,
+                        disable_notification: bool = None,
+                        reply_to_message_id: int = None,
+                        allow_sending_without_reply: bool = None,
                         reply_markup=None):
         """Send a video from file_id, HTTP url or file.
 
@@ -518,15 +546,17 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendAnimation(self, chat_id, animation,
-                            duration=None,
-                            width=None,
-                            height=None,
+    async def sendAnimation(self, chat_id: Union[int, str], animation,
+                            duration: int = None,
+                            width: int = None,
+                            height: int = None,
                             thumb=None,
-                            caption=None,
-                            parse_mode=None,
-                            disable_notification=None,
-                            reply_to_message_id=None,
+                            caption: str = None,
+                            parse_mode: str = None,
+                            caption_entities: List[dict] = None,
+                            disable_notification: bool = None,
+                            reply_to_message_id: int = None,
+                            allow_sending_without_reply: bool = None,
                             reply_markup=None):
         """Send animation files (GIF or H.264/MPEG-4 AVC video without sound).
 
@@ -537,12 +567,14 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendVoice(self, chat_id, voice,
-                        caption=None,
-                        parse_mode=None,
-                        duration=None,
-                        disable_notification=None,
-                        reply_to_message_id=None,
+    async def sendVoice(self, chat_id: Union[int, str], voice,
+                        caption: str = None,
+                        parse_mode: str = None,
+                        caption_entities: List[dict] = None,
+                        duration: int = None,
+                        disable_notification: bool = None,
+                        reply_to_message_id: int = None,
+                        allow_sending_without_reply: bool = None,
                         reply_markup=None):
         """Send an audio file to be displayed as playable voice message.
 
@@ -554,12 +586,13 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendVideoNote(self, chat_id, video_note,
-                            duration=None,
-                            length=None,
+    async def sendVideoNote(self, chat_id: Union[int, str], video_note,
+                            duration: int = None,
+                            length: int = None,
                             thumb=None,
-                            disable_notification=None,
-                            reply_to_message_id=None,
+                            disable_notification: bool = None,
+                            reply_to_message_id: int = None,
+                            allow_sending_without_reply: bool = None,
                             reply_markup=None):
         """Send a rounded square mp4 video message of up to 1 minute long.
 
@@ -570,9 +603,10 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendMediaGroup(self, chat_id, media,
-                             disable_notification=None,
-                             reply_to_message_id=None):
+    async def sendMediaGroup(self, chat_id: Union[int, str], media: list,
+                             disable_notification: bool = None,
+                             reply_to_message_id: int = None,
+                             allow_sending_without_reply: bool = None):
         """Send a group of photos or videos as an album.
 
         `media` must be a list of `InputMediaPhoto` and/or `InputMediaVideo`
@@ -584,23 +618,40 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendLocation(self, chat_id, latitude, longitude,
+    async def sendLocation(self, chat_id: Union[int, str],
+                           latitude: float, longitude: float,
+                           horizontal_accuracy: float = None,
                            live_period=None,
-                           disable_notification=None,
-                           reply_to_message_id=None,
+                           heading: int = None,
+                           proximity_alert_radius: int = None,
+                           disable_notification: bool = None,
+                           reply_to_message_id: int = None,
+                           allow_sending_without_reply: bool = None,
                            reply_markup=None):
         """Send a point on the map. May be kept updated for a `live_period`.
 
         See https://core.telegram.org/bots/api#sendlocation for details.
         """
+        if horizontal_accuracy:  # Horizontal accuracy: 0-1500 m [float].
+            horizontal_accuracy = max(0.0, min(horizontal_accuracy, 1500.0))
+        if live_period:
+            live_period = max(60, min(live_period, 86400))
+        if heading:  # Direction in which the user is moving, 1-360°
+            heading = max(1, min(heading, 360))
+        if proximity_alert_radius:  # Distance 1-100000 m
+            proximity_alert_radius = max(1, min(proximity_alert_radius, 100000))
         return await self.api_request(
             'sendLocation',
             parameters=locals()
         )
 
-    async def editMessageLiveLocation(self, latitude, longitude,
-                                      chat_id=None, message_id=None,
-                                      inline_message_id=None,
+    async def editMessageLiveLocation(self, latitude: float, longitude: float,
+                                      chat_id: Union[int, str] = None,
+                                      message_id: int = None,
+                                      inline_message_id: str = None,
+                                      horizontal_accuracy: float = None,
+                                      heading: int = None,
+                                      proximity_alert_radius: int = None,
                                       reply_markup=None):
         """Edit live location messages.
 
@@ -611,14 +662,23 @@ class TelegramBot:
         See https://core.telegram.org/bots/api#editmessagelivelocation
             for details.
         """
+        if inline_message_id is None and (chat_id is None or message_id is None):
+            logging.error("Invalid target chat!")
+        if horizontal_accuracy:  # Horizontal accuracy: 0-1500 m [float].
+            horizontal_accuracy = max(0.0, min(horizontal_accuracy, 1500.0))
+        if heading:  # Direction in which the user is moving, 1-360°
+            heading = max(1, min(heading, 360))
+        if proximity_alert_radius:  # Distance 1-100000 m
+            proximity_alert_radius = max(1, min(proximity_alert_radius, 100000))
         return await self.api_request(
             'editMessageLiveLocation',
             parameters=locals()
         )
 
     async def stopMessageLiveLocation(self,
-                                      chat_id=None, message_id=None,
-                                      inline_message_id=None,
+                                      chat_id: Union[int, str] = None,
+                                      message_id: int = None,
+                                      inline_message_id: int = None,
                                       reply_markup=None):
         """Stop updating a live location message before live_period expires.
 
@@ -633,11 +693,16 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendVenue(self, chat_id, latitude, longitude, title, address,
-                        foursquare_id=None,
-                        foursquare_type=None,
-                        disable_notification=None,
-                        reply_to_message_id=None,
+    async def sendVenue(self, chat_id: Union[int, str],
+                        latitude: float, longitude: float,
+                        title: str, address: str,
+                        foursquare_id: str = None,
+                        foursquare_type: str = None,
+                        google_place_id: str = None,
+                        google_place_type: str = None,
+                        disable_notification: bool = None,
+                        reply_to_message_id: int = None,
+                        allow_sending_without_reply: bool = None,
                         reply_markup=None):
         """Send information about a venue.
 
@@ -649,11 +714,14 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendContact(self, chat_id, phone_number, first_name,
-                          last_name=None,
-                          vcard=None,
-                          disable_notification=None,
-                          reply_to_message_id=None,
+    async def sendContact(self, chat_id: Union[int, str],
+                          phone_number: str,
+                          first_name: str,
+                          last_name: str = None,
+                          vcard: str = None,
+                          disable_notification: bool = None,
+                          reply_to_message_id: int = None,
+                          allow_sending_without_reply: bool = None,
                           reply_markup=None):
         """Send a phone contact.
 
@@ -674,16 +742,33 @@ class TelegramBot:
                        correct_option_id: int = None,
                        explanation: str = None,
                        explanation_parse_mode: str = None,
+                       explanation_entities: List[dict] = None,
                        open_period: int = None,
-                       close_date: int = None,
+                       close_date: Union[int, datetime.datetime] = None,
                        is_closed: bool = None,
                        disable_notification: bool = None,
+                       allow_sending_without_reply: bool = None,
                        reply_to_message_id: int = None,
                        reply_markup=None):
         """Send a native poll in a group, a supergroup or channel.
 
         See https://core.telegram.org/bots/api#sendpoll for details.
+
+        close_date: Unix timestamp; 5-600 seconds from now.
+        open_period (overwrites close_date): seconds (integer), 5-600.
         """
+        if open_period is not None:
+            close_date = None
+            open_period = min(max(5, open_period), 600)
+        elif isinstance(close_date, datetime.datetime):
+            now = datetime.datetime.now()
+            close_date = min(
+                max(
+                    now + datetime.timedelta(seconds=5),
+                    close_date
+                ), now + datetime.timedelta(seconds=600)
+            )
+            close_date = int(close_date.timestamp())
         # To avoid shadowing `type`, this workaround is required
         parameters = locals().copy()
         parameters['type'] = parameters['type_']
@@ -693,7 +778,7 @@ class TelegramBot:
             parameters=parameters
         )
 
-    async def sendChatAction(self, chat_id, action):
+    async def sendChatAction(self, chat_id: Union[int, str], action):
         """Fake a typing status or similar.
 
         See https://core.telegram.org/bots/api#sendchataction for details.
@@ -732,7 +817,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def kickChatMember(self, chat_id, user_id,
+    async def kickChatMember(self, chat_id: Union[int, str], user_id,
                              until_date=None):
         """Kick a user from a group, a supergroup or a channel.
 
@@ -750,7 +835,8 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def unbanChatMember(self, chat_id, user_id):
+    async def unbanChatMember(self, chat_id: Union[int, str], user_id: int,
+                              only_if_banned: bool = True):
         """Unban a previously kicked user in a supergroup or channel.
 
         The user will not return to the group or channel automatically, but
@@ -758,18 +844,18 @@ class TelegramBot:
         The bot must be an administrator for this to work.
         Return True on success.
         See https://core.telegram.org/bots/api#unbanchatmember for details.
+
+        If `only_if_banned` is set to False, regular users will be kicked from
+            chat upon call of this method on them.
         """
         return await self.api_request(
             'unbanChatMember',
             parameters=locals()
         )
 
-    async def restrictChatMember(self, chat_id, user_id,
-                                 until_date=None,
-                                 can_send_messages=None,
-                                 can_send_media_messages=None,
-                                 can_send_other_messages=None,
-                                 can_add_web_page_previews=None):
+    async def restrictChatMember(self, chat_id: Union[int, str], user_id: int,
+                                 permissions: Dict[str, bool],
+                                 until_date: Union[datetime.datetime, int] = None):
         """Restrict a user in a supergroup.
 
         The bot must be an administrator in the supergroup for this to work
@@ -778,21 +864,26 @@ class TelegramBot:
             user.
         Return True on success.
         See https://core.telegram.org/bots/api#restrictchatmember for details.
+
+        until_date must be a Unix timestamp.
         """
+        if isinstance(until_date, datetime.datetime):
+            until_date = int(until_date.timestamp())
         return await self.api_request(
             'restrictChatMember',
             parameters=locals()
         )
 
-    async def promoteChatMember(self, chat_id, user_id,
-                                can_change_info=None,
-                                can_post_messages=None,
-                                can_edit_messages=None,
-                                can_delete_messages=None,
-                                can_invite_users=None,
-                                can_restrict_members=None,
-                                can_pin_messages=None,
-                                can_promote_members=None):
+    async def promoteChatMember(self, chat_id: Union[int, str], user_id: int,
+                                is_anonymous: bool = None,
+                                can_change_info: bool = None,
+                                can_post_messages: bool = None,
+                                can_edit_messages: bool = None,
+                                can_delete_messages: bool = None,
+                                can_invite_users: bool = None,
+                                can_restrict_members: bool = None,
+                                can_pin_messages: bool = None,
+                                can_promote_members: bool = None):
         """Promote or demote a user in a supergroup or a channel.
 
         The bot must be an administrator in the chat for this to work and must
@@ -806,7 +897,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def exportChatInviteLink(self, chat_id):
+    async def exportChatInviteLink(self, chat_id: Union[int, str]):
         """Generate a new invite link for a chat and revoke any active link.
 
         The bot must be an administrator in the chat for this to work and must
@@ -821,7 +912,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def setChatPhoto(self, chat_id, photo):
+    async def setChatPhoto(self, chat_id: Union[int, str], photo):
         """Set a new profile photo for the chat.
 
         Photos can't be changed for private chats.
@@ -836,7 +927,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def deleteChatPhoto(self, chat_id):
+    async def deleteChatPhoto(self, chat_id: Union[int, str]):
         """Delete a chat photo.
 
         Photos can't be changed for private chats.
@@ -850,7 +941,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def setChatTitle(self, chat_id, title):
+    async def setChatTitle(self, chat_id: Union[int, str], title):
         """Change the title of a chat.
 
         Titles can't be changed for private chats.
@@ -864,7 +955,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def setChatDescription(self, chat_id, description):
+    async def setChatDescription(self, chat_id: Union[int, str], description):
         """Change the description of a supergroup or a channel.
 
         The bot must be an administrator in the chat for this to work and must
@@ -877,8 +968,8 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def pinChatMessage(self, chat_id, message_id,
-                             disable_notification=None):
+    async def pinChatMessage(self, chat_id: Union[int, str], message_id,
+                             disable_notification: bool = None):
         """Pin a message in a group, a supergroup, or a channel.
 
         The bot must be an administrator in the chat for this to work and must
@@ -892,7 +983,8 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def unpinChatMessage(self, chat_id):
+    async def unpinChatMessage(self, chat_id: Union[int, str],
+                               message_id: int = None):
         """Unpin a message in a group, a supergroup, or a channel.
 
         The bot must be an administrator in the chat for this to work and must
@@ -906,7 +998,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def leaveChat(self, chat_id):
+    async def leaveChat(self, chat_id: Union[int, str]):
         """Make the bot leave a group, supergroup or channel.
 
         Return True on success.
@@ -917,7 +1009,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def getChat(self, chat_id):
+    async def getChat(self, chat_id: Union[int, str]):
         """Get up to date information about the chat.
 
         Return a Chat object on success.
@@ -928,7 +1020,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def getChatAdministrators(self, chat_id):
+    async def getChatAdministrators(self, chat_id: Union[int, str]):
         """Get a list of administrators in a chat.
 
         On success, return an Array of ChatMember objects that contains
@@ -944,7 +1036,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def getChatMembersCount(self, chat_id):
+    async def getChatMembersCount(self, chat_id: Union[int, str]):
         """Get the number of members in a chat.
 
         Returns Int on success.
@@ -955,7 +1047,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def getChatMember(self, chat_id, user_id):
+    async def getChatMember(self, chat_id: Union[int, str], user_id):
         """Get information about a member of a chat.
 
         Returns a ChatMember object on success.
@@ -966,7 +1058,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def setChatStickerSet(self, chat_id, sticker_set_name):
+    async def setChatStickerSet(self, chat_id: Union[int, str], sticker_set_name):
         """Set a new group sticker set for a supergroup.
 
         The bot must be an administrator in the chat for this to work and must
@@ -981,7 +1073,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def deleteChatStickerSet(self, chat_id):
+    async def deleteChatStickerSet(self, chat_id: Union[int, str]):
         """Delete a group sticker set from a supergroup.
 
         The bot must be an administrator in the chat for this to work and must
@@ -1014,11 +1106,13 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def editMessageText(self, text,
-                              chat_id=None, message_id=None,
-                              inline_message_id=None,
-                              parse_mode=None,
-                              disable_web_page_preview=None,
+    async def editMessageText(self, text: str,
+                              chat_id: Union[int, str] = None,
+                              message_id: int = None,
+                              inline_message_id: str = None,
+                              parse_mode: str = None,
+                              entities: List[dict] = None,
+                              disable_web_page_preview: bool = None,
                               reply_markup=None):
         """Edit text and game messages.
 
@@ -1032,10 +1126,12 @@ class TelegramBot:
         )
 
     async def editMessageCaption(self,
-                                 chat_id=None, message_id=None,
-                                 inline_message_id=None,
-                                 caption=None,
-                                 parse_mode=None,
+                                 chat_id: Union[int, str] = None,
+                                 message_id: int = None,
+                                 inline_message_id: str = None,
+                                 caption: str = None,
+                                 parse_mode: str = None,
+                                 caption_entities: List[dict] = None,
                                  reply_markup=None):
         """Edit captions of messages.
 
@@ -1049,8 +1145,9 @@ class TelegramBot:
         )
 
     async def editMessageMedia(self,
-                               chat_id=None, message_id=None,
-                               inline_message_id=None,
+                               chat_id: Union[int, str] = None,
+                               message_id: int = None,
+                               inline_message_id: str = None,
                                media=None,
                                reply_markup=None):
         """Edit animation, audio, document, photo, or video messages.
@@ -1070,8 +1167,9 @@ class TelegramBot:
         )
 
     async def editMessageReplyMarkup(self,
-                                     chat_id=None, message_id=None,
-                                     inline_message_id=None,
+                                     chat_id: Union[int, str] = None,
+                                     message_id: int = None,
+                                     inline_message_id: str = None,
                                      reply_markup=None):
         """Edit only the reply markup of messages.
 
@@ -1085,7 +1183,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def stopPoll(self, chat_id, message_id,
+    async def stopPoll(self, chat_id: Union[int, str], message_id,
                        reply_markup=None):
         """Stop a poll which was sent by the bot.
 
@@ -1098,7 +1196,7 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def deleteMessage(self, chat_id, message_id):
+    async def deleteMessage(self, chat_id: Union[int, str], message_id):
         """Delete a message, including service messages.
 
             - A message can only be deleted if it was sent less than 48 hours
@@ -1121,19 +1219,28 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendSticker(self, chat_id, sticker,
-                          disable_notification=None,
-                          reply_to_message_id=None,
+    async def sendSticker(self, chat_id: Union[int, str],
+                          sticker: Union[str, dict, IO],
+                          disable_notification: bool = None,
+                          reply_to_message_id: int = None,
+                          allow_sending_without_reply: bool = None,
                           reply_markup=None):
         """Send `.webp` stickers.
 
         On success, the sent Message is returned.
         See https://core.telegram.org/bots/api#sendsticker for details.
         """
-        return await self.api_request(
+        sticker = self.prepare_file_object(sticker)
+        if sticker is None:
+            logging.error("Invalid sticker provided!")
+            return
+        result = await self.api_request(
             'sendSticker',
             parameters=locals()
         )
+        if type(sticker) is dict:  # Close sticker file, if it was open
+            sticker['file'].close()
+        return result
 
     async def getStickerSet(self, name):
         """Get a sticker set.
@@ -1162,32 +1269,57 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def createNewStickerSet(self, user_id,
-                                  name, title, png_sticker, emojis,
-                                  contains_masks=None,
-                                  mask_position=None):
+    async def createNewStickerSet(self, user_id: int, name: str, title: str,
+                                  emojis: str,
+                                  png_sticker: Union[str, dict, IO] = None,
+                                  tgs_sticker: Union[str, dict, IO] = None,
+                                  contains_masks: bool = None,
+                                  mask_position: dict = None):
         """Create new sticker set owned by a user.
 
         The bot will be able to edit the created sticker set.
         Returns True on success.
         See https://core.telegram.org/bots/api#createnewstickerset for details.
         """
-        return await self.api_request(
+        png_sticker = self.prepare_file_object(png_sticker)
+        tgs_sticker = self.prepare_file_object(tgs_sticker)
+        if png_sticker is None and tgs_sticker is None:
+            logging.error("Invalid sticker provided!")
+            return
+        result = await self.api_request(
             'createNewStickerSet',
             parameters=locals()
         )
+        if type(png_sticker) is dict:  # Close png_sticker file, if it was open
+            png_sticker['file'].close()
+        if type(tgs_sticker) is dict:  # Close tgs_sticker file, if it was open
+            tgs_sticker['file'].close()
+        return result
 
-    async def addStickerToSet(self, user_id, name, png_sticker, emojis,
-                              mask_position=None):
+    async def addStickerToSet(self, user_id: int, name: str,
+                              emojis: str,
+                              png_sticker: Union[str, dict, IO] = None,
+                              tgs_sticker: Union[str, dict, IO] = None,
+                              mask_position: dict = None):
         """Add a new sticker to a set created by the bot.
 
         Returns True on success.
         See https://core.telegram.org/bots/api#addstickertoset for details.
         """
-        return await self.api_request(
+        png_sticker = self.prepare_file_object(png_sticker)
+        tgs_sticker = self.prepare_file_object(tgs_sticker)
+        if png_sticker is None and tgs_sticker is None:
+            logging.error("Invalid sticker provided!")
+            return
+        result = await self.api_request(
             'addStickerToSet',
             parameters=locals()
         )
+        if type(png_sticker) is dict:  # Close png_sticker file, if it was open
+            png_sticker['file'].close()
+        if type(tgs_sticker) is dict:  # Close tgs_sticker file, if it was open
+            tgs_sticker['file'].close()
+        return result
 
     async def setStickerPositionInSet(self, sticker, position):
         """Move a sticker in a set created by the bot to a specific position .
@@ -1231,22 +1363,24 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendInvoice(self, chat_id, title, description, payload,
-                          provider_token, start_parameter, currency, prices,
-                          provider_data=None,
-                          photo_url=None,
-                          photo_size=None,
-                          photo_width=None,
-                          photo_height=None,
-                          need_name=None,
-                          need_phone_number=None,
-                          need_email=None,
-                          need_shipping_address=None,
-                          send_phone_number_to_provider=None,
-                          send_email_to_provider=None,
-                          is_flexible=None,
-                          disable_notification=None,
-                          reply_to_message_id=None,
+    async def sendInvoice(self, chat_id: int, title: str, description: str,
+                          payload: str, provider_token: str,
+                          start_parameter: str, currency: str, prices: List[dict],
+                          provider_data: str = None,
+                          photo_url: str = None,
+                          photo_size: int = None,
+                          photo_width: int = None,
+                          photo_height: int = None,
+                          need_name: bool = None,
+                          need_phone_number: bool = None,
+                          need_email: bool = None,
+                          need_shipping_address: bool = None,
+                          send_phone_number_to_provider: bool = None,
+                          send_email_to_provider: bool = None,
+                          is_flexible: bool = None,
+                          disable_notification: bool = None,
+                          reply_to_message_id: int = None,
+                          allow_sending_without_reply: bool = None,
                           reply_markup=None):
         """Send an invoice.
 
@@ -1315,10 +1449,11 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendGame(self, chat_id, game_short_name,
-                       disable_notification=None,
-                       reply_to_message_id=None,
-                       reply_markup=None):
+    async def sendGame(self, chat_id: Union[int, str], game_short_name,
+                       disable_notification: bool = None,
+                       reply_to_message_id: int = None,
+                       reply_markup=None,
+                       allow_sending_without_reply: bool = None):
         """Send a game.
 
         On success, the sent Message is returned.
@@ -1330,11 +1465,12 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def setGameScore(self, user_id, score,
-                           force=None,
-                           disable_edit_message=None,
-                           chat_id=None, message_id=None,
-                           inline_message_id=None):
+    async def setGameScore(self, user_id: int, score: int,
+                           force: bool = None,
+                           disable_edit_message: bool = None,
+                           chat_id: Union[int, str] = None,
+                           message_id: int = None,
+                           inline_message_id: str = None):
         """Set the score of the specified user in a game.
 
         On success, if the message was sent by the bot, returns the edited
@@ -1350,8 +1486,9 @@ class TelegramBot:
         )
 
     async def getGameHighScores(self, user_id,
-                                chat_id=None, message_id=None,
-                                inline_message_id=None):
+                                chat_id: Union[int, str] = None,
+                                message_id: int = None,
+                                inline_message_id: str = None):
         """Get data for high score tables.
 
         Will return the score of the specified user and several of his
@@ -1372,8 +1509,9 @@ class TelegramBot:
     async def sendDice(self,
                        chat_id: Union[int, str] = None,
                        emoji: str = None,
-                       disable_notification: bool = False,
+                       disable_notification: bool = None,
                        reply_to_message_id: int = None,
+                       allow_sending_without_reply: bool = None,
                        reply_markup=None):
         """Send a dice.
 
@@ -1462,5 +1600,77 @@ class TelegramBot:
         """
         return await self.api_request(
             'setStickerSetThumb',
+            parameters=locals()
+        )
+
+    async def logOut(self):
+        """Log out from the cloud Bot API server.
+
+        Use this method to log out from the cloud Bot API server
+        before launching the bot locally.
+        You must log out the bot before running it locally, otherwise there
+        is no guarantee that the bot will receive updates.
+        After a successful call, you can immediately log in on a local server,
+        but will not be able to log in back to the cloud Bot API server
+        for 10 minutes.
+        Returns True on success. Requires no parameters.
+        See https://core.telegram.org/bots/api#logout for details.
+        """
+        return await self.api_request(
+            'logOut',
+            parameters=locals()
+        )
+
+    async def close(self):
+        """Close bot instance in local server.
+
+        Use this method to close the bot instance before moving it from one
+        local server to another.
+        You need to delete the webhook before calling this method to ensure
+        that the bot isn't launched again after server restart.
+        The method will return error 429 in the first 10 minutes after the
+        bot is launched. Returns True on success.
+        Requires no parameters.
+        See https://core.telegram.org/bots/api#close for details.
+        """
+        return await self.api_request(
+            'close',
+            parameters=locals()
+        )
+
+    async def copyMessage(self, chat_id: Union[int, str],
+                          from_chat_id: Union[int, str],
+                          message_id: int,
+                          caption: str = None,
+                          parse_mode: str = None,
+                          caption_entities: list = None,
+                          disable_notification: bool = None,
+                          reply_to_message_id: int = None,
+                          allow_sending_without_reply: bool = None,
+                          reply_markup=None):
+        """Use this method to copy messages of any kind.
+
+        The method is analogous to the method forwardMessages, but the copied
+        message doesn't have a link to the original message.
+        Returns the MessageId of the sent message on success.
+        See https://core.telegram.org/bots/api#copymessage for details.
+        """
+        return await self.api_request(
+            'copyMessage',
+            parameters=locals()
+        )
+
+    async def unpinAllChatMessages(self, chat_id: Union[int, str]):
+        """Use this method to clear the list of pinned messages in a chat.
+
+        If the chat is not a private chat, the bot must be an administrator
+        in the chat for this to work and must have the 'can_pin_messages'
+        admin right in a supergroup or 'can_edit_messages' admin right in a
+        channel.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#unpinallchatmessages for details.
+        """
+        return await self.api_request(
+            'unpinAllChatMessages',
             parameters=locals()
         )
