@@ -1896,7 +1896,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return sent_update
 
-    async def send_document(self, chat_id: Union[int, str], document,
+    async def send_document(self, chat_id: Union[int, str], document=None,
                             thumb=None,
                             caption: str = None,
                             parse_mode: str = None,
