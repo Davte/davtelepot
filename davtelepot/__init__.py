@@ -11,12 +11,13 @@ __author__ = "Davide Testa"
 __email__ = "davide@davte.it"
 __credits__ = ["Marco Origlia", "Nick Lee @Nickoala"]
 __license__ = "GNU General Public License v3.0"
-__version__ = "2.7.3"
+__version__ = "2.7.4"
 __maintainer__ = "Davide Testa"
 __contact__ = "t.me/davte"
 
-from . import (administration_tools, api, authorization, bot, helper,
-               languages, messages, suggestions, useful_tools, utilities)
+from davtelepot import (administration_tools, api, authorization,
+                        bot, helper, languages, messages, suggestions,
+                        useful_tools, utilities)
 
 __all__ = ['administration_tools', 'api', 'authorization', 'bot', 'helper',
            'languages', 'messages', 'suggestions', 'useful_tools', 'utilities']

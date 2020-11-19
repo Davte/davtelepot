@@ -13,11 +13,12 @@ from collections import OrderedDict
 from typing import List, Union
 
 # Project modules
-from .api import TelegramError
-from .bot import Bot
-from .messages import default_useful_tools_messages
-from .utilities import (get_cleaned_text, get_user, make_button,
-                        make_inline_keyboard, recursive_dictionary_update, )
+from davtelepot.api import TelegramError
+from davtelepot.bot import Bot
+from davtelepot.messages import default_useful_tools_messages
+from davtelepot.utilities import (get_cleaned_text, get_user, make_button,
+                                  make_inline_keyboard,
+                                  recursive_dictionary_update, )
 
 
 def get_calc_buttons() -> OrderedDict:

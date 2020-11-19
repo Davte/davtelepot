@@ -6,8 +6,8 @@ from collections import OrderedDict
 import logging
 
 # Project modules
-from .messages import default_language_messages
-from .utilities import extract, make_button, make_inline_keyboard
+from davtelepot.messages import default_language_messages
+from davtelepot.utilities import extract, make_button, make_inline_keyboard
 
 
 class MultiLanguageObject(object):

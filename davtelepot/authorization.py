@@ -5,9 +5,9 @@ from collections import OrderedDict
 from typing import Callable, List, Union
 
 # Project modules
-from .bot import Bot
-from .messages import default_authorization_messages
-from .utilities import (
+from davtelepot.bot import Bot
+from davtelepot.messages import default_authorization_messages
+from davtelepot.utilities import (
     Confirmator, get_cleaned_text, get_user, make_button, make_inline_keyboard
 )
 
