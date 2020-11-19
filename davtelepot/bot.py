@@ -46,14 +46,14 @@ from collections import OrderedDict
 from typing import Callable, List, Union, Dict
 
 # Third party modules
-from aiohttp import web
+import aiohttp.web
 
 # Project modules
-from .api import TelegramBot, TelegramError
-from .database import ObjectWithDatabase
-from .languages import MultiLanguageObject
-from .messages import davtelepot_messages
-from .utilities import (
+from davtelepot.api import TelegramBot, TelegramError
+from davtelepot.database import ObjectWithDatabase
+from davtelepot.languages import MultiLanguageObject
+from davtelepot.messages import davtelepot_messages
+from davtelepot.utilities import (
     async_get, escape_html_chars, extract, get_secure_key,
     make_inline_query_answer, make_lines_of_buttons, remove_html_tags
 )
@@ -3055,7 +3055,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         asyncio.ensure_future(
             self.route_update(update)
         )
-        return web.Response(
+        return aiohttp.web.Response(
             body='OK'.encode('utf-8')
         )
 
@@ -3396,9 +3396,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         assert cls.local_host is not None, "Invalid local host"
         assert cls.port is not None, "Invalid port"
-        cls.runner = web.AppRunner(cls.app)
+        cls.runner = aiohttp.web.AppRunner(cls.app)
         await cls.runner.setup()
-        cls.server = web.TCPSite(cls.runner, cls.local_host, cls.port)
+        cls.server = aiohttp.web.TCPSite(cls.runner, cls.local_host, cls.port)
         try:
             await cls.server.start()
         except OSError as e:

@@ -14,7 +14,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 # Project modules
-from .api import TelegramBot
+from davtelepot.api import TelegramBot
 
 api_url = "https://core.telegram.org/bots/api"
 

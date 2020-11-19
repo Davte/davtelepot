@@ -23,9 +23,9 @@ from typing import Union, List, Tuple
 from sqlalchemy.exc import ResourceClosedError
 
 # Project modules
-from .messages import default_admin_messages, default_talk_messages
-from .bot import Bot
-from .utilities import (
+from davtelepot.messages import default_admin_messages, default_talk_messages
+from davtelepot.bot import Bot
+from davtelepot.utilities import (
     async_wrapper, CachedPage, Confirmator, extract, get_cleaned_text,
     get_user, escape_html_chars, line_drawing_unordered_list, make_button,
     make_inline_keyboard, remove_html_tags, send_part_of_text_file,

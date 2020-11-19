@@ -4,12 +4,10 @@
 import asyncio
 import datetime
 
-# Third party modules
-import davtelepot
-
 # Project modules
-from .messages import default_suggestion_messages
-from .utilities import (
+import davtelepot
+from davtelepot.messages import default_suggestion_messages
+from davtelepot.utilities import (
     async_wrapper, get_cleaned_text, make_button,
     make_inline_keyboard, send_csv_file
 )

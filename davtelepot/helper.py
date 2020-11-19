@@ -3,9 +3,9 @@
 # Project modules
 from collections import OrderedDict
 
-from .bot import Bot
-from .messages import default_help_messages
-from .utilities import (
+from davtelepot.bot import Bot
+from davtelepot.messages import default_help_messages
+from davtelepot.utilities import (
     get_cleaned_text, make_inline_keyboard,
     make_lines_of_buttons, make_button,
     recursive_dictionary_update
