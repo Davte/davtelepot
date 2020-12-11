@@ -1525,7 +1525,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             **message_identifier
         )
 
-    async def send_photo(self, chat_id: Union[int, str], photo,
+    async def send_photo(self, photo, chat_id: Union[int, str] = None,
                          caption: str = None,
                          parse_mode: str = None,
                          caption_entities: List[dict] = None,
