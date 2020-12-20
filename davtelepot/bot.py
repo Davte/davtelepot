@@ -1896,7 +1896,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 )
         return sent_update
 
-    async def send_document(self, chat_id: Union[int, str], document=None,
+    async def send_document(self, chat_id: Union[int, str] = None, document=None,
                             thumb=None,
                             caption: str = None,
                             parse_mode: str = None,
@@ -1937,6 +1937,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             update = update['message']
         if chat_id is None and 'chat' in update:
             chat_id = self.get_chat_id(update)
+        if chat_id is None:
+            logging.error("Attempt to send document without providing a chat_id")
+            return
         if reply_to_update and 'message_id' in update:
             reply_to_message_id = update['message_id']
         if chat_id > 0:
