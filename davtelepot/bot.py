@@ -3439,6 +3439,16 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         return
 
     @classmethod
+    async def run_preliminary_tasks(cls):
+        await asyncio.gather(
+            *[
+                preliminary_task
+                for bot in cls.bots
+                for preliminary_task in bot.preliminary_tasks
+            ]
+        )
+
+    @classmethod
     def run(cls, local_host=None, port=None):
         """Run aiohttp web app and all Bot instances.
 
@@ -3454,15 +3464,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            asyncio.run(
-                asyncio.gather(
-                    *[
-                        preliminary_task
-                        for bot in cls.bots
-                        for preliminary_task in bot.preliminary_tasks
-                    ]
-                )
-            )
+            loop.run_until_complete(cls.run_preliminary_tasks())
         except Exception as e:
             logging.error(f"{e}", exc_info=True)
         for bot in cls.bots:
