@@ -3461,9 +3461,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             cls.local_host = local_host
         if port is not None:
             cls.port = port
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
             loop.run_until_complete(cls.run_preliminary_tasks())
         except Exception as e:
             logging.error(f"{e}", exc_info=True)
@@ -3471,16 +3471,12 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             bot.setup()
         asyncio.ensure_future(cls.start_app())
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
             loop.run_forever()
         except KeyboardInterrupt:
             logging.info("Stopped by KeyboardInterrupt")
         except Exception as e:
             logging.error(f"{e}", exc_info=True)
         finally:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
             loop.run_until_complete(cls.stop_app())
         return cls.final_state
 
