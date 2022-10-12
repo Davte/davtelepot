@@ -239,7 +239,7 @@ class TelegramBot:
                     )
                 )
             session = self.sessions[api_method]
-            session_must_be_cl  osed = cls.sessions_timeouts[api_method]['close']
+            session_must_be_closed = cls.sessions_timeouts[api_method]['close']
         else:
             session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=None)
