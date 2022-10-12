@@ -81,8 +81,8 @@ class TelegramBot:
 
     All mirrored methods are camelCase.
     """
+    _loop = None
 
-    loop = asyncio.get_event_loop()
     app = aiohttp.web.Application()
     sessions_timeouts = {
         'getUpdates': dict(
@@ -100,6 +100,9 @@ class TelegramBot:
 
     def __init__(self, token):
         """Set bot token and store HTTP sessions."""
+        if self.loop is None:
+            self.__class__._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
         self._token = token
         self.sessions = dict()
         self._flood_wait = 0
@@ -111,6 +114,11 @@ class TelegramBot:
             ),
             0: []
         }
+
+    @property
+    def loop(self):
+        """Telegram API bot token."""
+        return self.__class__._loop
 
     @property
     def token(self):
@@ -226,16 +234,14 @@ class TelegramBot:
         if api_method in cls.sessions_timeouts:
             if api_method not in self.sessions:
                 self.sessions[api_method] = aiohttp.ClientSession(
-                    loop=cls.loop,
                     timeout=aiohttp.ClientTimeout(
                         total=cls.sessions_timeouts[api_method]['timeout']
                     )
                 )
             session = self.sessions[api_method]
-            session_must_be_closed = cls.sessions_timeouts[api_method]['close']
+            session_must_be_cl  osed = cls.sessions_timeouts[api_method]['close']
         else:
             session = aiohttp.ClientSession(
-                loop=cls.loop,
                 timeout=aiohttp.ClientTimeout(total=None)
             )
             session_must_be_closed = True

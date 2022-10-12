@@ -503,7 +503,9 @@ async def async_wrapper(coroutine, *args1, **kwargs1):
             )
             await my_coroutine(a=1, b=5)
 
-        asyncio.get_event_loop().run_until_complete(main())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        asyncio.run(main())
     ```
     """
     async def wrapped_coroutine(*args2, bot=None, update=None, user_record=None, **kwargs2):

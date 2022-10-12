@@ -75,6 +75,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     bots = []
     _path = '.'
     runner = None
+    server = None
     # TODO: find a way to choose port automatically by default
     # Setting port to 0 does not work unfortunately
     local_host = 'localhost'
@@ -3105,6 +3106,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             if not session.closed:
                 await session.close()
 
+    async def send_one_message(self, *args, **kwargs):
+        await self.send_message(*args, **kwargs)
+        await self.close_sessions()
+
     async def set_webhook(self, url=None, certificate=None,
                           max_connections=None, allowed_updates=None):
         """Set a webhook if token is valid."""
@@ -3429,8 +3434,18 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         logging.info(message)
         cls.final_state = final_state
-        cls.loop.stop()
+        cls._loop.stop()
         return
+
+    @classmethod
+    async def run_preliminary_tasks(cls):
+        await asyncio.gather(
+            *[
+                preliminary_task
+                for bot in cls.bots
+                for preliminary_task in bot.preliminary_tasks
+            ]
+        )
 
     @classmethod
     def run(cls, local_host=None, port=None):
@@ -3445,29 +3460,22 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             cls.local_host = local_host
         if port is not None:
             cls.port = port
+        loop = cls._loop
         try:
-            cls.loop.run_until_complete(
-                asyncio.gather(
-                    *[
-                        preliminary_task
-                        for bot in cls.bots
-                        for preliminary_task in bot.preliminary_tasks
-                    ]
-                )
-            )
+            loop.run_until_complete(cls.run_preliminary_tasks())
         except Exception as e:
             logging.error(f"{e}", exc_info=True)
         for bot in cls.bots:
             bot.setup()
         asyncio.ensure_future(cls.start_app())
         try:
-            cls.loop.run_forever()
+            loop.run_forever()
         except KeyboardInterrupt:
             logging.info("Stopped by KeyboardInterrupt")
         except Exception as e:
             logging.error(f"{e}", exc_info=True)
         finally:
-            cls.loop.run_until_complete(cls.stop_app())
+            loop.run_until_complete(cls.stop_app())
         return cls.final_state
 
     def set_role_class(self, role):
