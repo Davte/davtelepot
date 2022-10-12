@@ -75,6 +75,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     bots = []
     _path = '.'
     runner = None
+    server = None
     # TODO: find a way to choose port automatically by default
     # Setting port to 0 does not work unfortunately
     local_host = 'localhost'
@@ -3105,6 +3106,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             if not session.closed:
                 await session.close()
 
+    async def send_one_message(self, *args, **kwargs):
+        await self.send_message(*args, **kwargs)
+        await self.close_sessions()
+
     async def set_webhook(self, url=None, certificate=None,
                           max_connections=None, allowed_updates=None):
         """Set a webhook if token is valid."""
@@ -3429,7 +3434,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         logging.info(message)
         cls.final_state = final_state
-        cls.loop.stop()
+        loop = asyncio.get_running_loop()
+        loop.stop()
         return
 
     @classmethod
@@ -3446,7 +3452,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         if port is not None:
             cls.port = port
         try:
-            cls.loop.run_until_complete(
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            asyncio.run(
                 asyncio.gather(
                     *[
                         preliminary_task
@@ -3461,13 +3469,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             bot.setup()
         asyncio.ensure_future(cls.start_app())
         try:
-            cls.loop.run_forever()
+            loop = asyncio.get_running_loop()
+            loop.run_forever()
         except KeyboardInterrupt:
             logging.info("Stopped by KeyboardInterrupt")
         except Exception as e:
             logging.error(f"{e}", exc_info=True)
         finally:
-            cls.loop.run_until_complete(cls.stop_app())
+            loop = asyncio.get_running_loop()
+            loop.run_until_complete(cls.stop_app())
         return cls.final_state
 
     def set_role_class(self, role):

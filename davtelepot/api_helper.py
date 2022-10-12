@@ -102,18 +102,14 @@ class TelegramApiMethod(object):
         return parameters
 
 
-async def print_api_methods(loop=None,
-                            filename=None,
+async def print_api_methods(filename=None,
                             print_all=False,
                             output_file=None,
                             input_file=None):
     """Get information from Telegram bot API web page."""
-    if loop is None:
-        loop = asyncio.get_event_loop()
     implemented_methods = dir(TelegramBot)
     if input_file is None or not os.path.isfile(input_file):
         async with aiohttp.ClientSession(
-            loop=loop,
             timeout=aiohttp.ClientTimeout(
                 total=100
             )
@@ -267,10 +263,8 @@ def main():
     print_all = cli_arguments['all']
     output_file = cli_arguments['out']
     input_file = cli_arguments['in']
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(
-        print_api_methods(loop=loop,
-                          filename=filename,
+    asyncio.run(
+        print_api_methods(filename=filename,
                           print_all=print_all,
                           output_file=output_file,
                           input_file=input_file)
