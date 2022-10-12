@@ -3434,8 +3434,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         logging.info(message)
         cls.final_state = final_state
-        loop = asyncio.get_running_loop()
-        loop.stop()
+        cls._loop.stop()
         return
 
     @classmethod
@@ -3461,8 +3460,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             cls.local_host = local_host
         if port is not None:
             cls.port = port
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        loop = cls._loop
         try:
             loop.run_until_complete(cls.run_preliminary_tasks())
         except Exception as e:

@@ -81,6 +81,7 @@ class TelegramBot:
 
     All mirrored methods are camelCase.
     """
+    _loop = None
 
     app = aiohttp.web.Application()
     sessions_timeouts = {
@@ -99,6 +100,9 @@ class TelegramBot:
 
     def __init__(self, token):
         """Set bot token and store HTTP sessions."""
+        if self.loop is None:
+            self.__class__._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
         self._token = token
         self.sessions = dict()
         self._flood_wait = 0
@@ -110,6 +114,11 @@ class TelegramBot:
             ),
             0: []
         }
+
+    @property
+    def loop(self):
+        """Telegram API bot token."""
+        return self.__class__._loop
 
     @property
     def token(self):
