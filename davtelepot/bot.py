@@ -3469,14 +3469,16 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             bot.setup()
         asyncio.ensure_future(cls.start_app())
         try:
-            loop = asyncio.get_running_loop()
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             loop.run_forever()
         except KeyboardInterrupt:
             logging.info("Stopped by KeyboardInterrupt")
         except Exception as e:
             logging.error(f"{e}", exc_info=True)
         finally:
-            loop = asyncio.get_running_loop()
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             loop.run_until_complete(cls.stop_app())
         return cls.final_state
 
