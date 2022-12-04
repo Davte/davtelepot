@@ -61,6 +61,8 @@ DEFAULT_ROLES[100] = {
     'can_be_appointed_by': [1, 2, 3]
 }
 
+max_records_per_query = 30
+
 
 class Role:
     """Authorization level for users of a bot."""
@@ -74,7 +76,7 @@ class Role:
         """Instantiate Role object.
 
         code : int
-            The higher the code, the less privileges are connected to that
+            The higher the code, the fewer privileges are connected to that
                 role. Use 0 for banned users.
         name : str
             Short name for role.
@@ -252,7 +254,7 @@ class Role:
         return text, buttons
 
     def __eq__(self, other: 'Role'):
-        """Return True if self is equal to other."""
+        """Return True if `self` is equal to `other`."""
         return self.code == other.code
 
     def __gt__(self, other: 'Role'):
@@ -274,11 +276,11 @@ class Role:
         return not self.__ge__(other)
 
     def __le__(self, other: 'Role'):
-        """Return True if self is superior or equal to other."""
+        """Return True if `self` is superior or equal to `other`."""
         return not self.__gt__(other)
 
     def __ne__(self, other: 'Role'):
-        """Return True if self is not equal to other."""
+        """Return True if `self` is not equal to `other`."""
         return not self.__eq__(other)
 
     def __str__(self):
@@ -312,6 +314,27 @@ def get_authorization_function(bot: Bot):
     return is_authorized
 
 
+def get_browse_buttons(bot: Bot, language: str):
+    return [
+        make_button(
+            text=bot.get_message('authorization', 'auth_button',
+                                 'browse', 'browse_button_az',
+                                 language=language),
+            prefix='auth:///',
+            delimiter='|',
+            data=['browse', 'az'],
+        ),
+        make_button(
+            text=bot.get_message('authorization', 'auth_button',
+                                 'browse', 'browse_button_by_role',
+                                 language=language),
+            prefix='auth:///',
+            delimiter='|',
+            data=['browse', 'role'],
+        ),
+    ]
+
+
 async def _authorization_command(bot: Bot,
                                  update: dict,
                                  user_record: OrderedDict,
@@ -334,6 +357,9 @@ async def _authorization_command(bot: Bot,
                 update=update, user_record=admin_record,
                 command=mode
             )
+            buttons = get_browse_buttons(bot=bot, language=language)
+            reply_markup = make_inline_keyboard(buttons, 2)
+            user_record = -1
         else:  # No text, command used in reply to another message
             update = update['reply_to_message']
             # Forwarded message: get both the user who forwarded and the original author
@@ -394,7 +420,9 @@ async def _authorization_command(bot: Bot,
             'authorization', 'auth_command', 'no_match',
             update=update, user_record=admin_record,
         )
-    elif isinstance(user_record, dict):  # If 1 user matches
+    elif type(user_record) is list and len(user_record) == 1 or isinstance(user_record, dict):  # If 1 user matches
+        if type(user_record) is list:
+            user_record = user_record[0]
         # Ban user if admin can do it
         user_role = bot.Role.get_user_role(user_record=user_record)
         if mode == 'ban' and admin_role > user_role:
@@ -419,6 +447,7 @@ async def _authorization_command(bot: Bot,
                     data=['picture', user_record['id']]
                 )
             )
+        buttons += get_browse_buttons(bot=bot, language=language)
         reply_markup = make_inline_keyboard(buttons, 1)
     return dict(
         text=result,
@@ -436,13 +465,54 @@ async def _authorization_button(bot: Bot,
         data = ['']
     command, *arguments = data
     user_id = user_record['telegram_id']
-    if len(arguments) > 0:
+    if len(arguments) > 0 and command in ['show', 'set']:
         other_user_id = arguments[0]
     else:
         other_user_id = None
     result, text, reply_markup = '', '', None
     db = bot.db
-    if command in ['show']:
+    if command in ['browse'] and len(arguments) >= 1:
+        mode = arguments[0]
+        offset = arguments[1] if len(arguments) > 1 else 0
+        if mode == 'az':
+            user_records = list(
+                bot.db.query(
+                    "SELECT * "
+                    "FROM users "
+                    "ORDER BY COALESCE("
+                    "   username || first_name || last_name,"
+                    "   username || last_name,"
+                    "   username || first_name,"
+                    "   username,"
+                    "   first_name || last_name,"
+                    "   first_name,"
+                    "   last_name"
+                    f")"
+                    f"LIMIT {max_records_per_query + 1} "
+                    f"OFFSET {offset} "
+                )
+            )
+            n = 0
+            for record in bot.db.query("SELECT COUNT(*) n "
+                                       "FROM users"):
+                n = record['n']
+            text = bot.get_message(
+                'authorization', 'auth_command', 'choose_user',
+                update=update, user_record=user_record,
+                n=n
+            )
+            reply_markup = make_inline_keyboard(
+                [
+                    make_button(
+                        f"👤 {get_user(user, link_profile=False)}",
+                        prefix='auth:///',
+                        data=['show', user['id']]
+                    )
+                    for user in user_records[:30]
+                ],
+                3
+            )
+    elif command in ['show']:
         other_user_record = db['users'].find_one(id=other_user_id)
         text, buttons = bot.Role.get_user_role_text_and_buttons(
             user_record=other_user_record,
