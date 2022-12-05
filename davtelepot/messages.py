@@ -713,6 +713,16 @@ default_authorization_messages = {
             'en': "Permission granted",
             'it': "Permesso conferito"
         },
+        'browse': {
+            'browse_button_az': {
+                'en': "🆎 Users A-Z",
+                'it': "🆎 Utenti A-Z",
+            },
+            'browse_button_by_role': {
+                'en': "👑 Users by role",
+                'it': "👑 Utenti per ruolo",
+            },
+        },
         'back_to_user': {
             'en': "Back to user",
             'it': "Torna all'utente"
