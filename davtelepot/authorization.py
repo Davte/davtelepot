@@ -617,7 +617,7 @@ async def _authorization_button(bot: Bot,
                                          language=language),
                     prefix='auth:///',
                     delimiter='|',
-                    data=['picture', user_record['id']]
+                    data=['picture', other_user_record['id']]
                 )
             )
         if len(arguments) > 2:
@@ -711,7 +711,7 @@ async def _authorization_button(bot: Bot,
                                              language=language),
                         prefix='auth:///',
                         delimiter='|',
-                        data=['picture', user_record['id']]
+                        data=['picture', other_user_record['id']]
                     )
                 )
             reply_markup = make_inline_keyboard(buttons, 1)
