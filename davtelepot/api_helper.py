@@ -170,7 +170,7 @@ async def print_api_methods(filename=None,
                 if parameter != 'self'
             )
             new_parameters = parameters - implemented_parameters
-            deprecated_parameters = implemented_parameters - parameters
+            deprecated_parameters = implemented_parameters - parameters - {'kwargs'}
             if new_parameters or deprecated_parameters:
                 edited_methods.append(
                     dict(
@@ -193,9 +193,9 @@ async def print_api_methods(filename=None,
                 f"{', '.join(['self'] + method.parameters_with_types)}"
                 f"):\n"
                 f"        \"\"\""
-                f"    {method.description.replace(new_line, new_line + ' ' * 4)}\n"
+                f"{method.description.replace(new_line, new_line + ' ' * 4)}\n"
                 f"        See https://core.telegram.org/bots/api#"
-                f"    {method.name.lower()} for details.\n"
+                f"{method.name.lower()} for details.\n"
                 f"        \"\"\"\n"
                 f"        return await self.api_request(\n"
                 f"            '{method.name}',\n"

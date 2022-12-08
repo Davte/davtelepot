@@ -44,7 +44,11 @@ class TelegramError(Exception):
 
 
 class ChatPermissions(dict):
-    """Actions that a non-administrator user is allowed to take in a chat."""
+    """Actions that a non-administrator user is allowed to take in a chat.
+
+    See https://core.telegram.org/bots/api#chatpermissions for details.
+    """
+
     def __init__(self,
                  can_send_messages: bool = True,
                  can_send_media_messages: bool = True,
@@ -74,6 +78,198 @@ class Command(dict):
         self['description'] = description
 
 
+class BotCommandScope(dict):
+    """This object represents the scope to which bot commands are applied.
+
+    See https://core.telegram.org/bots/api#botcommandscope for details.
+
+    Currently, the following 7 scopes are supported:
+        - BotCommandScopeDefault;
+        - BotCommandScopeAllPrivateChats;
+        - BotCommandScopeAllGroupChats;
+        - BotCommandScopeAllChatAdministrators;
+        - BotCommandScopeChat;
+        - BotCommandScopeChatAdministrators;
+        - BotCommandScopeChatMember.
+
+    An algorithm described [here](https://core.telegram.org/bots/api#botcommandscope)
+        is used to determine the list of commands for a particular user
+        viewing the bot menu.
+    """
+
+    # noinspection PyShadowingBuiltins
+    def __init__(self,
+                 type: str = 'default'):
+        if type not in ('default', 'all_private_chats', 'all_group_chats',
+                        'all_chat_administrators', 'chat', 'chat_administrators',
+                        'chat_member'):
+            raise TypeError(f"Unknown bot command scope type: `{type}`.")
+        super().__init__(self)
+        self['type'] = type
+
+
+class WebAppInfo(dict):
+    """Describes a Web App.
+
+    See https://core.telegram.org/bots/api#webappinfo for details."""
+
+    def __init__(self,
+                 url: str = None):
+        super().__init__(self)
+        self['url'] = url
+
+
+class MenuButton(dict):
+    # noinspection PyShadowingBuiltins
+    def __init__(self,
+                 type: str = 'default',
+                 text: str = None,
+                 web_app: 'WebAppInfo' = None):
+        if type not in ('default', 'commands', 'web_app'):
+            raise TypeError(f"Unknown menu button type: `{type}`.")
+        super().__init__(self)
+        self['type'] = type
+        if type == 'web_app':
+            self['text'] = text
+            self['web_app'] = web_app
+
+
+class ChatAdministratorRights(dict):
+    """Represents the rights of an administrator in a chat."""
+
+    def __init__(self,
+                 is_anonymous: bool = False,
+                 can_manage_chat: bool = False,
+                 can_delete_messages: bool = False,
+                 can_manage_video_chats: bool = False,
+                 can_restrict_members: bool = False,
+                 can_promote_members: bool = False,
+                 can_change_info: bool = False,
+                 can_invite_users: bool = False,
+                 can_post_messages: bool = False,
+                 can_edit_messages: bool = False,
+                 can_pin_messages: bool = False,
+                 can_manage_topics: bool = False):
+        """Represents the rights of an administrator in a chat.
+
+        @param is_anonymous: True, if the user's presence in the chat is hidden
+        @param can_manage_chat: True, if the administrator can access the chat
+            event log, chat statistics, message statistics in channels, see
+            channel members, see anonymous administrators in supergroups and
+            ignore slow mode. Implied by any other administrator privilege
+        @param can_delete_messages: True, if the administrator can delete
+            messages of other users
+        @param can_manage_video_chats: True, if the administrator can manage
+            video chats
+        @param can_restrict_members: True, if the administrator can restrict,
+            ban or unban chat members
+        @param can_promote_members: True, if the administrator can add new
+            administrators with a subset of their own privileges or demote
+            administrators that he has promoted, directly or indirectly
+            (promoted by administrators that were appointed by the user)
+        @param can_change_info: True, if the user is allowed to change the
+            chat title, photo and other settings
+        @param can_invite_users: True, if the user is allowed to invite new
+            users to the chat
+        @param can_post_messages: Optional. True, if the administrator can
+            post in the channel; channels only
+        @param can_edit_messages: Optional. True, if the administrator can
+            edit messages of other users and can pin messages; channels only
+        @param can_pin_messages: Optional. True, if the user is allowed to
+            pin messages; groups and supergroups only
+        @param can_manage_topics: Optional. True, if the user is allowed to
+            create, rename, close, and reopen forum topics; supergroups only
+        """
+        super().__init__(self)
+        self['is_anonymous'] = is_anonymous
+        self['can_manage_chat'] = can_manage_chat
+        self['can_delete_messages'] = can_delete_messages
+        self['can_manage_video_chats'] = can_manage_video_chats
+        self['can_restrict_members'] = can_restrict_members
+        self['can_promote_members'] = can_promote_members
+        self['can_change_info'] = can_change_info
+        self['can_invite_users'] = can_invite_users
+        self['can_post_messages'] = can_post_messages
+        self['can_edit_messages'] = can_edit_messages
+        self['can_pin_messages'] = can_pin_messages
+        self['can_manage_topics'] = can_manage_topics
+
+
+class LabeledPrice(dict):
+    """This object represents a portion of the price for goods or services."""
+    def __init__(self, label: str, amount: int):
+        """This object represents a portion of the price for goods or services.
+
+        @param label: Portion label.
+        @param amount: Price of the product in the smallest units of the
+            currency (integer, not float/double).
+            For example, for a price of US$ 1.45 pass amount = 145.
+            See the exp parameter in currencies.json, it shows the number of
+            digits past the decimal point for each currency (2 for the majority
+            of currencies).
+        Reference (currencies.json): https://core.telegram.org/bots/payments/currencies.json
+        """
+        super().__init__(self)
+        self['label'] = label
+        self['amount'] = amount
+
+
+class InlineQueryResult(dict):
+    """This object represents one result of an inline query.
+
+    Telegram clients currently support results of the following 20 types:
+        - InlineQueryResultCachedAudio;
+        - InlineQueryResultCachedDocument;
+        - InlineQueryResultCachedGif;
+        - InlineQueryResultCachedMpeg4Gif;
+        - InlineQueryResultCachedPhoto;
+        - InlineQueryResultCachedSticker;
+        - InlineQueryResultCachedVideo;
+        - InlineQueryResultCachedVoice;
+        - InlineQueryResultArticle;
+        - InlineQueryResultAudio;
+        - InlineQueryResultContact;
+        - InlineQueryResultGame;
+        - InlineQueryResultDocument;
+        - InlineQueryResultGif;
+        - InlineQueryResultLocation;
+        - InlineQueryResultMpeg4Gif;
+        - InlineQueryResultPhoto;
+        - InlineQueryResultVenue;
+        - InlineQueryResultVideo.
+    Note: All URLs passed in inline query results will be available to end
+        users and therefore must be assumed to be public.
+    """
+    # noinspection PyShadowingBuiltins
+    def __init__(self,
+                 type: str = 'default',
+                 **kwargs):
+        if type not in ('InlineQueryResultCachedAudio',
+                        'InlineQueryResultCachedDocument',
+                        'InlineQueryResultCachedGif',
+                        'InlineQueryResultCachedMpeg4Gif',
+                        'InlineQueryResultCachedPhoto',
+                        'InlineQueryResultCachedSticker',
+                        'InlineQueryResultCachedVideo',
+                        'InlineQueryResultCachedVoice',
+                        'InlineQueryResultArticle',
+                        'InlineQueryResultAudio',
+                        'InlineQueryResultContact',
+                        'InlineQueryResultGame',
+                        'InlineQueryResultDocument',
+                        'InlineQueryResultGif',
+                        'InlineQueryResultLocation',
+                        'InlineQueryResultMpeg4Gif',
+                        'InlineQueryResultPhoto',
+                        'InlineQueryResultVenue',
+                        'InlineQueryResultVideo'):
+            raise TypeError(f"Unknown InlineQueryResult type: `{type}`.")
+        super().__init__(self)
+        self['type'] = type
+        for key, value in kwargs.items():
+            self[key] = value
+
+
 # This class needs to mirror Telegram API, so camelCase method are needed
 # noinspection PyPep8Naming
 class TelegramBot:
@@ -94,7 +290,7 @@ class TelegramBot:
             close=False
         )
     }
-    _absolute_cooldown_timedelta = datetime.timedelta(seconds=1/30)
+    _absolute_cooldown_timedelta = datetime.timedelta(seconds=1 / 30)
     _per_chat_cooldown_timedelta = datetime.timedelta(seconds=1)
     _allowed_messages_per_group_per_minute = 20
 
@@ -108,10 +304,8 @@ class TelegramBot:
         self._flood_wait = 0
         # Each `telegram_id` key has a list of `datetime.datetime` as value
         self.last_sending_time = {
-            'absolute': (
-                datetime.datetime.now()
-                - self.absolute_cooldown_timedelta
-            ),
+            'absolute': (datetime.datetime.now()
+                         - self.absolute_cooldown_timedelta),
             0: []
         }
 
@@ -200,10 +394,8 @@ class TelegramBot:
         data = aiohttp.FormData(quote_fields=False)
         for key, value in parameters.items():
             if not (key in exclude or value is None):
-                if (
-                    type(value) in (int, list,)
-                    or (type(value) is dict and 'file' not in value)
-                ):
+                if (type(value) in (int, list,)
+                        or (type(value) is dict and 'file' not in value)):
                     value = json.dumps(value, separators=(',', ':'))
                 data.add_field(key, value)
         return data
@@ -299,12 +491,12 @@ class TelegramBot:
                     ]
                 ) >= self.allowed_messages_per_group_per_minute
             ) or (
-                chat_id in self.last_sending_time
-                and len(self.last_sending_time[chat_id]) > 0
-                and now() < (
-                    self.last_sending_time[chat_id][-1]
-                    + self.per_chat_cooldown_timedelta
-                )
+                    chat_id in self.last_sending_time
+                    and len(self.last_sending_time[chat_id]) > 0
+                    and now() < (
+                            self.last_sending_time[chat_id][-1]
+                            + self.per_chat_cooldown_timedelta
+                    )
             ):
                 await asyncio.sleep(0.5)
             if chat_id not in self.last_sending_time:
@@ -313,10 +505,8 @@ class TelegramBot:
             self.last_sending_time[chat_id] = [
                 sending_datetime
                 for sending_datetime in self.last_sending_time[chat_id]
-                if sending_datetime >= (
-                    now()
-                    - self.longest_cooldown_timedelta
-                )
+                if sending_datetime >= (now()
+                                        - self.longest_cooldown_timedelta)
             ]
         self.last_sending_time['absolute'] = now()
         return
@@ -339,11 +529,9 @@ class TelegramBot:
             await self.prevent_flooding(parameters['chat_id'])
         parameters = self.adapt_parameters(parameters, exclude=exclude)
         try:
-            async with session.post(
-                "https://api.telegram.org/bot"
-                f"{self.token}/{method}",
-                data=parameters
-            ) as response:
+            async with session.post("https://api.telegram.org/bot"
+                                    f"{self.token}/{method}",
+                                    data=parameters) as response:
                 try:
                     response_object = self.check_telegram_api_json(
                         await response.json()  # Telegram returns json objects
@@ -357,7 +545,7 @@ class TelegramBot:
                             ) + 30
                         except Exception as e:
                             logging.error(f"{e}")
-                            flood_wait = 5*60
+                            flood_wait = 5 * 60
                         logging.critical(
                             "Telegram antiflood control triggered!\n"
                             f"Wait {flood_wait} seconds before making another "
@@ -410,10 +598,19 @@ class TelegramBot:
                          ip_address: str = None,
                          max_connections: int = None,
                          allowed_updates: List[str] = None,
-                         drop_pending_updates: bool = None):
+                         drop_pending_updates: bool = None,
+                         secret_token: str = None):
         """Set or remove a webhook. Telegram will post to `url` new updates.
 
         See https://core.telegram.org/bots/api#setwebhook for details.
+
+        Notes:
+            1. You will not be able to receive updates using getUpdates for as
+                long as an outgoing webhook is set up.
+            2. To use a self-signed certificate, you need to upload your public
+                key certificate using certificate parameter.
+                Please upload as InputFile, sending a String will not work.
+            3. Ports currently supported for webhooks: 443, 80, 88, 8443.
         """
         certificate = self.prepare_file_object(certificate)
         result = await self.api_request(
@@ -443,11 +640,14 @@ class TelegramBot:
             'getWebhookInfo',
         )
 
-    async def sendMessage(self, chat_id: Union[int, str], text: str,
+    async def sendMessage(self, chat_id: Union[int, str],
+                          text: str,
+                          message_thread_id: int = None,
                           parse_mode: str = None,
                           entities: List[dict] = None,
                           disable_web_page_preview: bool = None,
                           disable_notification: bool = None,
+                          protect_content: bool = None,
                           reply_to_message_id: int = None,
                           allow_sending_without_reply: bool = None,
                           reply_markup=None):
@@ -463,6 +663,8 @@ class TelegramBot:
     async def forwardMessage(self, chat_id: Union[int, str],
                              from_chat_id: Union[int, str],
                              message_id: int,
+                             message_thread_id: int = None,
+                             protect_content: bool = None,
                              disable_notification: bool = None):
         """Forward a message.
 
@@ -477,6 +679,8 @@ class TelegramBot:
                         caption: str = None,
                         parse_mode: str = None,
                         caption_entities: List[dict] = None,
+                        message_thread_id: int = None,
+                        protect_content: bool = None,
                         disable_notification: bool = None,
                         reply_to_message_id: int = None,
                         allow_sending_without_reply: bool = None,
@@ -501,6 +705,8 @@ class TelegramBot:
                         disable_notification: bool = None,
                         reply_to_message_id: int = None,
                         allow_sending_without_reply: bool = None,
+                        message_thread_id: int = None,
+                        protect_content: bool = None,
                         reply_markup=None):
         """Send an audio file from file_id, HTTP url or file.
 
@@ -520,6 +726,8 @@ class TelegramBot:
                            disable_notification: bool = None,
                            reply_to_message_id: int = None,
                            allow_sending_without_reply: bool = None,
+                           message_thread_id: int = None,
+                           protect_content: bool = None,
                            reply_markup=None):
         """Send a document from file_id, HTTP url or file.
 
@@ -542,6 +750,8 @@ class TelegramBot:
                         disable_notification: bool = None,
                         reply_to_message_id: int = None,
                         allow_sending_without_reply: bool = None,
+                        message_thread_id: int = None,
+                        protect_content: bool = None,
                         reply_markup=None):
         """Send a video from file_id, HTTP url or file.
 
@@ -563,6 +773,8 @@ class TelegramBot:
                             disable_notification: bool = None,
                             reply_to_message_id: int = None,
                             allow_sending_without_reply: bool = None,
+                            message_thread_id: int = None,
+                            protect_content: bool = None,
                             reply_markup=None):
         """Send animation files (GIF or H.264/MPEG-4 AVC video without sound).
 
@@ -581,6 +793,8 @@ class TelegramBot:
                         disable_notification: bool = None,
                         reply_to_message_id: int = None,
                         allow_sending_without_reply: bool = None,
+                        message_thread_id: int = None,
+                        protect_content: bool = None,
                         reply_markup=None):
         """Send an audio file to be displayed as playable voice message.
 
@@ -599,6 +813,8 @@ class TelegramBot:
                             disable_notification: bool = None,
                             reply_to_message_id: int = None,
                             allow_sending_without_reply: bool = None,
+                            message_thread_id: int = None,
+                            protect_content: bool = None,
                             reply_markup=None):
         """Send a rounded square mp4 video message of up to 1 minute long.
 
@@ -612,6 +828,8 @@ class TelegramBot:
     async def sendMediaGroup(self, chat_id: Union[int, str], media: list,
                              disable_notification: bool = None,
                              reply_to_message_id: int = None,
+                             message_thread_id: int = None,
+                             protect_content: bool = None,
                              allow_sending_without_reply: bool = None):
         """Send a group of photos or videos as an album.
 
@@ -633,6 +851,8 @@ class TelegramBot:
                            disable_notification: bool = None,
                            reply_to_message_id: int = None,
                            allow_sending_without_reply: bool = None,
+                           message_thread_id: int = None,
+                           protect_content: bool = None,
                            reply_markup=None):
         """Send a point on the map. May be kept updated for a `live_period`.
 
@@ -709,6 +929,8 @@ class TelegramBot:
                         disable_notification: bool = None,
                         reply_to_message_id: int = None,
                         allow_sending_without_reply: bool = None,
+                        message_thread_id: int = None,
+                        protect_content: bool = None,
                         reply_markup=None):
         """Send information about a venue.
 
@@ -728,6 +950,8 @@ class TelegramBot:
                           disable_notification: bool = None,
                           reply_to_message_id: int = None,
                           allow_sending_without_reply: bool = None,
+                          message_thread_id: int = None,
+                          protect_content: bool = None,
                           reply_markup=None):
         """Send a phone contact.
 
@@ -755,6 +979,8 @@ class TelegramBot:
                        disable_notification: bool = None,
                        allow_sending_without_reply: bool = None,
                        reply_to_message_id: int = None,
+                       message_thread_id: int = None,
+                       protect_content: bool = None,
                        reply_markup=None):
         """Send a native poll in a group, a supergroup or channel.
 
@@ -796,7 +1022,7 @@ class TelegramBot:
 
     async def getUserProfilePhotos(self, user_id,
                                    offset=None,
-                                   limit=None,):
+                                   limit=None):
         """Get a list of profile pictures for a user.
 
         See https://core.telegram.org/bots/api#getuserprofilephotos
@@ -889,7 +1115,10 @@ class TelegramBot:
                                 can_invite_users: bool = None,
                                 can_restrict_members: bool = None,
                                 can_pin_messages: bool = None,
-                                can_promote_members: bool = None):
+                                can_promote_members: bool = None,
+                                can_manage_topics: bool = None,
+                                can_manage_chat: bool = None,
+                                can_manage_video_chats: bool = None):
         """Promote or demote a user in a supergroup or a channel.
 
         The bot must be an administrator in the chat for this to work and must
@@ -1230,6 +1459,8 @@ class TelegramBot:
                           disable_notification: bool = None,
                           reply_to_message_id: int = None,
                           allow_sending_without_reply: bool = None,
+                          message_thread_id: int = None,
+                          protect_content: bool = None,
                           reply_markup=None):
         """Send `.webp` stickers.
 
@@ -1279,17 +1510,27 @@ class TelegramBot:
                                   emojis: str,
                                   png_sticker: Union[str, dict, IO] = None,
                                   tgs_sticker: Union[str, dict, IO] = None,
-                                  contains_masks: bool = None,
-                                  mask_position: dict = None):
+                                  webm_sticker: Union[str, dict, IO] = None,
+                                  sticker_type: str = 'regular',
+                                  mask_position: dict = None,
+                                  **kwargs):
         """Create new sticker set owned by a user.
 
         The bot will be able to edit the created sticker set.
         Returns True on success.
         See https://core.telegram.org/bots/api#createnewstickerset for details.
         """
+        if 'contains_masks' in kwargs:
+            logging.error("Parameter `contains_masks` of method "
+                          "`createNewStickerSet` has been deprecated. "
+                          "Use `sticker_type = 'mask'` instead.")
+            sticker_type = 'mask' if kwargs['contains_masks'] else 'regular'
+        if sticker_type not in ('regular', 'mask'):
+            raise TypeError
         png_sticker = self.prepare_file_object(png_sticker)
         tgs_sticker = self.prepare_file_object(tgs_sticker)
-        if png_sticker is None and tgs_sticker is None:
+        webm_sticker = self.prepare_file_object(webm_sticker)
+        if png_sticker is None and tgs_sticker is None and webm_sticker is None:
             logging.error("Invalid sticker provided!")
             return
         result = await self.api_request(
@@ -1300,12 +1541,15 @@ class TelegramBot:
             png_sticker['file'].close()
         if type(tgs_sticker) is dict:  # Close tgs_sticker file, if it was open
             tgs_sticker['file'].close()
+        if type(webm_sticker) is dict:  # Close webm_sticker file, if it was open
+            webm_sticker['file'].close()
         return result
 
     async def addStickerToSet(self, user_id: int, name: str,
                               emojis: str,
                               png_sticker: Union[str, dict, IO] = None,
                               tgs_sticker: Union[str, dict, IO] = None,
+                              webm_sticker: Union[str, dict, IO] = None,
                               mask_position: dict = None):
         """Add a new sticker to a set created by the bot.
 
@@ -1314,7 +1558,8 @@ class TelegramBot:
         """
         png_sticker = self.prepare_file_object(png_sticker)
         tgs_sticker = self.prepare_file_object(tgs_sticker)
-        if png_sticker is None and tgs_sticker is None:
+        webm_sticker = self.prepare_file_object(webm_sticker)
+        if png_sticker is None and tgs_sticker is None and webm_sticker is None:
             logging.error("Invalid sticker provided!")
             return
         result = await self.api_request(
@@ -1325,6 +1570,8 @@ class TelegramBot:
             png_sticker['file'].close()
         if type(tgs_sticker) is dict:  # Close tgs_sticker file, if it was open
             tgs_sticker['file'].close()
+        if type(webm_sticker) is dict:  # Close webm_sticker file, if it was open
+            webm_sticker['file'].close()
         return result
 
     async def setStickerPositionInSet(self, sticker, position):
@@ -1371,7 +1618,12 @@ class TelegramBot:
 
     async def sendInvoice(self, chat_id: int, title: str, description: str,
                           payload: str, provider_token: str,
-                          start_parameter: str, currency: str, prices: List[dict],
+                          start_parameter: str,
+                          currency: str, prices: List[dict],
+                          message_thread_id: int = None,
+                          protect_content: bool = None,
+                          max_tip_amount: int = None,
+                          suggested_tip_amounts: List[int] = None,
                           provider_data: str = None,
                           photo_url: str = None,
                           photo_size: int = None,
@@ -1456,6 +1708,8 @@ class TelegramBot:
         )
 
     async def sendGame(self, chat_id: Union[int, str], game_short_name,
+                       message_thread_id: int = None,
+                       protect_content: bool = None,
                        disable_notification: bool = None,
                        reply_to_message_id: int = None,
                        reply_markup=None,
@@ -1518,6 +1772,8 @@ class TelegramBot:
                        disable_notification: bool = None,
                        reply_to_message_id: int = None,
                        allow_sending_without_reply: bool = None,
+                       message_thread_id: int = None,
+                       protect_content: bool = None,
                        reply_markup=None):
         """Send a dice.
 
@@ -1568,7 +1824,10 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def setMyCommands(self, commands: List[Union[Command, dict]]):
+    async def setMyCommands(self,
+                            commands: List[Union[Command, dict]],
+                            scope: 'BotCommandScope' = None,
+                            language_code: str = None):
         """Change the list of the bot's commands.
 
         Use this method to change the list of the bot's commands.
@@ -1580,12 +1839,15 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def getMyCommands(self):
+    async def getMyCommands(self,
+                            scope: 'BotCommandScope' = None,
+                            language_code: str = None):
         """Get the current list of the bot's commands.
 
-        Use this method to get the current list of the bot's commands.
-        Requires no parameters.
-        Returns Array of BotCommand on success.
+        Use this method to get the current list of the bot's commands for
+            the given scope and user language.
+        Returns an Array of BotCommand objects.
+        If commands aren't set, an empty list is returned.
         See https://core.telegram.org/bots/api#getmycommands for details.
         """
         return await self.api_request(
@@ -1647,6 +1909,8 @@ class TelegramBot:
     async def copyMessage(self, chat_id: Union[int, str],
                           from_chat_id: Union[int, str],
                           message_id: int,
+                          message_thread_id: int = None,
+                          protect_content: bool = None,
                           caption: str = None,
                           parse_mode: str = None,
                           caption_entities: list = None,
@@ -1678,5 +1942,346 @@ class TelegramBot:
         """
         return await self.api_request(
             'unpinAllChatMessages',
+            parameters=locals()
+        )
+
+    async def banChatMember(self, chat_id: Union[int, str],
+                            user_id: int, until_date: int,
+                            revoke_messages: bool):
+        """Use this method to ban a user in a group, a supergroup or a channel.
+
+        In the case of supergroups and channels, the user will not be able to
+            return to the chat on their own using invite links, etc., unless
+            unbanned first.
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate administrator rights.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#banchatmember for details.
+        """
+        return await self.api_request(
+            'banChatMember',
+            parameters=locals()
+        )
+
+    async def banChatSenderChat(self, chat_id: Union[int, str], sender_chat_id: int):
+        """Use this method to ban a channel chat in a supergroup or a channel.
+
+        Until the chat is unbanned, the owner of the banned chat won't be able
+            to send messages on behalf of any of their channels.
+        The bot must be an administrator in the supergroup or channel for this
+            to work and must have the appropriate administrator rights.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#banchatsenderchat for details.
+        """
+        return await self.api_request(
+            'banChatSenderChat',
+            parameters=locals()
+        )
+
+    async def unbanChatSenderChat(self, chat_id: Union[int, str], sender_chat_id: int):
+        """Use this method to unban a previously banned channel chat in a supergroup or channel.
+
+        The bot must be an administrator for this to work and must have the
+            appropriate administrator rights.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#unbanchatsenderchat for details.
+        """
+        return await self.api_request(
+            'unbanChatSenderChat',
+            parameters=locals()
+        )
+
+    async def createChatInviteLink(self, chat_id: Union[int, str], name: str,
+                                   expire_date: int, member_limit: int,
+                                   creates_join_request: bool):
+        """Use this method to create an additional invite link for a chat.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate administrator rights.
+        The link can be revoked using the method revokeChatInviteLink.
+        Returns the new invite link as ChatInviteLink object.
+        See https://core.telegram.org/bots/api#createchatinvitelink for details.
+        """
+        return await self.api_request(
+            'createChatInviteLink',
+            parameters=locals()
+        )
+
+    async def editChatInviteLink(self, chat_id: Union[int, str],
+                                 invite_link: str, name: str, expire_date: int,
+                                 member_limit: int, creates_join_request: bool):
+        """Use this method to edit a non-primary invite link created by the bot.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate administrator rights.
+        Returns the edited invite link as a ChatInviteLink object.
+        See https://core.telegram.org/bots/api#editchatinvitelink for details.
+        """
+        return await self.api_request(
+            'editChatInviteLink',
+            parameters=locals()
+        )
+
+    async def revokeChatInviteLink(self, chat_id: Union[int, str], invite_link: str):
+        """Use this method to revoke an invite link created by the bot.
+
+        If the primary link is revoked, a new link is automatically generated.
+        The bot must be an administrator in the chat for this to work and must
+            have the appropriate administrator rights.
+        Returns the revoked invite link as ChatInviteLink object.
+        See https://core.telegram.org/bots/api#revokechatinvitelink for details.
+        """
+        return await self.api_request(
+            'revokeChatInviteLink',
+            parameters=locals()
+        )
+
+    async def approveChatJoinRequest(self, chat_id: Union[int, str], user_id: int):
+        """Use this method to approve a chat join request.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the can_invite_users administrator right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#approvechatjoinrequest for details.
+        """
+        return await self.api_request(
+            'approveChatJoinRequest',
+            parameters=locals()
+        )
+
+    async def declineChatJoinRequest(self, chat_id: Union[int, str], user_id: int):
+        """Use this method to decline a chat join request.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the can_invite_users administrator right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#declinechatjoinrequest for details.
+        """
+        return await self.api_request(
+            'declineChatJoinRequest',
+            parameters=locals()
+        )
+
+    async def getChatMemberCount(self, chat_id: Union[int, str]):
+        """Use this method to get the number of members in a chat. Returns Int on success.
+        See https://core.telegram.org/bots/api#getchatmembercount for details.
+        """
+        return await self.api_request(
+            'getChatMemberCount',
+            parameters=locals()
+        )
+
+    async def getForumTopicIconStickers(self):
+        """Use this method to get custom emoji stickers.
+
+        They can be used as a forum topic icon by any user.
+        Requires no parameters. Returns an Array of Sticker objects.
+        See https://core.telegram.org/bots/api#getforumtopiciconstickers for details.
+        """
+        return await self.api_request(
+            'getForumTopicIconStickers',
+            parameters=locals()
+        )
+
+    async def createForumTopic(self, chat_id: Union[int, str], name: str,
+                               icon_color: int, icon_custom_emoji_id: str):
+        """Use this method to create a topic in a forum supergroup chat.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the can_manage_topics administrator rights.
+        Returns information about the created topic as a ForumTopic object.
+        See https://core.telegram.org/bots/api#createforumtopic for details.
+        """
+        return await self.api_request(
+            'createForumTopic',
+            parameters=locals()
+        )
+
+    async def editForumTopic(self, chat_id: Union[int, str],
+                             message_thread_id: int, name: str,
+                             icon_custom_emoji_id: str):
+        """Use this method to edit name and icon of a topic in a forum supergroup chat.
+
+        The bot must be an administrator in the chat for this to work and must
+            have can_manage_topics administrator rights, unless it is the
+            creator of the topic.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#editforumtopic for details.
+        """
+        return await self.api_request(
+            'editForumTopic',
+            parameters=locals()
+        )
+
+    async def closeForumTopic(self, chat_id: Union[int, str],
+                              message_thread_id: int):
+        """Use this method to close an open topic in a forum supergroup chat.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the can_manage_topics administrator rights, unless it is the
+            creator of the topic.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#closeforumtopic for details.
+        """
+        return await self.api_request(
+            'closeForumTopic',
+            parameters=locals()
+        )
+
+    async def reopenForumTopic(self, chat_id: Union[int, str],
+                               message_thread_id: int):
+        """Use this method to reopen a closed topic in a forum supergroup chat.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the can_manage_topics administrator rights, unless it is the
+            creator of the topic.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#reopenforumtopic for details.
+        """
+        return await self.api_request(
+            'reopenForumTopic',
+            parameters=locals()
+        )
+
+    async def deleteForumTopic(self, chat_id: Union[int, str],
+                               message_thread_id: int):
+        """Use this method to delete a forum topic.
+
+        This method deletes a forum topic along with all its messages in a
+            forum supergroup chat.
+        The bot must be an administrator in the chat for this to work and must
+            have the can_delete_messages administrator rights.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#deleteforumtopic for details.
+        """
+        return await self.api_request(
+            'deleteForumTopic',
+            parameters=locals()
+        )
+
+    async def unpinAllForumTopicMessages(self, chat_id: Union[int, str],
+                                         message_thread_id: int):
+        """Use this method to clear the list of pinned messages in a forum topic.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the can_pin_messages administrator right in the supergroup.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#unpinallforumtopicmessages for details.
+        """
+        return await self.api_request(
+            'unpinAllForumTopicMessages',
+            parameters=locals()
+        )
+
+    async def deleteMyCommands(self, scope: 'BotCommandScope', language_code: str):
+        """Use this method to delete the list of the bot's commands for the given scope and user language.
+
+        After deletion, higher level commands will be shown to affected users.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#deletemycommands for details.
+        """
+        return await self.api_request(
+            'deleteMyCommands',
+            parameters=locals()
+        )
+
+    async def setChatMenuButton(self, chat_id: int, menu_button: 'MenuButton'):
+        """Use this method to change the bot's menu button in a private chat, or the default menu button.
+
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setchatmenubutton for details.
+        """
+        return await self.api_request(
+            'setChatMenuButton',
+            parameters=locals()
+        )
+
+    async def getChatMenuButton(self, chat_id: int):
+        """Use this method to get the current value of the bot's menu button.
+
+        Use this method to get the current value of the bot's menu button in a
+            private chat, or the default menu button.
+        Returns MenuButton on success.
+        See https://core.telegram.org/bots/api#getchatmenubutton for details.
+        """
+        return await self.api_request(
+            'getChatMenuButton',
+            parameters=locals()
+        )
+
+    async def setMyDefaultAdministratorRights(self,
+                                              rights: 'ChatAdministratorRights',
+                                              for_channels: bool):
+        """Use this method to change the default administrator rights.
+
+        Use this method to change the default administrator rights requested by
+            the bot when it's added as an administrator to groups or channels.
+        These rights will be suggested to users, but they are free to modify
+            the list before adding the bot.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setmydefaultadministratorrights for details.
+        """
+        return await self.api_request(
+            'setMyDefaultAdministratorRights',
+            parameters=locals()
+        )
+
+    async def getMyDefaultAdministratorRights(self, for_channels: bool):
+        """Use this method to get the current default administrator rights of
+            the bot.
+        Returns ChatAdministratorRights on success.
+        See https://core.telegram.org/bots/api#getmydefaultadministratorrights for details.
+        """
+        return await self.api_request(
+            'getMyDefaultAdministratorRights',
+            parameters=locals()
+        )
+
+    async def getCustomEmojiStickers(self, custom_emoji_ids: List[str]):
+        """Use this method to get information about custom emoji stickers by their identifiers.
+
+        Returns an Array of Sticker objects.
+        See https://core.telegram.org/bots/api#getcustomemojistickers for details.
+        """
+        return await self.api_request(
+            'getCustomEmojiStickers',
+            parameters=locals()
+        )
+
+    async def answerWebAppQuery(self, web_app_query_id: str,
+                                result: 'InlineQueryResult'):
+        """Use this method to set the result of an interaction with a Web App.
+
+        Use this method to set the result of an interaction with a Web App and
+            send a corresponding message on behalf of the user to the chat from
+            which the query originated.
+        On success, a SentWebAppMessage object is returned.
+        See https://core.telegram.org/bots/api#answerwebappquery for details.
+        """
+        return await self.api_request(
+            'answerWebAppQuery',
+            parameters=locals()
+        )
+
+    async def createInvoiceLink(self, title: str, description: str,
+                                payload: str, provider_token: str,
+                                currency: str, prices: List['LabeledPrice'],
+                                max_tip_amount: int,
+                                suggested_tip_amounts: List[int],
+                                provider_data: str, photo_url: str,
+                                photo_size: int, photo_width: int,
+                                photo_height: int, need_name: bool,
+                                need_phone_number: bool, need_email: bool,
+                                need_shipping_address: bool,
+                                send_phone_number_to_provider: bool,
+                                send_email_to_provider: bool,
+                                is_flexible: bool):
+        """Use this method to create a link for an invoice.
+
+        Returns the created invoice link as String on success.
+        See https://core.telegram.org/bots/api#createinvoicelink for details.
+        """
+        return await self.api_request(
+            'createInvoiceLink',
             parameters=locals()
         )
