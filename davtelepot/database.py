@@ -2,6 +2,7 @@
 
 # Standard library modules
 import logging
+from typing import Tuple
 
 # Third party modules
 import dataset
@@ -71,3 +72,32 @@ class ObjectWithDatabase(object):
                     )
                 except Exception as e:
                     logging.error(f"{e}")
+
+    def add_table_and_columns_if_not_existent(self,
+                                              table_name: str,
+                                              columns: Tuple[
+                                                  Tuple[str,
+                                                        dataset.database.Types],
+                                                  ...] = None):
+        """Create table (if it does not exist) and add given columns (if missing).
+
+        @param table_name: Table name (string)
+        @param columns: Table columns as tuples of column name and type
+        @return: None
+        """
+        if table_name not in self.db.tables:
+            table = self.db.create_table(table_name=table_name)
+            logging.info(f"Created table `{table_name}`")
+        else:
+            table = self.db[table_name]
+        if columns is None:
+            columns = []
+        for column_name, column_type in columns:
+            if not table.has_column(column_name):
+                table.create_column(
+                    column_name,
+                    column_type
+                )
+                logging.info(f"Added column `{column_name}` "
+                             f"(type `{column_type}`) "
+                             f"to table `{table_name}`")
