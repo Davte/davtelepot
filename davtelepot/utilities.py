@@ -16,9 +16,9 @@ import string
 import time
 
 from difflib import SequenceMatcher
+from typing import Tuple, Union
 
 # Third party modules
-from typing import Tuple, Union
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -1251,7 +1251,7 @@ def parse_datetime_interval_string(text):
             result_text.pop()
             if len(result_text) > 0 and result_text[-1].lower() in TIME_WORDS:
                 result_text.pop()
-    result_text = escape_html_chars(
+    result_text = clean_html_string(
         ' '.join(result_text)
     )
     parsers = list(
@@ -1329,6 +1329,22 @@ MONTH_NAMES_ITA[9] = "settembre"
 MONTH_NAMES_ITA[10] = "ottobre"
 MONTH_NAMES_ITA[11] = "novembre"
 MONTH_NAMES_ITA[12] = "dicembre"
+
+allowed_html_tags = ['b', 'strong',
+                     'i', 'em',
+                     'u', 'ins',
+                     's', 'strike', 'del',
+                     'span', 'tg-spoiler',
+                     'a',
+                     'code', 'pre']
+
+HTML_SYMBOLS = collections.OrderedDict()
+HTML_SYMBOLS["&"] = "&amp;"
+HTML_SYMBOLS["<"] = "&lt;"
+HTML_SYMBOLS[">"] = "&gt;"
+HTML_SYMBOLS["\""] = "&quot;"
+
+html_numeric_code_regex = re.compile(r'&amp;(?P<code>#\d{2,3};)')
 
 
 def beautytd(td):
@@ -1410,67 +1426,56 @@ def beautydt(dt):
     return result
 
 
-HTML_SYMBOLS = MyOD()
-HTML_SYMBOLS["&"] = "&amp;"
-HTML_SYMBOLS["<"] = "&lt;"
-HTML_SYMBOLS[">"] = "&gt;"
-HTML_SYMBOLS["\""] = "&quot;"
-HTML_SYMBOLS["&lt;b&gt;"] = "<b>"
-HTML_SYMBOLS["&lt;/b&gt;"] = "</b>"
-HTML_SYMBOLS["&lt;i&gt;"] = "<i>"
-HTML_SYMBOLS["&lt;/i&gt;"] = "</i>"
-HTML_SYMBOLS["&lt;code&gt;"] = "<code>"
-HTML_SYMBOLS["&lt;/code&gt;"] = "</code>"
-HTML_SYMBOLS["&lt;pre&gt;"] = "<pre>"
-HTML_SYMBOLS["&lt;/pre&gt;"] = "</pre>"
-HTML_SYMBOLS["&lt;a href=&quot;"] = "<a href=\""
-HTML_SYMBOLS["&quot;&gt;"] = "\">"
-HTML_SYMBOLS["&lt;/a&gt;"] = "</a>"
+def clean_html_string(text: str) -> str:
+    """Escape HTML symbols, unless part of a valid tag or numeric code character.
 
-HTML_TAGS = [
-    None, "<b>", "</b>",
-    None, "<i>", "</i>",
-    None, "<code>", "</code>",
-    None, "<pre>", "</pre>",
-    None, "<a href=\"", "\">", "</a>",
-    None
-]
-
-
-def remove_html_tags(text):
-    """Remove HTML tags from `text`."""
-    for tag in HTML_TAGS:
-        if tag is None:
-            continue
-        text = text.replace(tag, '')
+    Find valid HTML tags;
+    if there are any, choose the first occurring and call the function
+        recursively on what comes before the tag, inside the tag and after the
+        tag, preserving the tag opening and close as they are;
+    if there aren't any, escape HTML symbols except for `&` in HTML numeric code
+        characters (`&#` followed by 2 or 3 digits followed by `;`).
+    """
+    first_match = None
+    for tag in allowed_html_tags:
+        if tag in ('a', ):  # <a> must have href attribute
+            attribute = r" href=\".*\""
+        elif tag in ('span', ):  # <span> must have class attribute with "tg-spoiler" value
+            attribute = r" class=\"tg-spoiler\""
+        elif tag in ('code',):  # <code> may have a class with a programming language as value
+            attribute = r"( class=\".*\")?"
+        else:
+            attribute = ""
+        match = re.search(
+            rf'(?P<opening><{tag}{attribute}>)'
+            rf'(?P<body>.*?)'
+            rf'(?P<close></{tag}>)',
+            text
+        )
+        if match and (first_match is None or match.start() < first_match.start()):
+            first_match = match
+    if first_match is not None:
+        groups = first_match.groupdict()
+        text = (f"{clean_html_string(text[:first_match.start()])}"
+                f"{groups['opening']}{clean_html_string(groups['body'])}{groups['close']}"
+                f"{clean_html_string(text[first_match.end():])}")
+    else:
+        for key, value in HTML_SYMBOLS.items():
+            text = text.replace(key, value)
+        if re.search(html_numeric_code_regex, text):
+            text = re.sub(html_numeric_code_regex, r'&\g<code>', text)
     return text
 
 
 def escape_html_chars(text):
-    """Escape HTML chars if not part of a tag."""
-    for s, r in HTML_SYMBOLS.items():
-        text = text.replace(s, r)
-    copy = text
-    expected_tag = None
-    while copy:
-        min_ = min(
-            (
-                dict(
-                    position=copy.find(tag) if tag in copy else len(copy),
-                    tag=tag
-                )
-                for tag in HTML_TAGS
-                if tag
-            ),
-            key=lambda x: x['position'],
-            default=0
-        )
-        if min_['position'] == len(copy):
-            break
-        if expected_tag and min_['tag'] != expected_tag:
-            return text.replace('<', '_').replace('>', '_')
-        expected_tag = HTML_TAGS[HTML_TAGS.index(min_['tag'])+1]
-        copy = extract(copy, min_['tag'])
+    logging.error("`escape_html_chars` function deprecated, use `clean_html_string` instead.")
+    return clean_html_string(text)
+
+
+def remove_html_tags(text):
+    """Remove HTML tags from `text`."""
+    for tag in allowed_html_tags:
+        text = re.sub(rf'</?{tag}( (href|class)=\".*\")?>', '', text)
     return text
 
 

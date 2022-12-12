@@ -382,7 +382,7 @@ class TelegramBot:
 
     @staticmethod
     def adapt_parameters(parameters, exclude=None):
-        """Build a aiohttp.FormData object from given `parameters`.
+        """Build an aiohttp.FormData object from given `parameters`.
 
         Exclude `self`, empty values and parameters in `exclude` list.
         Cast integers to string to avoid TypeError during json serialization.
@@ -1058,7 +1058,7 @@ class TelegramBot:
             unbanned first.
         Note: In regular groups (non-supergroups), this method will only work
             if the ‘All Members Are Admins’ setting is off in the target group.
-            Otherwise members may only be removed by the group's creator or by
+            Otherwise, members may only be removed by the group's creator or by
             the member that added them.
         See https://core.telegram.org/bots/api#kickchatmember for details.
         """
@@ -1245,7 +1245,7 @@ class TelegramBot:
         )
 
     async def getChat(self, chat_id: Union[int, str]):
-        """Get up to date information about the chat.
+        """Get up-to-date information about the chat.
 
         Return a Chat object on success.
         See https://core.telegram.org/bots/api#getchat for details.
