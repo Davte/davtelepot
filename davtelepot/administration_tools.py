@@ -27,7 +27,7 @@ from davtelepot.messages import default_admin_messages, default_talk_messages
 from davtelepot.bot import Bot
 from davtelepot.utilities import (
     async_wrapper, CachedPage, Confirmator, extract, get_cleaned_text,
-    get_user, escape_html_chars, line_drawing_unordered_list, make_button,
+    get_user, clean_html_string, line_drawing_unordered_list, make_button,
     make_inline_keyboard, remove_html_tags, send_part_of_text_file,
     send_csv_file, make_lines_of_buttons
 )
@@ -130,7 +130,7 @@ def get_talk_panel(bot: Bot,
                 'help_text',
                 update=update,
                 user_record=user_record,
-                q=escape_html_chars(
+                q=clean_html_string(
                     remove_html_tags(text)
                 )
             )
@@ -155,7 +155,7 @@ def get_talk_panel(bot: Bot,
                 'user_not_found',
                 update=update,
                 user_record=user_record,
-                q=escape_html_chars(
+                q=clean_html_string(
                     remove_html_tags(text)
                 )
             )

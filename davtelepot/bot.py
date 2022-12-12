@@ -54,7 +54,7 @@ from davtelepot.database import ObjectWithDatabase
 from davtelepot.languages import MultiLanguageObject
 from davtelepot.messages import davtelepot_messages
 from davtelepot.utilities import (
-    async_get, escape_html_chars, extract, get_secure_key,
+    async_get, clean_html_string, extract, get_secure_key,
     make_inline_query_answer, make_lines_of_buttons, remove_html_tags
 )
 
@@ -69,7 +69,7 @@ logging.getLogger('chardet').setLevel(logging.WARNING)
 class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     """Simple Bot object, providing methods corresponding to Telegram bot API.
 
-    Multiple Bot() instances may be run together, along with a aiohttp web app.
+    Multiple Bot() instances may be run together, along with an aiohttp web app.
     """
 
     bots = []
@@ -347,7 +347,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     @property
     def errors_file_path(self):
-        """Return errors file path basing on self.path and `_errors_file_name`.
+        """Return errors file path basing on `self.path` and `_errors_file_name`.
 
         Fallback to class file if set, otherwise return None.
         """
@@ -417,7 +417,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """Maximum number of simultaneous HTTPS connections allowed.
 
         Telegram will open as many connections as possible to boost bot’s
-            throughput, lower values limit the load on bot‘s server.
+            throughput, lower values limit the load on bot's server.
         """
         return self._max_connections
 
@@ -477,7 +477,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     def allowed_during_maintenance(self):
         """Return the list of criteria to allow an update during maintenance.
 
-        If any of this criteria returns True on an update, that update will be
+        If any of these criteria returns True on an update, that update will be
             handled even during maintenance.
         """
         return self._allowed_during_maintenance
@@ -858,7 +858,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             elif 'chat' in update and update['chat']['id'] > 0:
                 reply = dict(text=self.unknown_command_message)
         else:  # Handle command aliases and text parsers
-            # Aliases are case insensitive: text and alias are both .lower()
+            # Aliases are case-insensitive: text and alias are both .lower()
             for alias, function in self.command_aliases.items():
                 if lowered_text.startswith(alias.lower()):
                     replier = function
@@ -1222,7 +1222,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         with proper code markdown.
         """
         if parse_mode == 'HTML':
-            text = escape_html_chars(text)
+            text = clean_html_string(text)
         tags = (
             ('`', '`')
             if parse_mode == 'Markdown'
@@ -1591,7 +1591,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             photo.startswith(url_starter)
                             for url_starter in ('http', 'www',)
                         ]
-                ):  # If `photo` is not a url but a local file path
+                ):  # If `photo` is not a URL but a local file path
                     try:
                         with io.BytesIO() as buffered_picture:
                             with open(
@@ -1716,7 +1716,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             audio.startswith(url_starter)
                             for url_starter in ('http', 'www',)
                         ]
-                ):  # If `audio` is not a url but a local file path
+                ):  # If `audio` is not a URL but a local file path
                     try:
                         with io.BytesIO() as buffered_picture:
                             with open(
@@ -1841,7 +1841,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             voice.startswith(url_starter)
                             for url_starter in ('http', 'www',)
                         ]
-                ):  # If `voice` is not a url but a local file path
+                ):  # If `voice` is not a URL but a local file path
                     try:
                         with io.BytesIO() as buffered_picture:
                             with open(
@@ -1977,7 +1977,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             document_path.startswith(url_starter)
                             for url_starter in ('http', 'www',)
                         ]
-                ):  # If `document_path` is not a url but a local file path
+                ):  # If `document_path` is not a URL but a local file path
                     try:
                         with open(
                             document_path.format(
@@ -3162,7 +3162,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         allowed_updates : List(str)
             List of update types to be retrieved.
             Empty list to allow all updates.
-            None to fallback to class default.
+            None to fall back to class default.
         """
         # Return if token is invalid
         await self.get_me()
