@@ -1450,7 +1450,8 @@ def clean_html_string(text: str) -> str:
             rf'(?P<opening><{tag}{attribute}>)'
             rf'(?P<body>.*?)'
             rf'(?P<close></{tag}>)',
-            text
+            text,
+            flags=re.DOTALL
         )
         if match and (first_match is None or match.start() < first_match.start()):
             first_match = match
