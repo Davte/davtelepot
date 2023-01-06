@@ -47,6 +47,29 @@ class TelegramApiMethod(object):
         return self._description
 
     @property
+    def description_80chars(self):
+        """Return method description, breaking lines at 80 characters."""
+        result, current_line = '', ''
+        indentation = 8
+        redundant_string = "Use this method to "
+        for n, paragraph in enumerate(self.description.replace('.', '.\n').split('\n')):
+            additional_indentation = 0
+            if n == 0 and paragraph.startswith(redundant_string):
+                paragraph = paragraph[len(redundant_string)].upper() + paragraph[len(redundant_string)+1:]
+            for word in paragraph.split(' '):
+                if len(current_line) + len(word) > 80 - indentation - additional_indentation:
+                    additional_indentation = max(additional_indentation, 4)
+                    result += f"{current_line.strip()}\n{' ' * additional_indentation}"
+                    current_line = ""
+                current_line += f"{word} "
+            if len(current_line):
+                result += f"{current_line.strip()}\n"
+                current_line = ""
+            if n == 0:
+                result += '\n'
+        return result.strip()
+
+    @property
     def table(self):
         """Return method parameters table."""
         return self._table
@@ -193,7 +216,7 @@ async def print_api_methods(filename=None,
                 f"{', '.join(['self'] + method.parameters_with_types)}"
                 f"):\n"
                 f"        \"\"\""
-                f"{method.description.replace(new_line, new_line + ' ' * 4)}\n"
+                f"{method.description_80chars.replace(new_line, new_line + ' ' * 8)}\n"
                 f"        See https://core.telegram.org/bots/api#"
                 f"{method.name.lower()} for details.\n"
                 f"        \"\"\"\n"
