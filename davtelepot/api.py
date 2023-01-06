@@ -684,6 +684,7 @@ class TelegramBot:
                         disable_notification: bool = None,
                         reply_to_message_id: int = None,
                         allow_sending_without_reply: bool = None,
+                        has_spoiler: bool = None,
                         reply_markup=None):
         """Send a photo from file_id, HTTP url or file.
 
@@ -752,6 +753,7 @@ class TelegramBot:
                         allow_sending_without_reply: bool = None,
                         message_thread_id: int = None,
                         protect_content: bool = None,
+                        has_spoiler: bool = None,
                         reply_markup=None):
         """Send a video from file_id, HTTP url or file.
 
@@ -775,6 +777,7 @@ class TelegramBot:
                             allow_sending_without_reply: bool = None,
                             message_thread_id: int = None,
                             protect_content: bool = None,
+                            has_spoiler: bool = None,
                             reply_markup=None):
         """Send animation files (GIF or H.264/MPEG-4 AVC video without sound).
 
@@ -1010,7 +1013,8 @@ class TelegramBot:
             parameters=parameters
         )
 
-    async def sendChatAction(self, chat_id: Union[int, str], action):
+    async def sendChatAction(self, chat_id: Union[int, str], action,
+                             message_thread_id: int = None):
         """Fake a typing status or similar.
 
         See https://core.telegram.org/bots/api#sendchataction for details.
@@ -2283,5 +2287,72 @@ class TelegramBot:
         """
         return await self.api_request(
             'createInvoiceLink',
+            parameters=locals()
+        )
+
+    async def editGeneralForumTopic(self, chat_id: Union[int, str], name: str):
+        """Edit the name of the 'General' topic in a forum supergroup chat.
+
+        The bot must be an administrator in the chat for this to work and must
+            have can_manage_topics administrator rights.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#editgeneralforumtopic for details.
+        """
+        return await self.api_request(
+            'editGeneralForumTopic',
+            parameters=locals()
+        )
+
+    async def closeGeneralForumTopic(self, chat_id: Union[int, str]):
+        """Close an open 'General' topic in a forum supergroup chat.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the can_manage_topics administrator rights.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#closegeneralforumtopic for details.
+        """
+        return await self.api_request(
+            'closeGeneralForumTopic',
+            parameters=locals()
+        )
+
+    async def reopenGeneralForumTopic(self, chat_id: Union[int, str]):
+        """Reopen a closed 'General' topic in a forum supergroup chat.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the can_manage_topics administrator rights.
+            The topic will be automatically unhidden if it was hidden.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#reopengeneralforumtopic for details.
+        """
+        return await self.api_request(
+            'reopenGeneralForumTopic',
+            parameters=locals()
+        )
+
+    async def hideGeneralForumTopic(self, chat_id: Union[int, str]):
+        """Hide the 'General' topic in a forum supergroup chat.
+
+        The bot must be an administrator in the chat for this to work and
+            must have the can_manage_topics administrator rights.
+            The topic will be automatically closed if it was open.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#hidegeneralforumtopic for details.
+        """
+        return await self.api_request(
+            'hideGeneralForumTopic',
+            parameters=locals()
+        )
+
+    async def unhideGeneralForumTopic(self, chat_id: Union[int, str]):
+        """Unhide the 'General' topic in a forum supergroup chat.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the can_manage_topics administrator rights.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#unhidegeneralforumtopic for details.
+        """
+        return await self.api_request(
+            'unhideGeneralForumTopic',
             parameters=locals()
         )
