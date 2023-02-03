@@ -1091,6 +1091,7 @@ class TelegramBot:
 
     async def restrictChatMember(self, chat_id: Union[int, str], user_id: int,
                                  permissions: Dict[str, bool],
+                                 use_independent_chat_permissions: bool = None,
                                  until_date: Union[datetime.datetime, int] = None):
         """Restrict a user in a supergroup.
 
@@ -1814,7 +1815,8 @@ class TelegramBot:
     async def setChatPermissions(self,
                                  chat_id: Union[int, str] = None,
                                  permissions: Union[ChatPermissions,
-                                                    dict] = None):
+                                                    dict] = None,
+                                 use_independent_chat_permissions: bool = None):
         """Set default chat permissions for all members.
 
         Use this method to set default chat permissions for all members.
