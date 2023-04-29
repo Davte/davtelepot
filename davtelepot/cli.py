@@ -3,18 +3,20 @@ import asyncio
 import logging
 import os.path
 import sys
-from typing import Any, Union
+from typing import Any, Dict, Union
 
 import davtelepot.authorization as authorization
 import davtelepot.administration_tools as administration_tools
 import davtelepot.helper as helper
 from davtelepot.bot import Bot
-from davtelepot.utilities import get_cleaned_text, get_secure_key, get_user, json_read, json_write, \
-    line_drawing_unordered_list
+from davtelepot.utilities import (get_cleaned_text, get_secure_key,
+                                  get_user, json_read, json_write,
+                                  line_drawing_unordered_list)
 
 
 def join_path(*args):
     return os.path.abspath(os.path.join(*args))
+
 
 def dir_path(path):
     if os.path.isdir(path) and os.access(path, os.W_OK):
@@ -22,7 +24,8 @@ def dir_path(path):
     else:
         raise argparse.ArgumentTypeError(f"`{path}` is not a valid path")
 
-def get_cli_arguments() -> dict[str, Any]:
+
+def get_cli_arguments() -> Dict[str, Any]:
     default_path = join_path(os.path.dirname(__file__), 'data')
     cli_parser = argparse.ArgumentParser(
         description='Run a davtelepot-powered Telegram bot from command line.',
@@ -56,6 +59,7 @@ def get_cli_arguments() -> dict[str, Any]:
         if cli_parsed_arguments[key] is None:
             cli_parsed_arguments[key] = join_path(cli_parsed_arguments['path'], default)
     return cli_parsed_arguments
+
 
 def set_loggers(log_file: str = 'davtelepot.log',
                 error_log_file: str = 'davtelepot.errors'):
@@ -147,9 +151,11 @@ def send_single_message(telegram_bot: Bot):
         text = input(f"Write a message for {get_user(records[0], False)}\t\t")
         if input("Should I send it? Y to send, anything else cancel\t\t").lower() == "y":
             break
+
     async def send_and_print_message():
         sent_message = await telegram_bot.send_one_message(chat_id=records[0]['telegram_id'], text=text)
         print(sent_message)
+
     asyncio.run(send_and_print_message())
     return
 
