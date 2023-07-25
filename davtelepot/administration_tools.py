@@ -29,13 +29,17 @@ from davtelepot.utilities import (
     async_wrapper, CachedPage, Confirmator, extract, get_cleaned_text,
     get_user, clean_html_string, line_drawing_unordered_list, make_button,
     make_inline_keyboard, remove_html_tags, send_part_of_text_file,
-    send_csv_file, make_lines_of_buttons
+    send_csv_file, make_lines_of_buttons, join_path
 )
 
 # Use this parameter in SQL `LIMIT x OFFSET y` clauses
 rows_number_limit = 10
 
 command_description_parser = re.compile(r'(?P<command>\w+)(\s?-\s?(?P<description>.*))?')
+variable_regex = re.compile(r"(?P<name>[a-zA-Z][\w]*)\s*=\s*"
+                            r"(?P<value>[\d.,]+|True|False|"
+                            r"'[^']*'|"
+                            r"\"[^\"]*\")")
 
 
 async def _forward_to(update,
@@ -1805,6 +1809,40 @@ async def _father_button(bot: Bot, user_record: OrderedDict,
     return result
 
 
+async def _config_command(bot: Bot, update: dict,
+                          user_record: dict, language: str):
+    text = get_cleaned_text(
+        update,
+        bot,
+        ['config']
+    )
+    if not text:
+        return bot.get_message('admin', 'config_command',
+                               'instructions',
+                               user_record=user_record,
+                               language=language)
+    match = variable_regex.match(text)
+    if not match:
+        return bot.get_message('admin', 'config_command',
+                               'invalid_input',
+                               user_record=user_record,
+                               language=language)
+    match = match.groupdict()
+    if (',' in match['value']
+            and not match['value'].startswith('\'')
+            and not match['value'].startswith('"')):
+        match['value'] = match['value'].replace(',', '.')
+    new_variable = f"{match['name']} = {match['value']}"
+    with open(join_path(bot.path, 'data', 'config.py'),
+              'a') as configuration_file:
+        configuration_file.write(f"{new_variable}\n")
+    return bot.get_message('admin', 'config_command',
+                           'success',
+                           new_variable=new_variable,
+                           user_record=user_record,
+                           language=language)
+
+
 def init(telegram_bot: Bot,
          talk_messages: dict = None,
          admin_messages: dict = None,
@@ -2019,3 +2057,18 @@ def init(telegram_bot: Bot,
                                       update=update,
                                       user_record=user_record,
                                       language=language)
+
+    @telegram_bot.command(command='/config',
+                          aliases=[],
+                          **{key: admin_messages['config_command'][key]
+                             for key in ('reply_keyboard_button',
+                                         'description',
+                                         'help_section',)
+                             },
+                          show_in_keyboard=False,
+                          authorization_level='admin')
+    async def config_command(bot, update, user_record, language):
+        return await _config_command(bot=bot,
+                                     update=update,
+                                     user_record=user_record,
+                                     language=language)

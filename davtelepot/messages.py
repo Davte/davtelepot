@@ -36,6 +36,53 @@ default_admin_messages = {
             'it': "annulla",
         },
     },
+    'config_command': {
+        'description': {
+            'en': "Add a variable to the configuration file",
+            'it': "Aggiungi una variabile al file di configurazione",
+        },
+        'help_section': None,
+        'instructions': {
+            'en': "<b>Config 🔧</b>\n\n"
+                  "<i>Send me a new configuration variable, for example:</i>\n"
+                  "<code>variable = 2</code>",
+            'it': "<b>Configurazione 🔧</b>\n\n"
+                  "<i>Mandami una variabile da aggiungere al file di "
+                  "configurazione, per esempio:</i>\n"
+                  "<code>variabile = 2</code>",
+        },
+        'invalid_input': {
+            'en': "<b>❌ Invalid input 🔧</b>\n\n"
+                  "<i>Send me a new configuration variable, for example:</i>\n"
+                  "<code>int_var = 2\n"
+                  "str_var = 'test'\n"
+                  "bool_var = False\n"
+                  "float_var = 3.5</code>",
+            'it': "<b>❌ Configurazione scorretta 🔧</b>\n\n"
+                  "<i>Mandami una variabile da aggiungere al file di "
+                  "configurazione, per esempio:</i>\n"
+                  "<code>var_int = 2\n"
+                  "var_str = 'test'\n"
+                  "var_bool = False\n"
+                  "var_float = 3.5</code>",
+        },
+        'reply_keyboard_button': {
+            'en': "Config 🔧",
+            'it': "Configurazione 🔧",
+        },
+        'success': {
+            'en': "<b>✔️ Configuration updated 🔧</b>\n\n"
+                  "The following variable has been added to the configuration "
+                  "file:\n"
+                  "<code>{new_variable}</code>\n\n"
+                  "/restart to apply",
+            'it': "<b>✔️ Configurazione aggiornata 🔧</b>\n\n"
+                  "La seguente variabile è stata aggiunta al file di "
+                  "configurazione:\n"
+                  "<code>{new_variable}</code>\n\n"
+                  "Per rendere effettive le modifiche fai /restart",
+        },
+    },
     'confirm': {
         'en': "🔄 Click again to confirm",
         'it': "🔄 Clicka di nuovo per confermare",
