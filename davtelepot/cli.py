@@ -10,12 +10,8 @@ import davtelepot.administration_tools as administration_tools
 import davtelepot.helper as helper
 from davtelepot.bot import Bot
 from davtelepot.utilities import (get_cleaned_text, get_secure_key,
-                                  get_user, json_read, json_write,
+                                  get_user, join_path, json_read, json_write,
                                   line_drawing_unordered_list)
-
-
-def join_path(*args):
-    return os.path.abspath(os.path.join(*args))
 
 
 def dir_path(path):
@@ -99,11 +95,13 @@ async def elevate_to_admin(bot: Bot, update: dict, user_record: dict,
 
 def allow_elevation_to_admin(telegram_bot: Bot) -> None:
     secret = get_secure_key(length=15)
+
     @telegram_bot.additional_task('BEFORE')
     async def print_secret():
         await telegram_bot.get_me()
         logging.info(f"To get administration privileges, enter code {secret} "
                      f"or click here: https://t.me/{telegram_bot.name}?start=00elevate_{secret}")
+
     @telegram_bot.command(command='/elevate', aliases=['00elevate_'], show_in_keyboard=False,
                           authorization_level='anybody')
     async def _elevate_to_admin(bot, update, user_record):
@@ -143,7 +141,7 @@ def send_single_message(telegram_bot: Bot):
               line_drawing_unordered_list(
                   list(map(lambda x: get_user(x, False),
                            records[:max_shown]))
-                  + (['...'] if len(records)>=max_shown else [])
+                  + (['...'] if len(records) >= max_shown else [])
               ),
               sep='\n')
         text = input("Select a recipient: write part of their name.\t\t")
@@ -165,7 +163,7 @@ def run_from_command_line():
     stored_arguments_file = os.path.join(arguments['path'],
                                          'cli_args.json')
     for key, value in json_read(file_=stored_arguments_file,
-                                     default={}).items():
+                                default={}).items():
         if key not in arguments or not arguments[key]:
             arguments[key] = value
     set_loggers(**{k: v

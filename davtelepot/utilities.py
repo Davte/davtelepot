@@ -1738,3 +1738,7 @@ async def aio_subprocess_shell(command: str) -> Tuple[str, str]:
             )
         )
     return stdout, stderr
+
+
+def join_path(*args):
+    return os.path.abspath(os.path.join(*args))
