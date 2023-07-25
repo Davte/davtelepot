@@ -36,8 +36,9 @@ from davtelepot.utilities import (
 rows_number_limit = 10
 
 command_description_parser = re.compile(r'(?P<command>\w+)(\s?-\s?(?P<description>.*))?')
-variable_regex = re.compile(r"(?P<name>[a-zA-Z][\w]*)\s*=\s*"
-                            r"(?P<value>[\d.,]+|True|False|"
+variable_regex = re.compile(r"(?P<name>[a-zA-Z]\w*)\s*=\s*"
+                            r"(?P<value>\d*[.,]?\d+|"
+                            r"True|False|"
                             r"'[^']*'|"
                             r"\"[^\"]*\")")
 
