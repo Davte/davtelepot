@@ -99,7 +99,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         )
     ]
     _log_file_name = None
+    _log_file_path = None
     _errors_file_name = None
+    _errors_file_path = None
     _documents_max_dimension = 50 * 1000 * 1000  # 50 MB
 
     def __init__(
@@ -237,7 +239,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.default_reply_keyboard_elements = []
         self.recent_users = OrderedDict()
         self._log_file_name = None
+        self._log_file_path = None
         self._errors_file_name = None
+        self._errors_file_path = None
         self.placeholder_requests = dict()
         self.shared_data = dict()
         self.Role = None
@@ -321,10 +325,17 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     @property
     def log_file_path(self):
-        """Return log file path basing on self.path and `_log_file_name`.
+        """Return log file path.
 
+        If an instance file path is set, return it.
+        If not and a class file path is set, return that.
+        Otherwise, generate a file path basing on `self.path` and `_log_file_name`
         Fallback to class file if set, otherwise return None.
         """
+        if self._log_file_path:
+            return self._log_file_path
+        if self.__class__._log_file_path:
+            return self.__class__._log_file_path
         if self.log_file_name:
             return f"{self.path}/data/{self.log_file_name}"
 
@@ -337,6 +348,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """Set class log file name."""
         cls._log_file_name = file_name
 
+    def set_log_file_path(self, file_path):
+        """Set log file path."""
+        self._log_file_path = file_path
+
+    @classmethod
+    def set_class_log_file_path(cls, file_path):
+        """Set class log file path."""
+        cls._log_file_path = file_path
+
     @property
     def errors_file_name(self):
         """Return errors file name.
@@ -347,10 +367,17 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     @property
     def errors_file_path(self):
-        """Return errors file path basing on `self.path` and `_errors_file_name`.
+        """Return errors file path.
 
+        If an instance file path is set, return it.
+        If not and a class file path is set, return that.
+        Otherwise, generate a file path basing on `self.path` and `_errors_file_name`
         Fallback to class file if set, otherwise return None.
         """
+        if self.__class__._errors_file_path:
+            return self.__class__._errors_file_path
+        if self._errors_file_path:
+            return self._errors_file_path
         if self.errors_file_name:
             return f"{self.path}/data/{self.errors_file_name}"
 
@@ -362,6 +389,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     def set_class_errors_file_name(cls, file_name):
         """Set class errors file name."""
         cls._errors_file_name = file_name
+
+    def set_errors_file_path(self, file_path):
+        """Set errors file path."""
+        self._errors_file_path = file_path
+
+    @classmethod
+    def set_class_errors_file_path(cls, file_path):
+        """Set class errors file path."""
+        cls._errors_file_path = file_path
 
     @classmethod
     def get(cls, token, *args, **kwargs):
@@ -1658,7 +1694,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                          duration: int = None,
                          performer: str = None,
                          title: str = None,
-                         thumb=None,
+                         thumbnail=None,
                          disable_notification: bool = None,
                          reply_to_message_id: int = None,
                          allow_sending_without_reply: bool = None,
@@ -1743,7 +1779,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 duration=duration,
                 performer=performer,
                 title=title,
-                thumb=thumb,
+                thumbnail=thumbnail,
                 disable_notification=disable_notification,
                 reply_to_message_id=reply_to_message_id,
                 allow_sending_without_reply=allow_sending_without_reply,
@@ -1902,7 +1938,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         return sent_update
 
     async def send_document(self, chat_id: Union[int, str] = None, document=None,
-                            thumb=None,
+                            thumbnail=None,
                             caption: str = None,
                             parse_mode: str = None,
                             caption_entities: List[dict] = None,
@@ -2021,7 +2057,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                                 sent_document = await self.send_document(
                                     chat_id=chat_id,
                                     document=buffered_file,
-                                    thumb=thumb,
+                                    thumbnail=thumbnail,
                                     caption=caption,
                                     parse_mode=parse_mode,
                                     disable_notification=disable_notification,
@@ -2050,7 +2086,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             sent_update = await self.sendDocument(
                 chat_id=chat_id,
                 document=document,
-                thumb=thumb,
+                thumbnail=thumbnail,
                 caption=caption,
                 parse_mode=parse_mode,
                 caption_entities=caption_entities,
@@ -3111,8 +3147,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 await session.close()
 
     async def send_one_message(self, *args, **kwargs):
-        await self.send_message(*args, **kwargs)
+        sent_message = await self.send_message(*args, **kwargs)
         await self.close_sessions()
+        return sent_message
 
     async def set_webhook(self, url=None, certificate=None,
                           max_connections=None, allowed_updates=None):
