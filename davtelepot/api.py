@@ -1768,9 +1768,9 @@ class TelegramBot:
         No more than 50 results per query are allowed.
         See https://core.telegram.org/bots/api#answerinlinequery for details.
         """
-        if 'switch_pm_text' in kwargs:
+        if 'switch_pm_text' in kwargs and kwargs['switch_pm_text']:
             button = InlineQueryResultsButton(text=kwargs['switch_pm_text'])
-        if 'switch_pm_parameter' in kwargs:
+        if 'switch_pm_parameter' in kwargs and kwargs['switch_pm_parameter']:
             button = InlineQueryResultsButton(start_parameter=kwargs['switch_pm_parameter'])
         return await self.api_request(
             'answerInlineQuery',
