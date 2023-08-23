@@ -21,6 +21,7 @@ from typing import Tuple, Union
 # Third party modules
 
 import aiohttp
+import dataset
 from bs4 import BeautifulSoup
 
 
@@ -1747,3 +1748,18 @@ async def aio_subprocess_shell(command: str,
 
 def join_path(*args):
     return os.path.abspath(os.path.join(*args))
+
+
+def add_table_and_columns_if_not_existent(database: dataset.Database,
+                                          table_name: str,
+                                          columns: Tuple[Tuple, ...]):
+    if table_name not in database.tables:
+        table = database.create_table(table_name=table_name)
+    else:
+        table = database[table_name]
+    for column_name, column_type in columns:
+        if not table.has_column(column_name):
+            table.create_column(
+                column_name,
+                column_type
+            )
