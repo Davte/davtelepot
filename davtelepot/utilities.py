@@ -1713,16 +1713,21 @@ def recursive_dictionary_update(one: dict, other: dict) -> dict:
     return one
 
 
-async def aio_subprocess_shell(command: str) -> Tuple[str, str]:
+async def aio_subprocess_shell(command: str,
+                               stdout=None,
+                               stderr=None) -> Tuple[str, str]:
     """Run `command` in a subprocess shell.
 
     Await for the subprocess to end and return standard error and output.
     On error, log errors.
+    If `stdout` and/or `stderr` are given, use them as output and/or error pipes.
+    Example of non-null standard output/error pipe: asyncio.subprocess.PIPE
     """
-    stdout, stderr = None, None
     try:
         _subprocess = await asyncio.create_subprocess_shell(
-            command
+            command,
+            stdout=stdout,
+            stderr=stderr
         )
         stdout, stderr = await _subprocess.communicate()
         if stdout:
