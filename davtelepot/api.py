@@ -150,7 +150,10 @@ class ChatAdministratorRights(dict):
                  can_post_messages: bool = False,
                  can_edit_messages: bool = False,
                  can_pin_messages: bool = False,
-                 can_manage_topics: bool = False):
+                 can_manage_topics: bool = False,
+                 can_post_stories: bool = False,
+                 can_edit_stories : bool = False,
+                 can_delete_stories: bool = False):
         """Represents the rights of an administrator in a chat.
 
         @param is_anonymous: True, if the user's presence in the chat is hidden
@@ -194,6 +197,9 @@ class ChatAdministratorRights(dict):
         self['can_edit_messages'] = can_edit_messages
         self['can_pin_messages'] = can_pin_messages
         self['can_manage_topics'] = can_manage_topics
+        self['can_post_stories'] = can_post_stories
+        self['can_edit_stories'] = can_edit_stories
+        self['can_delete_stories'] = can_delete_stories
 
 
 class LabeledPrice(dict):
@@ -1245,7 +1251,10 @@ class TelegramBot:
                                 can_promote_members: bool = None,
                                 can_manage_topics: bool = None,
                                 can_manage_chat: bool = None,
-                                can_manage_video_chats: bool = None):
+                                can_manage_video_chats: bool = None,
+                                can_edit_stories: bool = None,
+                                can_delete_stories: bool = None,
+                                can_post_stories: bool = None):
         """Promote or demote a user in a supergroup or a channel.
 
         The bot must be an administrator in the chat for this to work and must
@@ -2662,5 +2671,18 @@ class TelegramBot:
         """
         return await self.api_request(
             'deleteStickerSet',
+            parameters=locals()
+        )
+
+    async def unpinAllGeneralForumTopicMessages(self, chat_id: Union[int, str]):
+        """Clear the list of pinned messages in a General forum topic.
+
+        The bot must be an administrator in the chat for this to work and must
+            have the can_pin_messages administrator right in the supergroup.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#unpinallgeneralforumtopicmessages for details.
+        """
+        return await self.api_request(
+            'unpinAllGeneralForumTopicMessages',
             parameters=locals()
         )
