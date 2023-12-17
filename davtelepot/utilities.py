@@ -1666,7 +1666,8 @@ async def send_part_of_text_file(bot, chat_id, file_path, caption=None,
                                  file_name='File.txt', user_record=None,
                                  update=None,
                                  reversed_=True,
-                                 limit=None):
+                                 limit=None,
+                                 encoding='utf-8'):
     """Send `lines` lines of text file via `bot` in `chat_id`.
 
     If `reversed`, read the file from last line.
@@ -1677,7 +1678,7 @@ async def send_part_of_text_file(bot, chat_id, file_path, caption=None,
     if update is None:
         update = dict()
     try:
-        with open(file_path, 'r') as log_file:
+        with open(file_path, 'r', encoding=encoding) as log_file:
             lines = log_file.readlines()
             if reversed_:
                 lines = lines[::-1]
