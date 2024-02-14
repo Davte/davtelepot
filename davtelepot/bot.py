@@ -2137,7 +2137,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         file = await self.getFile(file_id=file_id)
         if file is None or isinstance(file, Exception):
             logging.error(f"{file}")
-            return
+            return file
         file_bytes = await async_get(
             url=(
                 f"https://api.telegram.org/file/"
@@ -2147,16 +2147,21 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             mode='raw'
         )
         path = path or self.path
-        while file_name is None:
+        if file_name is None:
             file_name = get_secure_key(length=10)
-            if os.path.exists(f"{path}/{file_name}"):
-                file_name = None
+        file_complete_path = os.path.join(path, file_name)
+        while os.path.exists(file_complete_path):
+            file_complete_path = file_complete_path + '1'
         try:
-            with open(f"{path}/{file_name}", 'wb') as local_file:
+            with open(file_complete_path, 'wb') as local_file:
                 local_file.write(file_bytes)
         except Exception as e:
             logging.error(f"File download failed due to {e}")
-        return
+            return e
+        return dict(file_id=file_id,
+                    file_name=file_name,
+                    path=path,
+                    file_complete_path=file_complete_path)
 
     def translate_inline_query_answer_result(self, record,
                                              update=None, user_record=None):
