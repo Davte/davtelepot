@@ -358,6 +358,7 @@ class TelegramBot:
     All mirrored methods are camelCase.
     """
     _loop = None
+    _api_url = "https://api.telegram.org/bot"
 
     app = aiohttp.web.Application()
     sessions_timeouts = {
@@ -374,12 +375,13 @@ class TelegramBot:
     _per_chat_cooldown_timedelta = datetime.timedelta(seconds=1)
     _allowed_messages_per_group_per_minute = 20
 
-    def __init__(self, token):
+    def __init__(self, token, api_url: str = None):
         """Set bot token and store HTTP sessions."""
         if self.loop is None:
             self.__class__._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
         self._token = token
+        self._api_url = api_url
         self.sessions = dict()
         self._flood_wait = 0
         # Each `telegram_id` key has a list of `datetime.datetime` as value
@@ -398,6 +400,18 @@ class TelegramBot:
     def token(self):
         """Telegram API bot token."""
         return self._token
+
+    @property
+    def api_url(self):
+        """Telegram API bot token."""
+        return self._api_url or self.__class__._api_url
+
+    @classmethod
+    def set_class_api_url(cls, api_url: str):
+        cls._api_url = api_url
+
+    def set_api_url(self, api_url: str):
+        self._api_url = api_url
 
     @property
     def flood_wait(self):
@@ -627,7 +641,7 @@ class TelegramBot:
             await self.prevent_flooding(parameters['chat_id'])
         parameters = self.adapt_parameters(parameters, exclude=exclude)
         try:
-            async with session.post("https://api.telegram.org/bot"
+            async with session.post(f"{self.api_url}/bot"
                                     f"{self.token}/{method}",
                                     data=parameters) as response:
                 try:

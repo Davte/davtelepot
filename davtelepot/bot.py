@@ -104,10 +104,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
     _errors_file_path = None
     _documents_max_dimension = 50 * 1000 * 1000  # 50 MB
 
-    def __init__(
-        self, token, hostname='', certificate=None, max_connections=40,
-        allowed_updates=None, database_url='bot.db'
-    ):
+    def __init__(self,
+                 token, hostname='', certificate=None,
+                 max_connections=40, allowed_updates=None,
+                 database_url='bot.db', api_url: str = None):
         """Init a bot instance.
 
         token : str
@@ -125,7 +125,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         # Append `self` to class list of instances
         self.__class__.bots.append(self)
         # Call superclasses constructors with proper arguments
-        TelegramBot.__init__(self, token)
+        TelegramBot.__init__(self, token, api_url=api_url)
         ObjectWithDatabase.__init__(self, database_url=database_url)
         MultiLanguageObject.__init__(self)
         self.messages['davtelepot'] = davtelepot_messages
@@ -2140,7 +2140,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             return file
         file_bytes = await async_get(
             url=(
-                f"https://api.telegram.org/file/"
+                f"{self.api_url}/file/"
                 f"bot{self.token}/"
                 f"{file['file_path']}"
             ),
