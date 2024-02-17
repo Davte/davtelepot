@@ -358,7 +358,7 @@ class TelegramBot:
     All mirrored methods are camelCase.
     """
     _loop = None
-    _api_url = "https://api.telegram.org/bot"
+    _api_url = "https://api.telegram.org"
 
     app = aiohttp.web.Application()
     sessions_timeouts = {
