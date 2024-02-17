@@ -2138,26 +2138,29 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         if file is None or isinstance(file, Exception):
             logging.error(f"{file}")
             return file
-        file_bytes = await async_get(
-            url=(
-                f"{self.api_url}/file/"
-                f"bot{self.token}/"
-                f"{file['file_path']}"
-            ),
-            mode='raw'
-        )
-        path = path or self.path
-        if file_name is None:
-            file_name = get_secure_key(length=10)
-        file_complete_path = os.path.join(path, file_name)
-        while os.path.exists(file_complete_path):
-            file_complete_path = file_complete_path + '1'
-        try:
-            with open(file_complete_path, 'wb') as local_file:
-                local_file.write(file_bytes)
-        except Exception as e:
-            logging.error(f"File download failed due to {e}")
-            return e
+        if self.api_url == 'https://api.telegram.org':
+            file_bytes = await async_get(
+                url=(
+                    f"{self.api_url}/file/"
+                    f"bot{self.token}/"
+                    f"{file['file_path']}"
+                ),
+                mode='raw'
+            )
+            path = path or self.path
+            if file_name is None:
+                file_name = get_secure_key(length=10)
+            file_complete_path = os.path.join(path, file_name)
+            while os.path.exists(file_complete_path):
+                file_complete_path = file_complete_path + '1'
+            try:
+                with open(file_complete_path, 'wb') as local_file:
+                    local_file.write(file_bytes)
+            except Exception as e:
+                logging.error(f"File download failed due to {e}")
+                return e
+        else:
+            file_complete_path = file['file_path']
         return dict(file_id=file_id,
                     file_name=file_name,
                     path=path,
