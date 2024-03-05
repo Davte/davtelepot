@@ -2127,7 +2127,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         return sent_update
 
     async def download_file(self, file_id,
-                            file_name=None, path=None):
+                            file_name=None, path=None,
+                            prevent_overwriting: bool = False):
         """Given a telegram `file_id`, download the related file.
 
         Telegram may not preserve the original file name and MIME type: the
@@ -2151,8 +2152,9 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             if file_name is None:
                 file_name = get_secure_key(length=10)
             file_complete_path = os.path.join(path, file_name)
-            while os.path.exists(file_complete_path):
-                file_complete_path = file_complete_path + '1'
+            if prevent_overwriting:
+                while os.path.exists(file_complete_path):
+                    file_complete_path = file_complete_path + '1'
             try:
                 with open(file_complete_path, 'wb') as local_file:
                     local_file.write(file_bytes)
