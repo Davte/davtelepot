@@ -7,6 +7,7 @@ A simple aiohttp asynchronous web client is used to make requests.
 # Standard library modules
 import asyncio
 import datetime
+import inspect
 import io
 import json
 import logging
@@ -349,6 +350,104 @@ class InlineQueryResultsButton(dict):
         return
 
 
+class DictToDump(dict):
+    def dumps(self):
+        parameters = {key: value for key, value in self.items() if value}
+        return json.dumps(parameters, separators=(',', ':'))
+
+
+class ReplyParameters(DictToDump):
+    def __init__(self, message_id: int,
+                 chat_id: Union[int, str] = None,
+                 allow_sending_without_reply: bool = None,
+                 quote: str = None,
+                 quote_parse_mode: str = None,
+                 quote_entities: list = None,
+                 quote_position: int = None):
+        super().__init__(self)
+        self['message_id'] = message_id
+        self['chat_id'] = chat_id
+        self['allow_sending_without_reply'] = allow_sending_without_reply
+        self['quote'] = quote
+        self['quote_parse_mode'] = quote_parse_mode
+        self['quote_entities'] = quote_entities
+        self['quote_position'] = quote_position
+
+
+class LinkPreviewOptions(DictToDump):
+    def __init__(self,
+                 is_disabled: bool = None,
+                 url: str = None,
+                 prefer_small_media: bool = None,
+                 prefer_large_media: bool = None,
+                 show_above_text: bool = None):
+        super().__init__(self)
+        self['is_disabled'] = is_disabled
+        self['url'] = url
+        self['prefer_small_media'] = prefer_small_media
+        self['prefer_large_media'] = prefer_large_media
+        self['show_above_text'] = show_above_text
+
+
+class ReactionType(DictToDump):
+    def __init__(self,
+                 type_: str,
+                 emoji: str = None,
+                 custom_emoji_id: str = None):
+        super().__init__(self)
+        if type_ not in ('emoji', 'custom_emoji'):
+            raise TypeError(
+            f"ReactionType must be `emoji` or `custom_emoji`.\n"
+            f"Unknown type {type_}"
+        )
+        self['type'] = type_
+        if emoji and custom_emoji_id:
+            raise TypeError(
+                "One and only one of the two fields `emoji` or `custom_emoji` "
+                "may be not None."
+            )
+        elif emoji:
+            self['emoji'] = emoji
+        elif custom_emoji_id:
+            self['custom_emoji_id'] = custom_emoji_id
+        else:
+            raise TypeError(
+                "At least one of the two fields `emoji` or `custom_emoji` "
+                "must be provided and not None."
+            )
+
+
+def handle_deprecated_disable_web_page_preview(parameters: dict,
+                                               kwargs: dict):
+    if 'disable_web_page_preview' in kwargs:
+        if parameters['link_preview_options'] is None:
+            parameters['link_preview_options'] = LinkPreviewOptions()
+        parameters['link_preview_options']['is_disabled'] = True
+        logging.error("DEPRECATION WARNING: `disable_web_page_preview` "
+                      f"parameter of function `{inspect.stack()[2][3]}` has been "
+                      "deprecated since Bot API 7.0. "
+                      "Use `link_preview_options` instead.")
+    return parameters
+
+
+def handle_deprecated_reply_parameters(parameters: dict,
+                                       kwargs: dict):
+    if 'reply_to_message_id' in kwargs and kwargs['reply_to_message_id']:
+        if parameters['reply_parameters'] is None:
+            parameters['reply_parameters'] = ReplyParameters(
+                message_id=kwargs['reply_to_message_id']
+            )
+        parameters['reply_parameters']['message_id'] = kwargs['reply_to_message_id']
+        if 'allow_sending_without_reply' in kwargs:
+            parameters['reply_parameters'][
+                'allow_sending_without_reply'
+            ] = kwargs['allow_sending_without_reply']
+        logging.error(f"DEPRECATION WARNING: `reply_to_message_id` and "
+                      f"`allow_sending_without_reply` parameters of function "
+                      f"`{inspect.stack()[2][3]}` have been deprecated since "
+                      f"Bot API 7.0. Use `reply_parameters` instead.")
+    return parameters
+
 
 # This class needs to mirror Telegram API, so camelCase method are needed
 # noinspection PyPep8Naming
@@ -491,6 +590,8 @@ class TelegramBot:
                 if (type(value) in (int, list,)
                         or (type(value) is dict and 'file' not in value)):
                     value = json.dumps(value, separators=(',', ':'))
+                elif isinstance(value, DictToDump):
+                    value = value.dumps()
                 data.add_field(key, value)
         return data
 
@@ -757,19 +858,27 @@ class TelegramBot:
                           message_thread_id: int = None,
                           parse_mode: str = None,
                           entities: List[dict] = None,
-                          disable_web_page_preview: bool = None,
+                          link_preview_options: LinkPreviewOptions = None,
                           disable_notification: bool = None,
                           protect_content: bool = None,
-                          reply_to_message_id: int = None,
-                          allow_sending_without_reply: bool = None,
-                          reply_markup=None):
+                          reply_parameters: ReplyParameters = None,
+                          reply_markup=None,
+                          **kwargs):
         """Send a text message. On success, return it.
 
         See https://core.telegram.org/bots/api#sendmessage for details.
         """
+        parameters = handle_deprecated_disable_web_page_preview(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
+        parameters = handle_deprecated_reply_parameters(
+            parameters=parameters,
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendMessage',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def forwardMessage(self, chat_id: Union[int, str],
@@ -794,17 +903,21 @@ class TelegramBot:
                         message_thread_id: int = None,
                         protect_content: bool = None,
                         disable_notification: bool = None,
-                        reply_to_message_id: int = None,
-                        allow_sending_without_reply: bool = None,
                         has_spoiler: bool = None,
-                        reply_markup=None):
+                        reply_parameters: ReplyParameters = None,
+                        reply_markup=None,
+                        **kwargs):
         """Send a photo from file_id, HTTP url or file.
 
         See https://core.telegram.org/bots/api#sendphoto for details.
         """
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendPhoto',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendAudio(self, chat_id: Union[int, str], audio,
@@ -816,10 +929,9 @@ class TelegramBot:
                         title: str = None,
                         thumbnail=None,
                         disable_notification: bool = None,
-                        reply_to_message_id: int = None,
-                        allow_sending_without_reply: bool = None,
                         message_thread_id: int = None,
                         protect_content: bool = None,
+                        reply_parameters: ReplyParameters = None,
                         reply_markup=None,
                         **kwargs):
         """Send an audio file from file_id, HTTP url or file.
@@ -831,9 +943,13 @@ class TelegramBot:
             logging.error("DEPRECATION WARNING: `thumb` parameter of function"
                           "`sendAudio` has been deprecated since Bot API 6.6. "
                           "Use `thumbnail` instead.")
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendAudio',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendDocument(self, chat_id: Union[int, str], document,
@@ -843,10 +959,9 @@ class TelegramBot:
                            caption_entities: List[dict] = None,
                            disable_content_type_detection: bool = None,
                            disable_notification: bool = None,
-                           reply_to_message_id: int = None,
-                           allow_sending_without_reply: bool = None,
                            message_thread_id: int = None,
                            protect_content: bool = None,
+                           reply_parameters: ReplyParameters = None,
                            reply_markup=None,
                            **kwargs):
         """Send a document from file_id, HTTP url or file.
@@ -858,9 +973,13 @@ class TelegramBot:
             logging.error("DEPRECATION WARNING: `thumb` parameter of function"
                           "`sendDocument` has been deprecated since Bot API 6.6. "
                           "Use `thumbnail` instead.")
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendDocument',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendVideo(self, chat_id: Union[int, str], video,
@@ -873,11 +992,10 @@ class TelegramBot:
                         caption_entities: List[dict] = None,
                         supports_streaming: bool = None,
                         disable_notification: bool = None,
-                        reply_to_message_id: int = None,
-                        allow_sending_without_reply: bool = None,
                         message_thread_id: int = None,
                         protect_content: bool = None,
                         has_spoiler: bool = None,
+                        reply_parameters: ReplyParameters = None,
                         reply_markup=None,
                         **kwargs):
         """Send a video from file_id, HTTP url or file.
@@ -889,9 +1007,13 @@ class TelegramBot:
             logging.error("DEPRECATION WARNING: `thumb` parameter of function"
                           "`sendVideo` has been deprecated since Bot API 6.6. "
                           "Use `thumbnail` instead.")
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendVideo',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendAnimation(self, chat_id: Union[int, str], animation,
@@ -903,11 +1025,10 @@ class TelegramBot:
                             parse_mode: str = None,
                             caption_entities: List[dict] = None,
                             disable_notification: bool = None,
-                            reply_to_message_id: int = None,
-                            allow_sending_without_reply: bool = None,
                             message_thread_id: int = None,
                             protect_content: bool = None,
                             has_spoiler: bool = None,
+                            reply_parameters: ReplyParameters = None,
                             reply_markup=None,
                             **kwargs):
         """Send animation files (GIF or H.264/MPEG-4 AVC video without sound).
@@ -919,9 +1040,13 @@ class TelegramBot:
             logging.error("DEPRECATION WARNING: `thumb` parameter of function"
                           "`sendAnimation` has been deprecated since Bot API 6.6. "
                           "Use `thumbnail` instead.")
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendAnimation',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendVoice(self, chat_id: Union[int, str], voice,
@@ -930,19 +1055,23 @@ class TelegramBot:
                         caption_entities: List[dict] = None,
                         duration: int = None,
                         disable_notification: bool = None,
-                        reply_to_message_id: int = None,
-                        allow_sending_without_reply: bool = None,
                         message_thread_id: int = None,
                         protect_content: bool = None,
-                        reply_markup=None):
+                        reply_parameters: ReplyParameters = None,
+                        reply_markup=None,
+                        **kwargs):
         """Send an audio file to be displayed as playable voice message.
 
         `voice` must be in an .ogg file encoded with OPUS.
         See https://core.telegram.org/bots/api#sendvoice for details.
         """
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendVoice',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendVideoNote(self, chat_id: Union[int, str], video_note,
@@ -950,10 +1079,9 @@ class TelegramBot:
                             length: int = None,
                             thumbnail=None,
                             disable_notification: bool = None,
-                            reply_to_message_id: int = None,
-                            allow_sending_without_reply: bool = None,
                             message_thread_id: int = None,
                             protect_content: bool = None,
+                            reply_parameters: ReplyParameters = None,
                             reply_markup=None,
                             **kwargs):
         """Send a rounded square mp4 video message of up to 1 minute long.
@@ -965,26 +1093,34 @@ class TelegramBot:
             logging.error("DEPRECATION WARNING: `thumb` parameter of function"
                           "`sendVideoNote` has been deprecated since Bot API 6.6. "
                           "Use `thumbnail` instead.")
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendVideoNote',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendMediaGroup(self, chat_id: Union[int, str], media: list,
                              disable_notification: bool = None,
-                             reply_to_message_id: int = None,
                              message_thread_id: int = None,
                              protect_content: bool = None,
-                             allow_sending_without_reply: bool = None):
+                             reply_parameters: ReplyParameters = None,
+                             **kwargs):
         """Send a group of photos or videos as an album.
 
         `media` must be a list of `InputMediaPhoto` and/or `InputMediaVideo`
             objects.
         See https://core.telegram.org/bots/api#sendmediagroup for details.
         """
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendMediaGroup',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendLocation(self, chat_id: Union[int, str],
@@ -994,11 +1130,11 @@ class TelegramBot:
                            heading: int = None,
                            proximity_alert_radius: int = None,
                            disable_notification: bool = None,
-                           reply_to_message_id: int = None,
-                           allow_sending_without_reply: bool = None,
                            message_thread_id: int = None,
                            protect_content: bool = None,
-                           reply_markup=None):
+                           reply_parameters: ReplyParameters = None,
+                           reply_markup=None,
+                           **kwargs):
         """Send a point on the map. May be kept updated for a `live_period`.
 
         See https://core.telegram.org/bots/api#sendlocation for details.
@@ -1011,9 +1147,13 @@ class TelegramBot:
             heading = max(1, min(heading, 360))
         if proximity_alert_radius:  # Distance 1-100000 m
             proximity_alert_radius = max(1, min(proximity_alert_radius, 100000))
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendLocation',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def editMessageLiveLocation(self, latitude: float, longitude: float,
@@ -1072,19 +1212,23 @@ class TelegramBot:
                         google_place_id: str = None,
                         google_place_type: str = None,
                         disable_notification: bool = None,
-                        reply_to_message_id: int = None,
-                        allow_sending_without_reply: bool = None,
                         message_thread_id: int = None,
                         protect_content: bool = None,
-                        reply_markup=None):
+                        reply_parameters: ReplyParameters = None,
+                        reply_markup=None,
+                        **kwargs):
         """Send information about a venue.
 
         Integrated with FourSquare.
         See https://core.telegram.org/bots/api#sendvenue for details.
         """
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendVenue',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendContact(self, chat_id: Union[int, str],
@@ -1093,18 +1237,22 @@ class TelegramBot:
                           last_name: str = None,
                           vcard: str = None,
                           disable_notification: bool = None,
-                          reply_to_message_id: int = None,
-                          allow_sending_without_reply: bool = None,
                           message_thread_id: int = None,
                           protect_content: bool = None,
-                          reply_markup=None):
+                          reply_parameters: ReplyParameters = None,
+                          reply_markup=None,
+                          **kwargs):
         """Send a phone contact.
 
         See https://core.telegram.org/bots/api#sendcontact for details.
         """
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendContact',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def sendPoll(self,
@@ -1122,11 +1270,11 @@ class TelegramBot:
                        close_date: Union[int, datetime.datetime] = None,
                        is_closed: bool = None,
                        disable_notification: bool = None,
-                       allow_sending_without_reply: bool = None,
-                       reply_to_message_id: int = None,
                        message_thread_id: int = None,
                        protect_content: bool = None,
-                       reply_markup=None):
+                       reply_parameters: ReplyParameters = None,
+                       reply_markup=None,
+                       **kwargs):
         """Send a native poll in a group, a supergroup or channel.
 
         See https://core.telegram.org/bots/api#sendpoll for details.
@@ -1150,6 +1298,10 @@ class TelegramBot:
         parameters = locals().copy()
         parameters['type'] = parameters['type_']
         del parameters['type_']
+        parameters = handle_deprecated_reply_parameters(
+            parameters=parameters,
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendPoll',
             parameters=parameters
@@ -1497,17 +1649,22 @@ class TelegramBot:
                               inline_message_id: str = None,
                               parse_mode: str = None,
                               entities: List[dict] = None,
-                              disable_web_page_preview: bool = None,
-                              reply_markup=None):
+                              link_preview_options: LinkPreviewOptions = None,
+                              reply_markup=None,
+                              **kwargs):
         """Edit text and game messages.
 
         On success, if edited message is sent by the bot, the edited Message
             is returned, otherwise True is returned.
         See https://core.telegram.org/bots/api#editmessagetext for details.
         """
+        parameters = handle_deprecated_disable_web_page_preview(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'editMessageText',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def editMessageCaption(self,
@@ -1604,15 +1761,28 @@ class TelegramBot:
             parameters=locals()
         )
 
+    async def deleteMessages(self, chat_id: Union[int, str],
+                             message_ids: List[int]):
+        """Delete multiple messages simultaneously.
+
+        If some of the specified messages can't be found, they are skipped.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#deletemessages for details.
+        """
+        return await self.api_request(
+            'deleteMessages',
+            parameters=locals()
+        )
+
     async def sendSticker(self, chat_id: Union[int, str],
                           sticker: Union[str, dict, IO],
                           disable_notification: bool = None,
-                          reply_to_message_id: int = None,
-                          allow_sending_without_reply: bool = None,
                           message_thread_id: int = None,
                           protect_content: bool = None,
                           emoji: str = None,
-                          reply_markup=None):
+                          reply_parameters: ReplyParameters = None,
+                          reply_markup=None,
+                          **kwargs):
         """Send `.webp` stickers.
 
         `sticker` must be a file path, a URL, a file handle or a dict
@@ -1624,9 +1794,13 @@ class TelegramBot:
         if sticker is None:
             logging.error("Invalid sticker provided!")
             return
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         result = await self.api_request(
             'sendSticker',
-            parameters=locals()
+            parameters=parameters
         )
         if type(sticker) is dict:  # Close sticker file, if it was open
             sticker['file'].close()
@@ -1715,7 +1889,7 @@ class TelegramBot:
             raise TypeError(f"Unknown sticker type `{sticker_type}`.")
         result = await self.api_request(
             'createNewStickerSet',
-            parameters=locals(),
+            parameters=locals().copy(),
             exclude=['old_sticker_format']
         )
         return result
@@ -1749,7 +1923,7 @@ class TelegramBot:
             return
         result = await self.api_request(
             'addStickerToSet',
-            parameters=locals(),
+            parameters=locals().copy(),
             exclude=['old_sticker_format']
         )
         return result
@@ -1821,17 +1995,21 @@ class TelegramBot:
                           send_email_to_provider: bool = None,
                           is_flexible: bool = None,
                           disable_notification: bool = None,
-                          reply_to_message_id: int = None,
-                          allow_sending_without_reply: bool = None,
-                          reply_markup=None):
+                          reply_parameters: ReplyParameters = None,
+                          reply_markup=None,
+                          **kwargs):
         """Send an invoice.
 
         On success, the sent Message is returned.
         See https://core.telegram.org/bots/api#sendinvoice for details.
         """
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendInvoice',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def answerShippingQuery(self, shipping_query_id, ok,
@@ -1895,18 +2073,22 @@ class TelegramBot:
                        message_thread_id: int = None,
                        protect_content: bool = None,
                        disable_notification: bool = None,
-                       reply_to_message_id: int = None,
+                       reply_parameters: ReplyParameters = None,
                        reply_markup=None,
-                       allow_sending_without_reply: bool = None):
+                       **kwargs):
         """Send a game.
 
         On success, the sent Message is returned.
         See https://core.telegram.org/bots/api#sendgame for
             details.
         """
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendGame',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def setGameScore(self, user_id: int, score: int,
@@ -1954,11 +2136,11 @@ class TelegramBot:
                        chat_id: Union[int, str] = None,
                        emoji: str = None,
                        disable_notification: bool = None,
-                       reply_to_message_id: int = None,
-                       allow_sending_without_reply: bool = None,
                        message_thread_id: int = None,
                        protect_content: bool = None,
-                       reply_markup=None):
+                       reply_parameters: ReplyParameters = None,
+                       reply_markup=None,
+                       **kwargs):
         """Send a dice.
 
         Use this method to send a dice, which will have a random value from 1
@@ -1969,9 +2151,13 @@ class TelegramBot:
         See https://core.telegram.org/bots/api#senddice for
             details.
         """
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'sendDice',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def setChatAdministratorCustomTitle(self,
@@ -2100,9 +2286,9 @@ class TelegramBot:
                           parse_mode: str = None,
                           caption_entities: list = None,
                           disable_notification: bool = None,
-                          reply_to_message_id: int = None,
-                          allow_sending_without_reply: bool = None,
-                          reply_markup=None):
+                          reply_parameters: ReplyParameters = None,
+                          reply_markup=None,
+                          **kwargs):
         """Use this method to copy messages of any kind.
 
         The method is analogous to the method forwardMessages, but the copied
@@ -2110,9 +2296,13 @@ class TelegramBot:
         Returns the MessageId of the sent message on success.
         See https://core.telegram.org/bots/api#copymessage for details.
         """
+        parameters = handle_deprecated_reply_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'copyMessage',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def unpinAllChatMessages(self, chat_id: Union[int, str]):
@@ -2698,5 +2888,81 @@ class TelegramBot:
         """
         return await self.api_request(
             'unpinAllGeneralForumTopicMessages',
+            parameters=locals()
+        )
+
+    async def getUserChatBoosts(self, chat_id: Union[int, str], user_id: int):
+        """Get the list of boosts added to a chat by a user.
+
+        Requires administrator rights in the chat.
+        Returns a UserChatBoosts object.
+        See https://core.telegram.org/bots/api#getuserchatboosts for details.
+        """
+        return await self.api_request(
+            'getUserChatBoosts',
+            parameters=locals()
+        )
+
+    async def forwardMessages(self, chat_id: Union[int, str],
+                              from_chat_id: Union[int, str],
+                              message_ids: List[int],
+                              message_thread_id: int = None,
+                              disable_notification: bool = None,
+                              protect_content: bool = None):
+        """Forward multiple messages of any kind.
+
+        If some of the specified messages can't be found or forwarded, they are
+            skipped.
+        Service messages and messages with protected content can't be
+            forwarded.
+        Album grouping is kept for forwarded messages.
+        On success, an array of MessageId of the sent messages is returned.
+        See https://core.telegram.org/bots/api#forwardmessages for details.
+        """
+        return await self.api_request(
+            'forwardMessages',
+            parameters=locals()
+        )
+
+    async def copyMessages(self, chat_id: Union[int, str],
+                           from_chat_id: Union[int, str],
+                           message_ids: List[int],
+                           message_thread_id: int = None,
+                           disable_notification: bool = None,
+                           protect_content: bool = None,
+                           remove_caption: bool = None):
+        """Copy messages of any kind.
+
+        If some of the specified messages can't be found or copied, they are
+            skipped.
+        Service messages, giveaway messages, giveaway winners messages, and
+            invoice messages can't be copied.
+        A quiz poll can be copied only if the value of the field
+            correct_option_id is known to the bot.
+        The method is analogous to the method forwardMessages, but the copied
+            messages don't have a link to the original message.
+        Album grouping is kept for copied messages.
+        On success, an array of MessageId of the sent messages is returned.
+        See https://core.telegram.org/bots/api#copymessages for details.
+        """
+        return await self.api_request(
+            'copyMessages',
+            parameters=locals()
+        )
+
+    async def setMessageReaction(self, chat_id: Union[int, str],
+                                 message_id: int,
+                                 reaction: List[ReactionType] = None,
+                                 is_big: bool = None):
+        """Change the chosen reactions on a message.
+
+        Service messages can't be reacted to.
+        Automatically forwarded messages from a channel to its discussion group
+            have the same available reactions as messages in the channel.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setmessagereaction for details.
+        """
+        return await self.api_request(
+            'setMessageReaction',
             parameters=locals()
         )

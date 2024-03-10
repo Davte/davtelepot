@@ -2,34 +2,6 @@
 
 camelCase methods mirror API directly, while snake_case ones act as middleware
     someway.
-
-Usage
-    ```
-    import sys
-
-    from davtelepot.bot import Bot
-
-    from data.passwords import my_token, my_other_token
-
-    long_polling_bot = Bot(token=my_token, database_url='my_db')
-    webhook_bot = Bot(token=my_other_token, hostname='example.com',
-                      certificate='path/to/certificate.pem',
-                      database_url='my_other_db')
-
-    @long_polling_bot.command('/foo')
-    async def foo_command(bot, update, user_record, language):
-        return "Bar!"
-
-    @webhook_bot.command('/bar')
-    async def bar_command(bot, update, user_record, language):
-        return "Foo!"
-
-    exit_state = Bot.run(
-        local_host='127.0.0.5',
-        port=8552
-    )
-    sys.exit(exit_state)
-    ```
 """
 
 # Standard library modules
@@ -49,7 +21,9 @@ from typing import Callable, List, Union, Dict
 import aiohttp.web
 
 # Project modules
-from davtelepot.api import TelegramBot, TelegramError
+from davtelepot.api import (
+    LinkPreviewOptions, ReplyParameters, TelegramBot, TelegramError
+)
 from davtelepot.database import ObjectWithDatabase
 from davtelepot.languages import MultiLanguageObject
 from davtelepot.messages import davtelepot_messages
@@ -1319,19 +1293,21 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     async def send_message(self, chat_id: Union[int, str] = None,
                            text: str = None,
+                           message_thread_id: int = None,
                            entities: List[dict] = None,
                            parse_mode: str = 'HTML',
-                           message_thread_id: int = None,
+                           link_preview_options: LinkPreviewOptions = None,
+                           disable_notification: bool = None,
                            protect_content: bool = None,
                            disable_web_page_preview: bool = None,
-                           disable_notification: bool = None,
                            reply_to_message_id: int = None,
                            allow_sending_without_reply: bool = None,
-                           reply_markup=None,
                            update: dict = None,
                            reply_to_update: bool = False,
                            send_default_keyboard: bool = True,
-                           user_record: OrderedDict = None):
+                           user_record: OrderedDict = None,
+                           reply_parameters: ReplyParameters = None,
+                           reply_markup=None):
         """Send text via message(s).
 
         This method wraps lower-level `TelegramBot.sendMessage` method.
@@ -1352,6 +1328,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             user_record = self.db['users'].find_one(telegram_id=chat_id)
         if reply_to_update and 'message_id' in update:
             reply_to_message_id = update['message_id']
+        if disable_web_page_preview:
+            if link_preview_options is None:
+                link_preview_options = LinkPreviewOptions()
+            link_preview_options['is_disabled'] = True
         if (
             send_default_keyboard
             and reply_markup is None
@@ -1395,19 +1375,27 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             limit=self.__class__.TELEGRAM_MESSAGES_MAX_LEN - 100,
             parse_mode=parse_mode
         )
+        if reply_to_message_id:
+            if reply_parameters is None:
+                reply_parameters = ReplyParameters(message_id=reply_to_message_id)
+            reply_parameters['message_id'] = reply_to_message_id
+            if allow_sending_without_reply:
+                reply_parameters['allow_sending_without_reply'] = allow_sending_without_reply
+            if reply_to_update and 'chat' in update and 'id' in update['chat']:
+                if update['chat']['id'] != chat_id:
+                    reply_parameters['chat_id'] = update['chat']['id']
         for text_chunk, is_last in text_chunks:
             _reply_markup = (reply_markup if is_last else None)
             sent_message_update = await self.sendMessage(
                 chat_id=chat_id,
                 text=text_chunk,
+                message_thread_id=message_thread_id,
                 parse_mode=parse_mode,
                 entities=entities,
-                message_thread_id=message_thread_id,
-                protect_content=protect_content,
-                disable_web_page_preview=disable_web_page_preview,
+                link_preview_options=link_preview_options,
                 disable_notification=disable_notification,
-                reply_to_message_id=reply_to_message_id,
-                allow_sending_without_reply=allow_sending_without_reply,
+                protect_content=protect_content,
+                reply_parameters=reply_parameters,
                 reply_markup=_reply_markup
             )
         return sent_message_update
@@ -1431,6 +1419,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                                 parse_mode: str = 'HTML',
                                 entities: List[dict] = None,
                                 disable_web_page_preview: bool = None,
+                                link_preview_options: LinkPreviewOptions = None,
                                 allow_sending_without_reply: bool = None,
                                 reply_markup=None,
                                 update: dict = None):
@@ -1463,6 +1452,10 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             )
         ):
             if i == 0:
+                if disable_web_page_preview:
+                    if link_preview_options is None:
+                        link_preview_options = LinkPreviewOptions()
+                    link_preview_options['is_disabled'] = True
                 edited_message = await self.editMessageText(
                     text=text_chunk,
                     chat_id=chat_id,
@@ -1470,7 +1463,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                     inline_message_id=inline_message_id,
                     parse_mode=parse_mode,
                     entities=entities,
-                    disable_web_page_preview=disable_web_page_preview,
+                    link_preview_options=link_preview_options,
                     reply_markup=(reply_markup if is_last else None)
                 )
                 if chat_id is None:
@@ -1576,6 +1569,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                          reply_markup=None,
                          update: dict = None,
                          reply_to_update: bool = False,
+                         reply_parameters: ReplyParameters = None,
                          send_default_keyboard: bool = True,
                          use_stored_file_id: bool = True):
         """Send photos.
@@ -1599,6 +1593,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             chat_id = self.get_chat_id(update)
         if reply_to_update and 'message_id' in update:
             reply_to_message_id = update['message_id']
+        if reply_to_message_id:
+            if reply_parameters is None:
+                reply_parameters = ReplyParameters(message_id=reply_to_message_id)
+            reply_parameters['message_id'] = reply_to_message_id
+            if allow_sending_without_reply:
+                reply_parameters['allow_sending_without_reply'] = allow_sending_without_reply
+            if reply_to_update and 'chat' in update and 'id' in update['chat']:
+                if update['chat']['id'] != chat_id:
+                    reply_parameters['chat_id'] = update['chat']['id']
         if (
             send_default_keyboard
             and reply_markup is None
@@ -1652,8 +1655,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 parse_mode=parse_mode,
                 caption_entities=caption_entities,
                 disable_notification=disable_notification,
-                reply_to_message_id=reply_to_message_id,
-                allow_sending_without_reply=allow_sending_without_reply,
+                reply_parameters=reply_parameters,
                 reply_markup=reply_markup
             )
             if isinstance(sent_update, Exception):
@@ -1701,6 +1703,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                          reply_markup=None,
                          update: dict = None,
                          reply_to_update: bool = False,
+                         reply_parameters: ReplyParameters = None,
                          send_default_keyboard: bool = True,
                          use_stored_file_id: bool = True):
         """Send audio files.
@@ -1724,6 +1727,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             chat_id = self.get_chat_id(update)
         if reply_to_update and 'message_id' in update:
             reply_to_message_id = update['message_id']
+        if reply_to_message_id:
+            if reply_parameters is None:
+                reply_parameters = ReplyParameters(message_id=reply_to_message_id)
+            reply_parameters['message_id'] = reply_to_message_id
+            if allow_sending_without_reply:
+                reply_parameters['allow_sending_without_reply'] = allow_sending_without_reply
+            if reply_to_update and 'chat' in update and 'id' in update['chat']:
+                if update['chat']['id'] != chat_id:
+                    reply_parameters['chat_id'] = update['chat']['id']
         if (
             send_default_keyboard
             and reply_markup is None
@@ -1781,8 +1793,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 title=title,
                 thumbnail=thumbnail,
                 disable_notification=disable_notification,
-                reply_to_message_id=reply_to_message_id,
-                allow_sending_without_reply=allow_sending_without_reply,
+                reply_parameters=reply_parameters,
                 reply_markup=reply_markup
             )
             if isinstance(sent_update, Exception):
@@ -1826,6 +1837,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                          reply_markup=None,
                          update: dict = None,
                          reply_to_update: bool = False,
+                         reply_parameters: ReplyParameters = None,
                          send_default_keyboard: bool = True,
                          use_stored_file_id: bool = True):
         """Send voice messages.
@@ -1849,6 +1861,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             chat_id = self.get_chat_id(update)
         if reply_to_update and 'message_id' in update:
             reply_to_message_id = update['message_id']
+        if reply_to_message_id:
+            if reply_parameters is None:
+                reply_parameters = ReplyParameters(message_id=reply_to_message_id)
+            reply_parameters['message_id'] = reply_to_message_id
+            if allow_sending_without_reply:
+                reply_parameters['allow_sending_without_reply'] = allow_sending_without_reply
+            if reply_to_update and 'chat' in update and 'id' in update['chat']:
+                if update['chat']['id'] != chat_id:
+                    reply_parameters['chat_id'] = update['chat']['id']
         if (
             send_default_keyboard
             and reply_markup is None
@@ -1903,8 +1924,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 caption_entities=caption_entities,
                 duration=duration,
                 disable_notification=disable_notification,
-                reply_to_message_id=reply_to_message_id,
-                allow_sending_without_reply=allow_sending_without_reply,
+                reply_parameters=reply_parameters,
                 reply_markup=reply_markup
             )
             if isinstance(sent_update, Exception):
@@ -1951,6 +1971,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                             document_name: str = None,
                             update: dict = None,
                             reply_to_update: bool = False,
+                            reply_parameters: ReplyParameters = None,
                             send_default_keyboard: bool = True,
                             use_stored_file_id: bool = False):
         """Send a document.
@@ -1983,6 +2004,15 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             return
         if reply_to_update and 'message_id' in update:
             reply_to_message_id = update['message_id']
+        if reply_to_message_id:
+            if reply_parameters is None:
+                reply_parameters = ReplyParameters(message_id=reply_to_message_id)
+            reply_parameters['message_id'] = reply_to_message_id
+            if allow_sending_without_reply:
+                reply_parameters['allow_sending_without_reply'] = allow_sending_without_reply
+            if reply_to_update and 'chat' in update and 'id' in update['chat']:
+                if update['chat']['id'] != chat_id:
+                    reply_parameters['chat_id'] = update['chat']['id']
         if chat_id > 0:
             user_record = self.db['users'].find_one(telegram_id=chat_id)
             language = self.get_language(update=update, user_record=user_record)
@@ -2061,7 +2091,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                                     caption=caption,
                                     parse_mode=parse_mode,
                                     disable_notification=disable_notification,
-                                    reply_to_message_id=reply_to_message_id,
+                                    reply_parameters=reply_parameters,
                                     reply_markup=reply_markup,
                                     update=update,
                                     reply_to_update=reply_to_update,
@@ -2092,8 +2122,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
                 caption_entities=caption_entities,
                 disable_content_type_detection=disable_content_type_detection,
                 disable_notification=disable_notification,
-                reply_to_message_id=reply_to_message_id,
-                allow_sending_without_reply=allow_sending_without_reply,
+                reply_parameters=reply_parameters,
                 reply_markup=reply_markup
             )
             if isinstance(sent_update, Exception):
@@ -3505,7 +3534,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         Each bot will receive updates via long polling or webhook according to
             its initialization parameters.
         A single aiohttp.web.Application instance will be run (cls.app) on
-            local_host:port and it may serve custom-defined routes as well.
+            local_host:port, and it may serve custom-defined routes as well.
         """
         if local_host is not None:
             cls.local_host = local_host
