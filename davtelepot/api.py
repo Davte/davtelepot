@@ -305,7 +305,8 @@ class MaskPosition(dict):
 class InputSticker(dict):
     """This object describes a sticker to be added to a sticker set."""
 
-    def __init__(self, sticker: Union[str, dict, IO], emoji_list: List[str],
+    def __init__(self, sticker: Union[str, dict, IO], format_: str,
+                 emoji_list: List[str],
                  mask_position: Union['MaskPosition', None] = None,
                  keywords: Union[List[str], None] = None):
         """This object describes a sticker to be added to a sticker set.
@@ -318,6 +319,9 @@ class InputSticker(dict):
             multipart/form-data under <file_attach_name> name.
             Animated and video stickers can't be uploaded via HTTP URL.
             More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+        @param format_: Format of the added sticker, must be one of “static”
+            for a .WEBP or .PNG image, “animated” for a .TGS animation,
+            “video” for a WEBM video
         @param emoji_list: List of 1-20 emoji associated with the sticker
         @param mask_position: Optional. Position where the mask should be
             placed on faces. For “mask” stickers only.
@@ -327,6 +331,10 @@ class InputSticker(dict):
         """
         super().__init__(self)
         self['sticker'] = sticker
+        if format_ not in ("static", "animated", "video"):
+            logging.error(f"Invalid format `{format_}")
+        else:
+            self['format'] = format_
         self['emoji_list'] = emoji_list
         self['mask_position'] = mask_position
         self['keywords'] = keywords
@@ -446,6 +454,16 @@ def handle_deprecated_reply_parameters(parameters: dict,
                       f"`allow_sending_without_reply` parameters of function "
                       f"`{inspect.stack()[2][3]}` have been deprecated since "
                       f"Bot API 7.0. Use `reply_parameters` instead.")
+    return parameters
+
+
+def handle_forbidden_names_for_parameters(parameters: dict,
+                                          kwargs: dict):
+    if 'format' in kwargs:
+        parameters['format'] = kwargs['format']
+    if 'format_' in parameters:
+        parameters['format'] = parameters['format_']
+        del parameters['format_']
     return parameters
 
 
@@ -646,7 +664,8 @@ class TelegramBot:
                            sticker: Union[dict, str, IO],
                            emoji_list: Union[List[str], str],
                            mask_position: Union[MaskPosition, None] = None,
-                           keywords: Union[List[str], None] = None) -> InputSticker:
+                           keywords: Union[List[str], None] = None,
+                           format_: str = 'static') -> InputSticker:
         if isinstance(emoji_list, str):
             emoji_list = [c for c in emoji_list]
         if isinstance(keywords, str):
@@ -654,7 +673,8 @@ class TelegramBot:
         if isinstance(sticker, str) and os.path.isfile(sticker):
             sticker = self.prepare_file_object(sticker)
         return InputSticker(sticker=sticker, emoji_list=emoji_list,
-                            mask_position=mask_position, keywords=keywords)
+                            mask_position=mask_position, keywords=keywords,
+                            format_=format_)
 
     async def prevent_flooding(self, chat_id):
         """Await until request may be sent safely.
@@ -855,6 +875,7 @@ class TelegramBot:
 
     async def sendMessage(self, chat_id: Union[int, str],
                           text: str,
+                          business_connection_id: str = None,
                           message_thread_id: int = None,
                           parse_mode: str = None,
                           entities: List[dict] = None,
@@ -897,6 +918,7 @@ class TelegramBot:
         )
 
     async def sendPhoto(self, chat_id: Union[int, str], photo,
+                        business_connection_id: str = None,
                         caption: str = None,
                         parse_mode: str = None,
                         caption_entities: List[dict] = None,
@@ -921,6 +943,7 @@ class TelegramBot:
         )
 
     async def sendAudio(self, chat_id: Union[int, str], audio,
+                        business_connection_id: str = None,
                         caption: str = None,
                         parse_mode: str = None,
                         caption_entities: List[dict] = None,
@@ -953,6 +976,7 @@ class TelegramBot:
         )
 
     async def sendDocument(self, chat_id: Union[int, str], document,
+                           business_connection_id: str = None,
                            thumbnail=None,
                            caption: str = None,
                            parse_mode: str = None,
@@ -983,6 +1007,7 @@ class TelegramBot:
         )
 
     async def sendVideo(self, chat_id: Union[int, str], video,
+                        business_connection_id: str = None,
                         duration: int = None,
                         width: int = None,
                         height: int = None,
@@ -1017,6 +1042,7 @@ class TelegramBot:
         )
 
     async def sendAnimation(self, chat_id: Union[int, str], animation,
+                            business_connection_id: str = None,
                             duration: int = None,
                             width: int = None,
                             height: int = None,
@@ -1050,6 +1076,7 @@ class TelegramBot:
         )
 
     async def sendVoice(self, chat_id: Union[int, str], voice,
+                        business_connection_id: str = None,
                         caption: str = None,
                         parse_mode: str = None,
                         caption_entities: List[dict] = None,
@@ -1075,6 +1102,7 @@ class TelegramBot:
         )
 
     async def sendVideoNote(self, chat_id: Union[int, str], video_note,
+                            business_connection_id: str = None,
                             duration: int = None,
                             length: int = None,
                             thumbnail=None,
@@ -1103,6 +1131,7 @@ class TelegramBot:
         )
 
     async def sendMediaGroup(self, chat_id: Union[int, str], media: list,
+                             business_connection_id: str = None,
                              disable_notification: bool = None,
                              message_thread_id: int = None,
                              protect_content: bool = None,
@@ -1125,6 +1154,7 @@ class TelegramBot:
 
     async def sendLocation(self, chat_id: Union[int, str],
                            latitude: float, longitude: float,
+                           business_connection_id: str = None,
                            horizontal_accuracy: float = None,
                            live_period=None,
                            heading: int = None,
@@ -1207,6 +1237,7 @@ class TelegramBot:
     async def sendVenue(self, chat_id: Union[int, str],
                         latitude: float, longitude: float,
                         title: str, address: str,
+                        business_connection_id: str = None,
                         foursquare_id: str = None,
                         foursquare_type: str = None,
                         google_place_id: str = None,
@@ -1234,6 +1265,7 @@ class TelegramBot:
     async def sendContact(self, chat_id: Union[int, str],
                           phone_number: str,
                           first_name: str,
+                          business_connection_id: str = None,
                           last_name: str = None,
                           vcard: str = None,
                           disable_notification: bool = None,
@@ -1259,6 +1291,7 @@ class TelegramBot:
                        chat_id: Union[int, str],
                        question: str,
                        options: List[str],
+                       business_connection_id: str = None,
                        is_anonymous: bool = True,
                        type_: str = 'regular',
                        allows_multiple_answers: bool = False,
@@ -1308,6 +1341,7 @@ class TelegramBot:
         )
 
     async def sendChatAction(self, chat_id: Union[int, str], action,
+                             business_connection_id: str = None,
                              message_thread_id: int = None):
         """Fake a typing status or similar.
 
@@ -1776,6 +1810,7 @@ class TelegramBot:
 
     async def sendSticker(self, chat_id: Union[int, str],
                           sticker: Union[str, dict, IO],
+                          business_connection_id: str = None,
                           disable_notification: bool = None,
                           message_thread_id: int = None,
                           protect_content: bool = None,
@@ -1850,7 +1885,6 @@ class TelegramBot:
 
     async def createNewStickerSet(self, user_id: int, name: str, title: str,
                                   stickers: List['InputSticker'],
-                                  sticker_format: str = 'static',
                                   sticker_type: str = 'regular',
                                   needs_repainting: bool = False,
                                   **kwargs):
@@ -1862,6 +1896,10 @@ class TelegramBot:
         """
         if stickers is None:
             stickers = []
+        if 'sticker_format' in kwargs:
+            logging.error("Parameter `sticker_format` of method "
+                          "`createNewStickerSet` has been deprecated. "
+                          "Use `format` parameter of class `InputSticker` instead.")
         if 'contains_masks' in kwargs:
             logging.error("Parameter `contains_masks` of method "
                           "`createNewStickerSet` has been deprecated. "
@@ -2070,6 +2108,7 @@ class TelegramBot:
         )
 
     async def sendGame(self, chat_id: Union[int, str], game_short_name,
+                       business_connection_id: str = None,
                        message_thread_id: int = None,
                        protect_content: bool = None,
                        disable_notification: bool = None,
@@ -2133,7 +2172,8 @@ class TelegramBot:
         )
 
     async def sendDice(self,
-                       chat_id: Union[int, str] = None,
+                       chat_id: Union[int, str],
+                       business_connection_id: str = None,
                        emoji: str = None,
                        disable_notification: bool = None,
                        message_thread_id: int = None,
@@ -2843,7 +2883,10 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def setStickerSetThumbnail(self, name: str, user_id: int, thumbnail: 'InputFile or String'):
+    async def setStickerSetThumbnail(self, name: str, user_id: int,
+                                     format_: str,
+                                     thumbnail: 'InputFile or String',
+                                     **kwargs):
         """Set the thumbnail of a regular or mask sticker set.
 
         The format of the thumbnail file must match the format of the stickers
@@ -2851,9 +2894,13 @@ class TelegramBot:
         Returns True on success.
         See https://core.telegram.org/bots/api#setstickersetthumbnail for details.
         """
+        parameters = handle_forbidden_names_for_parameters(
+            parameters=locals().copy(),
+            kwargs=kwargs
+        )
         return await self.api_request(
             'setStickerSetThumbnail',
-            parameters=locals()
+            parameters=parameters
         )
 
     async def setCustomEmojiStickerSetThumbnail(self, name: str, custom_emoji_id: str):
@@ -2964,5 +3011,30 @@ class TelegramBot:
         """
         return await self.api_request(
             'setMessageReaction',
+            parameters=locals()
+        )
+
+    async def getBusinessConnection(self, business_connection_id: str):
+        """Get information about the connection of the bot with a business account.
+
+        Returns a BusinessConnection object on success.
+        See https://core.telegram.org/bots/api#getbusinessconnection for details.
+        """
+        return await self.api_request(
+            'getBusinessConnection',
+            parameters=locals()
+        )
+
+    async def replaceStickerInSet(self, user_id: int, name: str,
+                                  old_sticker: str, sticker: 'InputSticker'):
+        """Replace an existing sticker in a sticker set with a new one.
+
+        The method is equivalent to calling deleteStickerFromSet, then
+            addStickerToSet, then setStickerPositionInSet.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#replacestickerinset for details.
+        """
+        return await self.api_request(
+            'replaceStickerInSet',
             parameters=locals()
         )
