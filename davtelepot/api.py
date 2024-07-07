@@ -425,6 +425,38 @@ class ReactionType(DictToDump):
             )
 
 
+class InputPaidMedia(DictToDump):
+    def __init__(self,
+                 type_: str,
+                 media: str):
+        assert type_ in ('photo', 'video'), f"Invalid paid media type `{type_}`"
+        super().__init__()
+        self['type'] = type_
+        self['media'] = media
+
+
+class InputPaidMediaPhoto(InputPaidMedia):
+    def __init__(self,
+                 media: str):
+        super().__init__('photo', media)
+
+
+class InputPaidMediaVideo(InputPaidMedia):
+    def __init__(self,
+                 media: str,
+                 thumbnail: str = None,
+                 width: int = None,
+                 height: int = None,
+                 duration: int = None,
+                 supports_streaming: bool = None):
+        super().__init__('video', media)
+        self['thumbnail'] = thumbnail
+        self['width'] = width
+        self['height'] = height
+        self['duration'] = duration
+        self['supports_streaming'] = supports_streaming
+
+
 def handle_deprecated_disable_web_page_preview(parameters: dict,
                                                kwargs: dict):
     if 'disable_web_page_preview' in kwargs:
@@ -882,6 +914,7 @@ class TelegramBot:
                           link_preview_options: LinkPreviewOptions = None,
                           disable_notification: bool = None,
                           protect_content: bool = None,
+                          message_effect_id: str = None,
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
                           **kwargs):
@@ -922,10 +955,12 @@ class TelegramBot:
                         caption: str = None,
                         parse_mode: str = None,
                         caption_entities: List[dict] = None,
+                        show_caption_above_media: bool = None,
                         message_thread_id: int = None,
                         protect_content: bool = None,
                         disable_notification: bool = None,
                         has_spoiler: bool = None,
+                        message_effect_id: str = None,
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
                         **kwargs):
@@ -954,6 +989,7 @@ class TelegramBot:
                         disable_notification: bool = None,
                         message_thread_id: int = None,
                         protect_content: bool = None,
+                        message_effect_id: str = None,
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
                         **kwargs):
@@ -985,6 +1021,7 @@ class TelegramBot:
                            disable_notification: bool = None,
                            message_thread_id: int = None,
                            protect_content: bool = None,
+                           message_effect_id: str = None,
                            reply_parameters: ReplyParameters = None,
                            reply_markup=None,
                            **kwargs):
@@ -1015,10 +1052,12 @@ class TelegramBot:
                         caption: str = None,
                         parse_mode: str = None,
                         caption_entities: List[dict] = None,
+                        show_caption_above_media: bool = None,
                         supports_streaming: bool = None,
                         disable_notification: bool = None,
                         message_thread_id: int = None,
                         protect_content: bool = None,
+                        message_effect_id: str = None,
                         has_spoiler: bool = None,
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
@@ -1050,9 +1089,11 @@ class TelegramBot:
                             caption: str = None,
                             parse_mode: str = None,
                             caption_entities: List[dict] = None,
+                            show_caption_above_media: bool = None,
                             disable_notification: bool = None,
                             message_thread_id: int = None,
                             protect_content: bool = None,
+                            message_effect_id: str = None,
                             has_spoiler: bool = None,
                             reply_parameters: ReplyParameters = None,
                             reply_markup=None,
@@ -1084,6 +1125,7 @@ class TelegramBot:
                         disable_notification: bool = None,
                         message_thread_id: int = None,
                         protect_content: bool = None,
+                        message_effect_id: str = None,
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
                         **kwargs):
@@ -1109,6 +1151,7 @@ class TelegramBot:
                             disable_notification: bool = None,
                             message_thread_id: int = None,
                             protect_content: bool = None,
+                            message_effect_id: str = None,
                             reply_parameters: ReplyParameters = None,
                             reply_markup=None,
                             **kwargs):
@@ -1135,6 +1178,7 @@ class TelegramBot:
                              disable_notification: bool = None,
                              message_thread_id: int = None,
                              protect_content: bool = None,
+                             message_effect_id: str = None,
                              reply_parameters: ReplyParameters = None,
                              **kwargs):
         """Send a group of photos or videos as an album.
@@ -1162,6 +1206,7 @@ class TelegramBot:
                            disable_notification: bool = None,
                            message_thread_id: int = None,
                            protect_content: bool = None,
+                           message_effect_id: str = None,
                            reply_parameters: ReplyParameters = None,
                            reply_markup=None,
                            **kwargs):
@@ -1187,7 +1232,9 @@ class TelegramBot:
         )
 
     async def editMessageLiveLocation(self, latitude: float, longitude: float,
+                                      live_period: int = None,
                                       chat_id: Union[int, str] = None,
+                                      business_connection_id: str = None,
                                       message_id: int = None,
                                       inline_message_id: str = None,
                                       horizontal_accuracy: float = None,
@@ -1218,6 +1265,7 @@ class TelegramBot:
 
     async def stopMessageLiveLocation(self,
                                       chat_id: Union[int, str] = None,
+                                      business_connection_id: str = None,
                                       message_id: int = None,
                                       inline_message_id: int = None,
                                       reply_markup=None):
@@ -1245,6 +1293,7 @@ class TelegramBot:
                         disable_notification: bool = None,
                         message_thread_id: int = None,
                         protect_content: bool = None,
+                        message_effect_id: str = None,
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
                         **kwargs):
@@ -1271,6 +1320,7 @@ class TelegramBot:
                           disable_notification: bool = None,
                           message_thread_id: int = None,
                           protect_content: bool = None,
+                          message_effect_id: str = None,
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
                           **kwargs):
@@ -1291,6 +1341,8 @@ class TelegramBot:
                        chat_id: Union[int, str],
                        question: str,
                        options: List[str],
+                       question_parse_mode: str = None,
+                       question_entities: list = None,
                        business_connection_id: str = None,
                        is_anonymous: bool = True,
                        type_: str = 'regular',
@@ -1305,6 +1357,7 @@ class TelegramBot:
                        disable_notification: bool = None,
                        message_thread_id: int = None,
                        protect_content: bool = None,
+                       message_effect_id: str = None,
                        reply_parameters: ReplyParameters = None,
                        reply_markup=None,
                        **kwargs):
@@ -1679,6 +1732,7 @@ class TelegramBot:
 
     async def editMessageText(self, text: str,
                               chat_id: Union[int, str] = None,
+                              business_connection_id: str = None,
                               message_id: int = None,
                               inline_message_id: str = None,
                               parse_mode: str = None,
@@ -1703,11 +1757,13 @@ class TelegramBot:
 
     async def editMessageCaption(self,
                                  chat_id: Union[int, str] = None,
+                                 business_connection_id: str = None,
                                  message_id: int = None,
                                  inline_message_id: str = None,
                                  caption: str = None,
                                  parse_mode: str = None,
                                  caption_entities: List[dict] = None,
+                                 show_caption_above_media: bool = None,
                                  reply_markup=None):
         """Edit captions of messages.
 
@@ -1722,6 +1778,7 @@ class TelegramBot:
 
     async def editMessageMedia(self,
                                chat_id: Union[int, str] = None,
+                               business_connection_id: str = None,
                                message_id: int = None,
                                inline_message_id: str = None,
                                media=None,
@@ -1744,6 +1801,7 @@ class TelegramBot:
 
     async def editMessageReplyMarkup(self,
                                      chat_id: Union[int, str] = None,
+                                     business_connection_id: str = None,
                                      message_id: int = None,
                                      inline_message_id: str = None,
                                      reply_markup=None):
@@ -1759,7 +1817,10 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def stopPoll(self, chat_id: Union[int, str], message_id,
+    async def stopPoll(self,
+                       chat_id: Union[int, str],
+                       message_id,
+                       business_connection_id: str = None,
                        reply_markup=None):
         """Stop a poll which was sent by the bot.
 
@@ -1815,6 +1876,7 @@ class TelegramBot:
                           message_thread_id: int = None,
                           protect_content: bool = None,
                           emoji: str = None,
+                          message_effect_id: str = None,
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
                           **kwargs):
@@ -2033,6 +2095,7 @@ class TelegramBot:
                           send_email_to_provider: bool = None,
                           is_flexible: bool = None,
                           disable_notification: bool = None,
+                          message_effect_id: str = None,
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
                           **kwargs):
@@ -2112,6 +2175,7 @@ class TelegramBot:
                        message_thread_id: int = None,
                        protect_content: bool = None,
                        disable_notification: bool = None,
+                       message_effect_id: str = None,
                        reply_parameters: ReplyParameters = None,
                        reply_markup=None,
                        **kwargs):
@@ -2178,6 +2242,7 @@ class TelegramBot:
                        disable_notification: bool = None,
                        message_thread_id: int = None,
                        protect_content: bool = None,
+                       message_effect_id: str = None,
                        reply_parameters: ReplyParameters = None,
                        reply_markup=None,
                        **kwargs):
@@ -2325,6 +2390,7 @@ class TelegramBot:
                           caption: str = None,
                           parse_mode: str = None,
                           caption_entities: list = None,
+                          show_caption_above_media: bool = None,
                           disable_notification: bool = None,
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
@@ -3036,5 +3102,54 @@ class TelegramBot:
         """
         return await self.api_request(
             'replaceStickerInSet',
+            parameters=locals()
+        )
+
+    async def sendPaidMedia(self, chat_id: Union[int, str], star_count: int,
+                            media: List[InputPaidMedia],
+                            caption: str, parse_mode: str,
+                            caption_entities: List[dict] = None,
+                            show_caption_above_media: bool = None,
+                            disable_notification: bool = None,
+                            protect_content: bool = None,
+                            reply_parameters: ReplyParameters = None,
+                            reply_markup = None):
+        """Send paid media to channel chats.
+
+        On success, the sent Message is returned.
+        See https://core.telegram.org/bots/api#sendpaidmedia for details.
+        """
+        return await self.api_request(
+            'sendPaidMedia',
+            parameters=locals()
+        )
+
+    async def getStarTransactions(self,
+                                  offset: int = None,
+                                  limit: int = None):
+        """Returns the bot's Telegram Star transactions in chronological order.
+
+        On success, returns a StarTransactions object.
+        See https://core.telegram.org/bots/api#getstartransactions for details.
+
+        `offset`: number of transactions to skip in the response (defaults to 0)
+        `limit`: maximum number of transactions to be retrieved.
+            Values between 1-100 are accepted (defaults to 100).
+        """
+        return await self.api_request(
+            'getStarTransactions',
+            parameters=locals()
+        )
+
+    async def refundStarPayment(self,
+                                user_id: int,
+                                telegram_payment_charge_id: str):
+        """Refunds a successful payment in Telegram Stars.
+
+        Returns True on success.
+        See https://core.telegram.org/bots/api#refundstarpayment for details.
+        """
+        return await self.api_request(
+            'refundStarPayment',
             parameters=locals()
         )
