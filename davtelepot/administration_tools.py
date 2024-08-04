@@ -18,6 +18,7 @@ import re
 import types
 
 from collections import OrderedDict
+from importlib.metadata import version as get_package_version_from_metadata
 from typing import Union, List, Tuple
 
 # Third party modules
@@ -42,6 +43,13 @@ variable_regex = re.compile(r"(?P<name>[a-zA-Z]\w*)\s*=\s*"
                             r"True|False|"
                             r"'[^']*'|"
                             r"\"[^\"]*\")")
+
+
+def get_package_version(package: types.ModuleType):
+    """Get version of given package."""
+    if hasattr(package, '__version__'):
+        return package.__version__
+    return get_package_version_from_metadata(package.__name__)
 
 
 async def _forward_to(update,
@@ -865,7 +873,12 @@ async def get_new_versions(bot: Bot,
                           "skipping...")
             continue
         new_version = web_page['info']['version']
-        current_version = package.__version__
+        try:
+            current_version = get_package_version(package)
+        except TypeError:
+            current_version = "NA"
+            logging.error("Could not get current version of "
+                          "package %s", package.__name__)
         notification_record = bot.db['updates_notifications'].find_one(
             package=package.__name__,
             order_by=['-id'],
@@ -895,7 +908,7 @@ async def version_command(bot: Bot, update: dict,
     text += f'<b>Python: </b> <code>{platform.python_version()}</code>\n'
     text += '\n'.join(
         f"<b>{package.__name__}</b>: "
-        f"<code>{package.__version__}</code>"
+        f"<code>{get_package_version(package)}</code>"
         for package in bot.packages
     )
     temporary_message = await bot.send_message(
@@ -939,7 +952,7 @@ async def notify_new_version(bot: Bot):
         order_by=['-id']
     )
     current_versions = {
-        f"{package.__name__}_version": package.__version__
+        f"{package.__name__}_version": get_package_version(package)
         for package in bot.packages
     }
     current_versions['last_commit'] = last_commit
