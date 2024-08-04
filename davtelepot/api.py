@@ -1593,6 +1593,7 @@ class TelegramBot:
         )
 
     async def pinChatMessage(self, chat_id: Union[int, str], message_id,
+                             business_connection_id: str = None,
                              disable_notification: bool = None):
         """Pin a message in a group, a supergroup, or a channel.
 
@@ -1608,6 +1609,7 @@ class TelegramBot:
         )
 
     async def unpinChatMessage(self, chat_id: Union[int, str],
+                               business_connection_id: str = None,
                                message_id: int = None):
         """Unpin a message in a group, a supergroup, or a channel.
 
