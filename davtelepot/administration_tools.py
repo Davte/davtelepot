@@ -29,8 +29,8 @@ from davtelepot.messages import default_admin_messages, default_talk_messages
 from davtelepot.bot import Bot
 from davtelepot.utilities import (
     async_wrapper, CachedPage, Confirmator, extract, get_cleaned_text,
-    get_user, clean_html_string, line_drawing_unordered_list, make_button,
-    make_inline_keyboard, remove_html_tags, send_part_of_text_file,
+    get_secure_key, get_user, clean_html_string, line_drawing_unordered_list,
+    make_button, make_inline_keyboard, remove_html_tags, send_part_of_text_file,
     send_csv_file, make_lines_of_buttons, join_path
 )
 
@@ -1859,6 +1859,50 @@ async def config_command(bot: Bot, update: dict,
                            language=language)
 
 
+async def become_administrator(bot: Bot, update: dict,
+                               user_record: dict, language: str):
+    """When the bot has no administrator, become one providing a token.
+    
+    The token will be printed to the stdout on the machine running the bot.
+    """
+    if len(bot.administrators) > 0:
+        return
+    def _get_message(*args):
+        return bot.get_message('admin', 'become_admin', *args,
+                               update=update, user_record=user_record,
+                               language=language)
+    token = get_cleaned_text(update=update, bot=bot,
+                             replace=['become_administrator',
+                                      '00become_administrator'],
+                             strip='/ @_')
+    if token != bot.administration_token:
+        return _get_message('wrong_token')
+    with bot.db as db:
+        db['users'].update({**user_record, 'privileges': 1},
+                           ['id'])
+    return _get_message('success')
+
+
+async def create_promotion_command(bot: Bot):
+    """If bot has no administrators, users can elevate themselves.
+    
+    To do so, they need to provide a token, that will be printed to the stdout
+        of the machine running the bot.
+    """
+    await bot.get_me()
+    bot.administration_token = get_secure_key(length=10)
+    print(f"To become administrator click "
+            f"https://t.me/{bot.name}?start="
+            f"00become_administrator_{bot.administration_token}")
+    @bot.command(command='become_administrator',
+                 authorization_level='everybody',
+                 aliases=['00become_administrator'])
+    async def _become_administrator(bot, update, user_record, language):
+        return await become_administrator(bot=bot, update=update,
+                                            user_record=user_record,
+                                            language=language)
+
+
 def init(telegram_bot: Bot,
          talk_messages: dict = None,
          admin_messages: dict = None,
@@ -2088,3 +2132,6 @@ def init(telegram_bot: Bot,
                                     update=update,
                                     user_record=user_record,
                                     language=language)
+
+    if len(telegram_bot.administrators) == 0:
+        asyncio.ensure_future(create_promotion_command(bot=telegram_bot))

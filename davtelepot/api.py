@@ -3109,7 +3109,8 @@ class TelegramBot:
 
     async def sendPaidMedia(self, chat_id: Union[int, str], star_count: int,
                             media: List[InputPaidMedia],
-                            caption: str, parse_mode: str,
+                            business_connection_id: str = None,
+                            caption: str = None, parse_mode: str = None,
                             caption_entities: List[dict] = None,
                             show_caption_above_media: bool = None,
                             disable_notification: bool = None,
@@ -3153,5 +3154,37 @@ class TelegramBot:
         """
         return await self.api_request(
             'refundStarPayment',
+            parameters=locals()
+        )
+    
+    async def createChatSubscriptionInviteLink(self, chat_id: Union[int, str],
+                                               name: str,
+                                               subscription_period: int,
+                                               subscription_price: int):
+        """Create a subscription invite link for a channel chat.
+        
+        The bot must have the can_invite_users administrator rights.
+        The link can be edited using the method editChatSubscriptionInviteLink
+            or revoked using the method revokeChatInviteLink.
+        Returns the new invite link as a ChatInviteLink object.
+        See https://core.telegram.org/bots/api#createchatsubscriptioninvitelink
+        for details.
+        """
+        return await self.api_request(
+            'createChatSubscriptionInviteLink',
+            parameters=locals()
+        )
+    
+    async def editChatSubscriptionInviteLink(self, chat_id: Union[int, str],
+                                             invite_link: str, name: str):
+        """Edit a subscription invite link created by the bot.
+        
+        The bot must have the can_invite_users administrator rights.
+        Returns the edited invite link as a ChatInviteLink object.
+        See https://core.telegram.org/bots/api#editchatsubscriptioninvitelink
+        for details.
+        """
+        return await self.api_request(
+            'editChatSubscriptionInviteLink',
             parameters=locals()
         )
