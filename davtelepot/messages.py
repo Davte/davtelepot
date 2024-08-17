@@ -22,6 +22,16 @@ davtelepot_messages = {
 }
 
 default_admin_messages = {
+    'become_admin': {
+        'success': {
+            'en': "🎉 You are now administrator! 👑",
+            'it': "🎉 Ora hai diritti di amministrazione! 👑",
+        },
+        'wrong_token': {
+            'en': "❌ Wrong token 🚷",
+            'it': "❌ Password errata 🚷",
+        },
+    },
     'cancel': {
         'button': {
             'en': "↩️ Cancel",
