@@ -221,6 +221,8 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         self.Role = None
         self.packages = [sys.modules['davtelepot']]
         self._documents_max_dimension = None
+        self._getting_me = False
+        self._got_me = False
         # Add `users` table with its fields if missing
         if 'users' not in self.db.tables:
             table = self.db.create_table(
@@ -2804,9 +2806,7 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
         """
         if not callable(condition):
             raise TypeError(
-                'Condition {c} is not a callable'.format(
-                    c=condition.__name__
-                )
+                f'Condition {condition.__name__} is not a callable'
             )
 
         def query_decorator(handler):
@@ -3147,26 +3147,41 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
         Restart bots if bot can't be got.
         """
+        for _ in range(60):
+            if not self._getting_me:
+                break
+            await asyncio.sleep(0.5)
+        else:
+            raise TimeoutError("Getting bot information was in progress but "
+                               "did not make it in 30 seconds...")
+        if self._got_me:
+            return
+        self._getting_me = True
         try:
             me = await self.getMe()
             if isinstance(me, Exception):
                 raise me
-            elif me is None:
-                raise Exception('getMe returned None')
+            if me is None:
+                raise TypeError('getMe returned None')
             self._name = me["username"]
             self._telegram_id = me['id']
         except Exception as e:
             logging.error(
-                f"API getMe method failed, information about this bot could "
-                f"not be retrieved. Restarting in 5 minutes...\n\n"
-                f"Error information:\n{e}"
+                "API getMe method failed, information about this bot could "
+                "not be retrieved. Restarting in 5 minutes...\n\n"
+                "Error information:\n%s", e
             )
+            self._getting_me = False
             await asyncio.sleep(5*60)
+            if self._got_me:
+                return
             self.__class__.stop(
                 message="Information about this bot could not be retrieved.\n"
                         "Restarting...",
                 final_state=65
             )
+        self._getting_me = False
+        self._got_me = True
 
     def setup(self):
         """Make bot ask for updates and handle responses."""

@@ -1890,6 +1890,8 @@ async def create_promotion_command(bot: Bot):
         of the machine running the bot.
     """
     await bot.get_me()
+    if len(bot.administrators) > 0:
+        return
     bot.administration_token = get_secure_key(length=10)
     print(f"To become administrator click "
             f"https://t.me/{bot.name}?start="
@@ -2132,6 +2134,4 @@ def init(telegram_bot: Bot,
                                     update=update,
                                     user_record=user_record,
                                     language=language)
-
-    if len(telegram_bot.administrators) == 0:
-        asyncio.ensure_future(create_promotion_command(bot=telegram_bot))
+    asyncio.ensure_future(create_promotion_command(bot=telegram_bot))
