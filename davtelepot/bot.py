@@ -122,12 +122,47 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             'edited_message': self.edited_message_handler,
             'channel_post': self.channel_post_handler,
             'edited_channel_post': self.edited_channel_post_handler,
+            'business_connection': self.get_update_handler(
+                update_type='business_connection'
+            ),
+            'business_message': self.get_update_handler(
+                update_type='business_message'
+            ),
+            'edited_business_message': self.get_update_handler(
+                update_type='edited_business_message'
+            ),
+            'deleted_business_messages': self.get_update_handler(
+                update_type='deleted_business_messages'
+            ),
+            'message_reaction': self.get_update_handler(
+                update_type='message_reaction'
+            ),
+            'message_reaction_count': self.get_update_handler(
+                update_type='message_reaction_count'
+            ),
             'inline_query': self.inline_query_handler,
             'chosen_inline_result': self.chosen_inline_result_handler,
             'callback_query': self.callback_query_handler,
             'shipping_query': self.shipping_query_handler,
             'pre_checkout_query': self.pre_checkout_query_handler,
+            'purchased_paid_media': self.get_update_handler(
+                update_type='purchased_paid_media'
+            ),
             'poll': self.poll_handler,
+            'poll_answer': self.get_update_handler(
+                update_type='poll_answer'
+            ),
+            'my_chat_member': self.get_update_handler(
+                update_type='my_chat_member'
+            ),
+            'chat_member': self.get_update_handler( update_type='chat_member' ),
+            'chat_join_request': self.get_update_handler(
+                update_type='chat_join_request'
+            ),
+            'chat_boost': self.get_update_handler( update_type='chat_boost' ),
+            'removed_chat_boost': self.get_update_handler(
+                update_type='removed_chat_boost'
+            ),
         }
         # Different message update types need different handlers
         self.message_handlers = {
@@ -681,6 +716,18 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
             "However, this channel_post handler does nothing yet."
         )
         return
+
+    def get_update_handler(self, update_type: str):
+        """Get update handler for `update_type`."""
+        bot = self
+        async def handler(update, user_record, language=None):
+            """Handle update message of type `update_type`"""
+            logging.info(
+                "The following update was received: %s\n"
+                "However, this `%s` handler does nothing yet.",
+                update, update_type
+            )
+        return handler
 
     async def edited_channel_post_handler(self, update, user_record, language=None):
         """Handle Telegram `edited_channel_post` update."""

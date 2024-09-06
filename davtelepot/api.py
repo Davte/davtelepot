@@ -3109,6 +3109,7 @@ class TelegramBot:
 
     async def sendPaidMedia(self, chat_id: Union[int, str], star_count: int,
                             media: List[InputPaidMedia],
+                            payload: str = None,
                             business_connection_id: str = None,
                             caption: str = None, parse_mode: str = None,
                             caption_entities: List[dict] = None,
