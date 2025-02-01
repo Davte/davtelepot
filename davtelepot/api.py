@@ -457,6 +457,40 @@ class InputPaidMediaVideo(InputPaidMedia):
         self['supports_streaming'] = supports_streaming
 
 
+class MessageEntity(DictToDump):
+    def __init__(self,
+                 type_: str,
+                 offset: int,
+                 length: int,
+                 url: str,
+                 user: 'User',
+                 language: str,
+                 custom_emoji_id: str):
+        super().__init__()
+        self['type'] = type_
+        self['offset'] = offset
+        self['length'] = length
+        self['url'] = url
+        self['user'] = user
+        self['language'] = language
+        self['custom_emoji_id'] = custom_emoji_id
+
+
+class PreparedInlineMessage(DictToDump):
+    """Describes an inline message to be sent by a user of a Mini App.
+    
+    Attributes:
+        id (str): Unique identifier of the prepared message
+        expiration_date (int): Expiration date of the prepared message,
+        in Unix time. Expired prepared messages can no longer be used.
+    """
+    def __init__(self,
+                 id: str,
+                 expiration_date: int):
+        super().__init__()
+        self['id'] = id
+        self['expiration_date'] = expiration_date
+
 def handle_deprecated_disable_web_page_preview(parameters: dict,
                                                kwargs: dict):
     if 'disable_web_page_preview' in kwargs:
@@ -917,6 +951,7 @@ class TelegramBot:
                           message_effect_id: str = None,
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
+                          allow_paid_broadcast: bool = None,
                           **kwargs):
         """Send a text message. On success, return it.
 
@@ -963,6 +998,7 @@ class TelegramBot:
                         message_effect_id: str = None,
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
+                        allow_paid_broadcast: bool = None,
                         **kwargs):
         """Send a photo from file_id, HTTP url or file.
 
@@ -992,6 +1028,7 @@ class TelegramBot:
                         message_effect_id: str = None,
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
+                        allow_paid_broadcast: bool = None,
                         **kwargs):
         """Send an audio file from file_id, HTTP url or file.
 
@@ -1024,6 +1061,7 @@ class TelegramBot:
                            message_effect_id: str = None,
                            reply_parameters: ReplyParameters = None,
                            reply_markup=None,
+                           allow_paid_broadcast: bool = None,
                            **kwargs):
         """Send a document from file_id, HTTP url or file.
 
@@ -1061,6 +1099,7 @@ class TelegramBot:
                         has_spoiler: bool = None,
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
+                        allow_paid_broadcast: bool = None,
                         **kwargs):
         """Send a video from file_id, HTTP url or file.
 
@@ -1097,6 +1136,7 @@ class TelegramBot:
                             has_spoiler: bool = None,
                             reply_parameters: ReplyParameters = None,
                             reply_markup=None,
+                            allow_paid_broadcast: bool = None,
                             **kwargs):
         """Send animation files (GIF or H.264/MPEG-4 AVC video without sound).
 
@@ -1128,6 +1168,7 @@ class TelegramBot:
                         message_effect_id: str = None,
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
+                        allow_paid_broadcast: bool = None,
                         **kwargs):
         """Send an audio file to be displayed as playable voice message.
 
@@ -1154,6 +1195,7 @@ class TelegramBot:
                             message_effect_id: str = None,
                             reply_parameters: ReplyParameters = None,
                             reply_markup=None,
+                            allow_paid_broadcast: bool = None,
                             **kwargs):
         """Send a rounded square mp4 video message of up to 1 minute long.
 
@@ -1180,6 +1222,7 @@ class TelegramBot:
                              protect_content: bool = None,
                              message_effect_id: str = None,
                              reply_parameters: ReplyParameters = None,
+                             allow_paid_broadcast: bool = None,
                              **kwargs):
         """Send a group of photos or videos as an album.
 
@@ -1209,6 +1252,7 @@ class TelegramBot:
                            message_effect_id: str = None,
                            reply_parameters: ReplyParameters = None,
                            reply_markup=None,
+                           allow_paid_broadcast: bool = None,
                            **kwargs):
         """Send a point on the map. May be kept updated for a `live_period`.
 
@@ -1296,6 +1340,7 @@ class TelegramBot:
                         message_effect_id: str = None,
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
+                        allow_paid_broadcast: bool = None,
                         **kwargs):
         """Send information about a venue.
 
@@ -1323,6 +1368,7 @@ class TelegramBot:
                           message_effect_id: str = None,
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
+                          allow_paid_broadcast: bool = None,
                           **kwargs):
         """Send a phone contact.
 
@@ -1360,6 +1406,7 @@ class TelegramBot:
                        message_effect_id: str = None,
                        reply_parameters: ReplyParameters = None,
                        reply_markup=None,
+                       allow_paid_broadcast: bool = None,
                        **kwargs):
         """Send a native poll in a group, a supergroup or channel.
 
@@ -1881,6 +1928,7 @@ class TelegramBot:
                           message_effect_id: str = None,
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
+                          allow_paid_broadcast: bool = None,
                           **kwargs):
         """Send `.webp` stickers.
 
@@ -2100,6 +2148,7 @@ class TelegramBot:
                           message_effect_id: str = None,
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
+                          allow_paid_broadcast: bool = None,
                           **kwargs):
         """Send an invoice.
 
@@ -2180,6 +2229,7 @@ class TelegramBot:
                        message_effect_id: str = None,
                        reply_parameters: ReplyParameters = None,
                        reply_markup=None,
+                       allow_paid_broadcast: bool = None,
                        **kwargs):
         """Send a game.
 
@@ -2247,6 +2297,7 @@ class TelegramBot:
                        message_effect_id: str = None,
                        reply_parameters: ReplyParameters = None,
                        reply_markup=None,
+                       allow_paid_broadcast: bool = None,
                        **kwargs):
         """Send a dice.
 
@@ -2396,6 +2447,7 @@ class TelegramBot:
                           disable_notification: bool = None,
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
+                          allow_paid_broadcast: bool = None,
                           **kwargs):
         """Use this method to copy messages of any kind.
 
@@ -2758,11 +2810,27 @@ class TelegramBot:
                                 need_shipping_address: bool,
                                 send_phone_number_to_provider: bool,
                                 send_email_to_provider: bool,
-                                is_flexible: bool):
+                                is_flexible: bool,
+                                business_connection_id: str = None,
+                                subscription_period: int = None
+                                ):
         """Use this method to create a link for an invoice.
 
-        Returns the created invoice link as String on success.
-        See https://core.telegram.org/bots/api#createinvoicelink for details.
+        Returns the created invoice link as String on success. See
+        https://core.telegram.org/bots/api#createinvoicelink for details.
+
+        Attributes:
+            business_connection_id (Optional[str]): Unique identifier of the
+                business connection on behalf of which the link will be created.
+                For payments in Telegram Stars only.
+            subscription_period (Optional[int]): The number of seconds the
+                subscription will be active for before the next payment. The
+                currency must be set to “XTR” (Telegram Stars) if the parameter
+                is used. Currently, it must always be 2592000 (30 days) if
+                specified. Any number of subscriptions can be active for a given
+                bot at the same time, including multiple concurrent
+                subscriptions from the same user.
+                Subscription price must no exceed 2500 Telegram Stars.
         """
         return await self.api_request(
             'createInvoiceLink',
@@ -3117,6 +3185,7 @@ class TelegramBot:
                             disable_notification: bool = None,
                             protect_content: bool = None,
                             reply_parameters: ReplyParameters = None,
+                            allow_paid_broadcast: bool = None,
                             reply_markup = None):
         """Send paid media to channel chats.
 
@@ -3187,5 +3256,148 @@ class TelegramBot:
         """
         return await self.api_request(
             'editChatSubscriptionInviteLink',
+            parameters=locals()
+        )
+
+    async def setUserEmojiStatus(self, user_id: int,
+                                 emoji_status_custom_emoji_id: str = None,
+                                 emoji_status_expiration_date: int = None):
+        """Changes the emoji status for a given user that previously allowed the
+            bot to manage their emoji status via the Mini App method
+            requestEmojiStatusAccess.
+        
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setuseremojistatus for details.
+        """
+        if emoji_status_custom_emoji_id is None:
+            emoji_status_custom_emoji_id = ''
+        return await self.api_request(
+            'setUserEmojiStatus',
+            parameters=locals()
+        )
+    
+    async def getAvailableGifts(self):
+        """Returns the list of gifts that can be sent by the bot to users.
+        
+        Requires no parameters.
+        Returns a Gifts object.
+        See https://core.telegram.org/bots/api#getavailablegifts for details.
+        """
+        return await self.api_request(
+            'getAvailableGifts',
+            parameters=locals()
+        )
+
+    async def sendGift(self, user_id: int, gift_id: str, pay_for_upgrade: bool,
+                       text: str, text_parse_mode: str,
+                       text_entities: List['MessageEntity']):
+        """Sends a gift to the given user.
+        
+        The gift can't be converted to Telegram Stars by the user.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#sendgift for details.
+        """
+        return await self.api_request(
+            'sendGift',
+            parameters=locals()
+        )
+
+    async def verifyUser(self, user_id: int,
+                         custom_description: str = None):
+        """Verifies a user on behalf of the organization which is represented by
+            the bot.
+        
+        Returns True on success.
+        See https://core.telegram.org/bots/api#verifyuser for details.
+        """
+        if len(custom_description) > 70:
+            raise TypeError("Parameter `custom_description` is too long "
+                            "(0-70 characters).")
+        return await self.api_request(
+            'verifyUser',
+            parameters=locals()
+        )
+
+    async def verifyChat(self, chat_id: Union[int, str],
+                         custom_description: str = None):
+        """Verifies a chat on behalf of the organization which is represented by
+            the bot.
+        
+        Returns True on success.
+        See https://core.telegram.org/bots/api#verifychat for details.
+        """
+        if isinstance(chat_id, str) and chat_id.isnumeric():
+            chat_id = int(chat_id)
+        if not (isinstance(chat_id, int) or
+            (isinstance(chat_id, str) and chat_id.startswith('@'))):
+            raise TypeError(f"Invalid chat_id: `{chat_id}`")
+        if len(custom_description) > 70:
+            raise TypeError("Parameter `custom_description` is too long "
+                            "(0-70 characters).")
+        return await self.api_request(
+            'verifyChat',
+            parameters=locals()
+        )
+
+    async def removeUserVerification(self, user_id: int):
+        """Removes verification from a user who is currently verified on behalf
+        of the organization represented by the bot.
+        
+        Returns True on success.
+        See https://core.telegram.org/bots/api#removeuserverification for
+            details.
+        """
+        return await self.api_request(
+            'removeUserVerification',
+            parameters=locals()
+        )
+
+    async def removeChatVerification(self, chat_id: Union[int, str]):
+        """Removes verification from a chat that is currently verified on behalf
+        of the organization represented by the bot.
+        
+        Returns True on success.
+        See https://core.telegram.org/bots/api#removechatverification for
+            details.
+        """
+        if not (isinstance(chat_id, int) or
+            (isinstance(chat_id, str) and chat_id.startswith('@'))):
+            raise TypeError(f"Invalid chat_id: `{chat_id}`")
+        return await self.api_request(
+            'removeChatVerification',
+            parameters=locals()
+        )
+
+    async def savePreparedInlineMessage(self,
+                                        user_id: int,
+                                        result: 'InlineQueryResult',
+                                        allow_user_chats: bool = None,
+                                        allow_bot_chats: bool = None,
+                                        allow_group_chats: bool = None,
+                                        allow_channel_chats: bool = None
+                                        ) -> 'PreparedInlineMessage':
+        """Stores a message that can be sent by a user of a Mini App.
+        
+        Returns a PreparedInlineMessage object.
+        See https://core.telegram.org/bots/api#savepreparedinlinemessage for
+            details.
+        """
+        return await self.api_request(
+            'savePreparedInlineMessage',
+            parameters=locals()
+        )
+
+    async def editUserStarSubscription(self, user_id: int,
+                                       telegram_payment_charge_id: str,
+                                       is_canceled: bool):
+        """Allows the bot to cancel or re-enable extension of a subscription
+            paid in Telegram Stars.
+        
+        Returns True on success.
+        See https://core.telegram.org/bots/api#edituserstarsubscription for
+            details.
+        """
+        return await self.api_request(
+            'editUserStarSubscription',
             parameters=locals()
         )

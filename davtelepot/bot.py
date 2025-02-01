@@ -3243,9 +3243,11 @@ class Bot(TelegramBot, ObjectWithDatabase, MultiLanguageObject):
 
     async def close_sessions(self):
         """Close open sessions."""
-        for session_name, session in self.sessions.items():
+        for session_name in list(self.sessions.keys()):
+            session = self.sessions[session_name]
             if not session.closed:
                 await session.close()
+                del self.sessions[session_name]
 
     async def send_one_message(self, *args, **kwargs):
         sent_message = await self.send_message(*args, **kwargs)
