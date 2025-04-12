@@ -403,9 +403,9 @@ class ReactionType(DictToDump):
                  emoji: str = None,
                  custom_emoji_id: str = None):
         super().__init__(self)
-        if type_ not in ('emoji', 'custom_emoji'):
+        if type_ not in ('emoji', 'custom_emoji', 'paid'):
             raise TypeError(
-            f"ReactionType must be `emoji` or `custom_emoji`.\n"
+            f"ReactionType must be `emoji`, `custom_emoji` or `paid`.\n"
             f"Unknown type {type_}"
         )
         self['type'] = type_
@@ -418,7 +418,7 @@ class ReactionType(DictToDump):
             self['emoji'] = emoji
         elif custom_emoji_id:
             self['custom_emoji_id'] = custom_emoji_id
-        else:
+        elif type_ != 'paid':
             raise TypeError(
                 "At least one of the two fields `emoji` or `custom_emoji` "
                 "must be provided and not None."
@@ -490,6 +490,224 @@ class PreparedInlineMessage(DictToDump):
         super().__init__()
         self['id'] = id
         self['expiration_date'] = expiration_date
+
+
+class StoryAreaPosition(DictToDump):
+    """Describes the position of a clickable area within a story.
+
+    @param x_percentage: The abscissa of the area's center, as a percentage of
+            the media width
+    @param y_percentage: The ordinate of the area's center, as a percentage of
+        the media height
+    @param width_percentage: The width of the area's rectangle, as a percentage
+        of the media width
+    @param height_percentage: The height of the area's rectangle, as a
+        percentage of the media height
+    @param rotation_angle: The clockwise rotation angle of the rectangle, in
+        degrees; 0-360
+    @param corner_radius_percentage: The radius of the rectangle corner
+        rounding, as a percentage of the media width
+    """
+    def __init__(self,x_percentage: float = None,
+                 y_percentage: float = None,
+                 width_percentage: float = None,
+                 height_percentage: float = None,
+                 rotation_angle: float = None,
+                 corner_radius_percentage: float = None):
+        super().__init__()
+        for parameter, value in locals().items():
+            if value:
+                self[parameter] = value
+
+
+class StoryAreaType(DictToDump):
+    """Describes the type of a clickable area on a story.
+    
+    Currently, it can be one of:
+    - StoryAreaTypeLocation
+    - StoryAreaTypeSuggestedReaction
+    - StoryAreaTypeLink
+    - StoryAreaTypeWeather
+    - StoryAreaTypeUniqueGift
+    """
+    def __init__(self, type_):
+        assert type_ in ('location',
+                         'suggested_reaction',
+                         'link',
+                         'weather',
+                         'unique_gift'), (
+                            f"Invalid StoryAreaType: {type_}"
+                         )
+        self['type'] = type_
+    
+
+class LocationAddress(DictToDump):
+    """Describes the physical address of a location.
+
+    @param country_code: the two-letter ISO 3166-1 alpha-2 country code of the
+        country where the location is located
+    @param state (optional): state of the location
+    @param city (optional): city of the location
+    @param street(optional): street address of the location
+    """
+    def __init__(self, country_code: str,
+                 state: str = None, 
+                 city: str = None, street: str = None):
+        assert len(f"{country_code}") == 2, (
+            f"Invalid country code: {country_code}"
+        )
+        super().__init__()
+        for parameter, value in locals().items():
+            if value:
+                self[parameter] = value
+
+
+
+class StoryAreaTypeLocation(StoryAreaType):
+    """Describes a story area pointing to a location.
+    
+    Currently, a story can have up to 10 location areas.
+    @param latitude: location latitude in degrees
+    @param longitude: location longitude in degrees
+    @param address: Optional. Address of the location
+    """
+    def __init__(self, latitude: float, longitude: float,
+                 address: 'LocationAddress' = None):
+        super().__init__(type_='location')
+        for parameter, value in locals().items():
+            if value:
+                self[parameter] = value
+
+
+class StoryAreaTypeSuggestedReaction(StoryAreaType):
+    """Describes a story area pointing to a suggested reaction.
+    
+    Currently, a story can have up to 5 suggested reaction areas.
+    @param reaction_type: type of the reaction
+    @param is_dark: pass True if the reaction area has a dark background
+    @param is_flipped: pass True if reaction area corner is flipped
+    """
+    def __init__(self, reaction_type: 'ReactionType',
+                 is_dark: bool = None,
+                 is_flipped: bool = None):
+        super().__init__(type_='suggested_reaction')
+        for parameter, value in locals().items():
+            if value is not None:
+                self[parameter] = value
+
+
+class StoryAreaTypeLink(StoryAreaType):
+    """Describes a story area pointing to an HTTP or tg:// link.
+    
+    Currently, a story can have up to 3 link areas.
+    @param url: HTTP or tg:// URL to be opened when the area is clicked
+    """
+    def __init__(self, url: str):
+        super().__init__(type_='link')
+        self['url'] = url
+
+
+class StoryAreaTypeWeather(StoryAreaType):
+    """Describes a story area containing weather information.
+    
+    Currently, a story can have up to 3 weather areas.
+    Parameters:
+    @param temperature: temperature, in degree Celsius
+    @param emoji: emoji representing the weather
+    @param background_color: a color of the area background in the ARGB format
+    """
+    def __init__(self, temperature: float, emoji: str, background_color: int):
+        super().__init__(type_='weather')
+        for parameter, value in locals().items():
+            if value:
+                self[parameter] = value
+
+
+class StoryAreaTypeUniqueGift(StoryAreaType):
+    """Describes a story area pointing to a unique gift.
+    
+    Currently, a story can have at most 1 unique gift area.
+    @param name: unique name of the gift
+    """
+    def __init__(self, name):
+        super().__init__(type_='unique_gift')
+        for parameter, value in locals().items():
+            if value:
+                self[parameter] = value
+
+
+class StoryArea(DictToDump):
+    """Describes a clickable area on a story media.
+    
+    @param position: Position of the area
+    @param type: Type of the area
+    """
+    def __init__(self,
+                 position: 'StoryAreaPosition',
+                 type_: 'StoryAreaType'):
+        super().__init__()
+        self['position'] = position
+        self['type'] = type_
+
+
+class InputStoryContent(DictToDump):
+    """This object describes the content of a story to post.
+    
+    Currently, it can be one of
+    - InputStoryContentPhoto
+    - InputStoryContentVideo
+    """
+    def __init__(self, type_):
+        assert type_ in ('photo',
+                         'video',), (
+                            f"Invalid InputStoryContent type: {type_}"
+                         )
+        self['type'] = type_
+
+
+class InputStoryContentPhoto(InputStoryContent):
+    """Describes a photo to post as a story.
+
+    @param photo: the photo to post as a story. The photo must be of the size
+        1080x1920 and must not exceed 10 MB. The photo can't be reused and can
+        only be uploaded as a new file, so you can pass
+        attach://<file_attach_name> if the photo was uploaded using
+        multipart/form-data under <file_attach_name>.
+        
+    More information: https://core.telegram.org/bots/api#sending-files
+    """
+    def __init__(self, photo: str):
+        super().__init__(type_='photo')
+        for parameter, value in locals().items():
+            if value:
+                self[parameter] = value
+
+
+class InputStoryContentVideo(InputStoryContent):
+    """Describes a video to post as a story.
+
+    @param video: The video to post as a story. The video must be of the size
+        720x1280, streamable, encoded with H.265 codec, with key frames added
+        each second in the MPEG4 format, and must not exceed 30 MB. The video
+        can't be reused and can only be uploaded as a new file, so you can pass
+        “attach://<file_attach_name>” if the video was uploaded using
+        multipart/form-data under <file_attach_name>.
+        More information: https://core.telegram.org/bots/api#sending-files
+    @param duration: Optional. Precise duration of the video in seconds; 0-60
+    @param cover_frame_timestamp: Optional. Timestamp in seconds of the frame
+        that will be used as the static cover for the story. Defaults to 0.0.
+    @param is_animation: Optional. Pass True if the video has no sound
+        
+    More information: https://core.telegram.org/bots/api#sending-files
+    """
+    def __init__(self, video: str, duration: float = None,
+                 cover_frame_timestamp: float = None,
+                 is_animation: bool = None):
+        super().__init__(type_='photo')
+        for parameter, value in locals().items():
+            if value is not None:
+                self[parameter] = value
+
 
 def handle_deprecated_disable_web_page_preview(parameters: dict,
                                                kwargs: dict):
@@ -975,7 +1193,8 @@ class TelegramBot:
                              message_id: int,
                              message_thread_id: int = None,
                              protect_content: bool = None,
-                             disable_notification: bool = None):
+                             disable_notification: bool = None,
+                             video_start_timestamp: int = None):
         """Forward a message.
 
         See https://core.telegram.org/bots/api#forwardmessage for details.
@@ -1100,6 +1319,8 @@ class TelegramBot:
                         reply_parameters: ReplyParameters = None,
                         reply_markup=None,
                         allow_paid_broadcast: bool = None,
+                        start_timestamp: int = None,
+                        cover=None,
                         **kwargs):
         """Send a video from file_id, HTTP url or file.
 
@@ -2448,6 +2669,7 @@ class TelegramBot:
                           reply_parameters: ReplyParameters = None,
                           reply_markup=None,
                           allow_paid_broadcast: bool = None,
+                          video_start_timestamp: int = None,
                           **kwargs):
         """Use this method to copy messages of any kind.
 
@@ -3288,7 +3510,8 @@ class TelegramBot:
             parameters=locals()
         )
 
-    async def sendGift(self, user_id: int, gift_id: str, pay_for_upgrade: bool,
+    async def sendGift(self, user_id: int, chat_id: Union[int, str],
+                       gift_id: str, pay_for_upgrade: bool,
                        text: str, text_parse_mode: str,
                        text_entities: List['MessageEntity']):
         """Sends a gift to the given user.
@@ -3399,5 +3622,123 @@ class TelegramBot:
         """
         return await self.api_request(
             'editUserStarSubscription',
+            parameters=locals()
+        )
+
+    async def getBusinessAccountGifts(self,
+                                      business_connection_id: str,
+                                      exclude_unsaved: bool = None,
+                                      exclude_saved: bool = None,
+                                      exclude_unlimited: bool = None,
+                                      exclude_limited: bool = None,
+                                      exclude_unique: bool = None,
+                                      sort_by_price: bool = None,
+                                      offset: str = None,
+                                      limit: int = None):
+        """Returns the gifts received and owned by a managed business account.
+        
+        Requires the can_view_gifts_and_stars business bot right.
+        Returns OwnedGifts on success.
+        See https://core.telegram.org/bots/api#getbusinessaccountgifts for details.
+        """
+        return await self.api_request(
+            'getBusinessAccountGifts',
+            parameters=locals()
+        )
+
+    async def convertGiftToStars(self, business_connection_id: str, owned_gift_id: str):
+        """Converts a given regular gift to Telegram Stars.
+        
+        Requires the can_convert_gifts_to_stars business bot right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#convertgifttostars for details.
+        """
+        return await self.api_request(
+            'convertGiftToStars',
+            parameters=locals()
+        )
+
+    async def upgradeGift(self, business_connection_id: str,
+                          owned_gift_id: str,
+                          keep_original_details: bool = None,
+                          star_count: int = None):
+        """Upgrades a given regular gift to a unique gift.
+        
+        Requires the can_transfer_and_upgrade_gifts business bot right.
+        Additionally requires the can_transfer_stars business bot right if the
+            upgrade is paid.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#upgradegift for details.
+        """
+        return await self.api_request(
+            'upgradeGift',
+            parameters=locals()
+        )
+
+    async def transferGift(self, business_connection_id: str,
+                           owned_gift_id: str,
+                           new_owner_chat_id: int,
+                           star_count: int = None):
+        """Transfers an owned unique gift to another user.
+        
+        Requires the can_transfer_and_upgrade_gifts business bot right.
+        Requires can_transfer_stars business bot right if the transfer is paid.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#transfergift for details.
+        """
+        return await self.api_request(
+            'transferGift',
+            parameters=locals()
+        )
+
+    async def postStory(self, business_connection_id: str,
+                        content: 'InputStoryContent',
+                        active_period: int,
+                        caption: str = None,
+                        parse_mode: str = None,
+                        caption_entities: List['MessageEntity'] = None,
+                        areas: List['StoryArea'] = None,
+                        post_to_chat_page: bool = None,
+                        protect_content: bool = None):
+        """Posts a story on behalf of a managed business account.
+        
+        Requires the can_manage_stories business bot right.
+        Returns Story on success.
+        See https://core.telegram.org/bots/api#poststory for details.
+        """
+        return await self.api_request(
+            'postStory',
+            parameters=locals()
+        )
+
+    async def editStory(self, business_connection_id: str,
+                        story_id: int,
+                        content: 'InputStoryContent',
+                        caption: str = None,
+                        parse_mode: str = None,
+                        caption_entities: List[dict] = None,
+                        areas: List['StoryArea'] = None):
+        """Edits a story previously posted by the bot on behalf of a managed
+            business account.
+        
+        Requires the can_manage_stories business bot right.
+        Returns Story on success.
+        See https://core.telegram.org/bots/api#editstory for details.
+        """
+        return await self.api_request(
+            'editStory',
+            parameters=locals()
+        )
+
+    async def deleteStory(self, business_connection_id: str, story_id: int):
+        """Deletes a story previously posted by the bot on behalf of a managed
+            business account.
+        
+        Requires the can_manage_stories business bot right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#deletestory for details.
+        """
+        return await self.api_request(
+            'deleteStory',
             parameters=locals()
         )
