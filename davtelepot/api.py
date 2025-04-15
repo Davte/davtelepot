@@ -318,7 +318,8 @@ class InputSticker(dict):
             or pass “attach://<file_attach_name>” to upload a new one using
             multipart/form-data under <file_attach_name> name.
             Animated and video stickers can't be uploaded via HTTP URL.
-            More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+            More information on Sending Files:
+            https://core.telegram.org/bots/api#sending-files
         @param format_: Format of the added sticker, must be one of “static”
             for a .WEBP or .PNG image, “animated” for a .TGS animation,
             “video” for a WEBM video
@@ -706,6 +707,58 @@ class InputStoryContentVideo(InputStoryContent):
         super().__init__(type_='photo')
         for parameter, value in locals().items():
             if value is not None:
+                self[parameter] = value
+
+
+class InputProfilePhoto(DictToDump):
+    """This object describes a profile photo to set.
+    
+    Currently, it can be one of
+    - InputProfilePhotoStatic
+    - InputProfilePhotoAnimated
+    """
+    def __init__(self, type_):
+        assert type_ in ('InputProfilePhotoStatic',
+                         'InputProfilePhotoAnimated',), (
+                            f"Invalid InputProfilePhoto type: {type_}"
+                         )
+        self['type'] = type_
+
+
+class InputProfilePhotoStatic(InputProfilePhoto):
+    """A static profile photo in the .JPG format.
+
+    @param photo: the static profile photo. Profile photos can't be reused and
+        can only be uploaded as a new file, so you can pass
+        "attach://<file_attach_name>" if the photo was uploaded using
+        multipart/form-data under <file_attach_name>.
+        More information on Sending Files:
+        https://core.telegram.org/bots/api#sending-files
+    """
+    def __init__(self, photo: str):
+        super().__init__(type_='static')
+        for parameter, value in locals().items():
+            if value:
+                self[parameter] = value
+
+
+class InputProfilePhotoAnimated(InputProfilePhoto):
+    """A static profile photo in the MPEG4 format.
+
+    @param animation: The animated profile photo. Profile photos can't be reused
+        and can only be uploaded as a new file, so you can pass
+        "attach://<file_attach_name>" if the photo was uploaded using
+        multipart/form-data under <file_attach_name>.
+        More information on Sending Files:
+        https://core.telegram.org/bots/api#sending-files
+    @param main_frame_timestamp: Optional. Timestamp in seconds of the frame
+        that will be used as the static profile photo. Defaults to 0.0.
+    """
+    def __init__(self, animation: str,
+                 main_frame_timestamp: float = None):
+        super().__init__(type_='animated')
+        for parameter, value in locals().items():
+            if value:
                 self[parameter] = value
 
 
@@ -3622,6 +3675,166 @@ class TelegramBot:
         """
         return await self.api_request(
             'editUserStarSubscription',
+            parameters=locals()
+        )
+
+    async def giftPremiumSubscription(
+        self, user_id: int,
+        month_count: int, star_count: int,
+        text: str = None,
+        text_parse_mode: str = None,
+        text_entities: List['MessageEntity'] = None
+    ):
+        """Gifts a Telegram Premium subscription to the given user.
+        
+        Returns True on success.
+        See https://core.telegram.org/bots/api#giftpremiumsubscription for details.
+        """
+        if star_count not in (1000, 1500, 2500):
+            logging.warning("Star count should be 1000 for three months, 1500 "
+                            "for 6 months or 2000 for 12 months")
+        return await self.api_request(
+            'giftPremiumSubscription',
+            parameters=locals()
+        )
+
+    async def readBusinessMessage(self,
+                                  business_connection_id: str,
+                                  chat_id: int,
+                                  message_id: int):
+        """Marks incoming message as read on behalf of a business account.
+        
+        Requires the can_read_messages business bot right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#readbusinessmessage for details.
+        """
+        return await self.api_request(
+            'readBusinessMessage',
+            parameters=locals()
+        )
+    
+    async def deleteBusinessMessages(self,
+                                     business_connection_id: str,
+                                     message_ids: List[int]):
+        """Delete messages on behalf of a business account.
+        
+        Requires the can_delete_outgoing_messages business bot right to delete
+            messages sent by the bot itself, or the can_delete_all_messages
+            business bot right to delete any message.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#deletebusinessmessages for details.
+        """
+        return await self.api_request(
+            'deleteBusinessMessages',
+            parameters=locals()
+        )
+
+    async def setBusinessAccountName(self,
+                                     business_connection_id: str,
+                                     first_name: str,
+                                     last_name: str = None):
+        """Changes the first and last name of a managed business account.
+        
+        Requires the can_change_name business bot right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setbusinessaccountname for details.
+        """
+        return await self.api_request(
+            'setBusinessAccountName',
+            parameters=locals()
+        )
+
+    async def setBusinessAccountUsername(self,
+                                         business_connection_id: str,
+                                         username: str = None):
+        """Changes the username of a managed business account.
+        
+        Requires the can_change_username business bot right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setbusinessaccountusername for details.
+        """
+        return await self.api_request(
+            'setBusinessAccountUsername',
+            parameters=locals()
+        )
+
+    async def setBusinessAccountBio(self,
+                                    business_connection_id: str,
+                                    bio: str = None):
+        """Changes the bio of a managed business account.
+        
+        Requires the can_change_bio business bot right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setbusinessaccountbio for details.
+        """
+        return await self.api_request(
+            'setBusinessAccountBio',
+            parameters=locals()
+        )
+
+    async def setBusinessAccountProfilePhoto(self,
+                                             business_connection_id: str,
+                                             photo: 'InputProfilePhoto',
+                                             is_public: bool = None):
+        """Changes the profile photo of a managed business account.
+        
+        Requires the can_edit_profile_photo business bot right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setbusinessaccountprofilephoto for details.
+        """
+        return await self.api_request(
+            'setBusinessAccountProfilePhoto',
+            parameters=locals()
+        )
+
+    async def removeBusinessAccountProfilePhoto(self, business_connection_id: str, is_public: bool):
+        """Removes the current profile photo of a managed business account.
+        
+        Requires the can_edit_profile_photo business bot right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#removebusinessaccountprofilephoto for details.
+        """
+        return await self.api_request(
+            'removeBusinessAccountProfilePhoto',
+            parameters=locals()
+        )
+
+    async def setBusinessAccountGiftSettings(self, business_connection_id: str, show_gift_button: bool, accepted_gift_types: 'AcceptedGiftTypes'):
+        """Changes the privacy settings pertaining to incoming gifts in a managed
+            business account.
+        
+        Requires the can_change_gift_settings business bot right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#setbusinessaccountgiftsettings for details.
+        """
+        return await self.api_request(
+            'setBusinessAccountGiftSettings',
+            parameters=locals()
+        )
+
+    async def getBusinessAccountStarBalance(self, business_connection_id: str):
+        """Returns the amount of Telegram Stars owned by a managed business
+            account.
+        
+        Requires the can_view_gifts_and_stars business bot right.
+        Returns StarAmount on success.
+        See https://core.telegram.org/bots/api#getbusinessaccountstarbalance for details.
+        """
+        return await self.api_request(
+            'getBusinessAccountStarBalance',
+            parameters=locals()
+        )
+
+    async def transferBusinessAccountStars(self, business_connection_id: str, star_count: int):
+        """Transfers Telegram Stars from the business account balance to the bot's
+            balance.
+        
+        Requires the can_transfer_stars business bot right.
+        Returns True on success.
+        See https://core.telegram.org/bots/api#transferbusinessaccountstars for details.
+        """
+        return await self.api_request(
+            'transferBusinessAccountStars',
             parameters=locals()
         )
 

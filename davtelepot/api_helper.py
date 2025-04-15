@@ -25,6 +25,7 @@ class TelegramApiMethod(object):
         'Boolean': "bool",
         'Integer': "int",
         'Integer or String': "Union[int, str]",
+        'Array of Integer': "List[str]",
         'String': "str",
     }
     """Telegram bot API method."""
@@ -55,14 +56,15 @@ class TelegramApiMethod(object):
         for n, paragraph in enumerate(self.description.replace('.', '.\n').split('\n')):
             additional_indentation = 0
             if n == 0 and paragraph.startswith(redundant_string):
-                paragraph = paragraph[len(redundant_string)].upper() + paragraph[len(redundant_string)+1:]
+                paragraph = (paragraph[len(redundant_string)].upper()
+                             + paragraph[len(redundant_string)+1:])
             for word in paragraph.split(' '):
                 if len(current_line) + len(word) > 80 - indentation - additional_indentation:
                     additional_indentation = max(additional_indentation, 4)
                     result += f"{current_line.strip()}\n{' ' * additional_indentation}"
                     current_line = ""
                 current_line += f"{word} "
-            if len(current_line):
+            if len(current_line) > 0:
                 result += f"{current_line.strip()}\n"
                 current_line = ""
             if n == 0:
@@ -203,7 +205,7 @@ async def print_api_methods(filename=None,
                     )
                 )
     if output_file:
-        with open(output_file, 'w') as file:
+        with open(output_file, 'w', encoding="utf-8") as file:
             if new_methods:
                 file.write(
                     "from typing import List, Union\n"
