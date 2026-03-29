@@ -836,7 +836,8 @@ def get_maintenance_exception_criterion(bot, allowed_command):
 
 
 async def get_last_commit():
-    """Get last commit hash and davtelepot version."""
+    """Get last commit hash and message."""
+    last_commit_message = None
     try:
         _subprocess = await asyncio.create_subprocess_exec(
             'git', 'rev-parse', 'HEAD',
@@ -844,12 +845,22 @@ async def get_last_commit():
             stderr=asyncio.subprocess.STDOUT
         )
         stdout, _ = await _subprocess.communicate()
-        last_commit = stdout.decode().strip()
+        last_commit_hash = stdout.decode().strip()
     except Exception as e:
-        last_commit = f"{e}"
-    if last_commit.startswith("fatal: not a git repository"):
-        last_commit = "-"
-    return last_commit
+        last_commit_hash = f"{e}"
+    try:
+        _subprocess = await asyncio.create_subprocess_exec(
+            'git', 'log', '--pretty=%B', "-n", "1", last_commit_hash,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT
+        )
+        stdout, _ = await _subprocess.communicate()
+        last_commit_message = stdout.decode().strip()
+    except Exception:
+        pass
+    if last_commit_hash.startswith("fatal: not a git repository"):
+        last_commit_hash = "-"
+    return last_commit_hash, last_commit_message
 
 
 async def get_new_versions(bot: Bot,
@@ -899,12 +910,15 @@ async def get_new_versions(bot: Bot,
 
 async def version_command(bot: Bot, update: dict,
                           user_record: OrderedDict, language: str):
-    last_commit = await get_last_commit()
+    last_commit_hash, last_commit_message = await get_last_commit()
     text = bot.get_message(
         'admin', 'version_command', 'header',
-        last_commit=last_commit,
+        last_commit=last_commit_hash,
         update=update, user_record=user_record
-    ) + '\n\n'
+    )
+    if last_commit_message:
+        text += "\n<i>" + last_commit_message + "</i>"
+    text += "\n\n"
     text += f'<b>Python: </b> <code>{platform.python_version()}</code>\n'
     text += '\n'.join(
         f"<b>{package.__name__}</b>: "
@@ -947,7 +961,7 @@ async def notify_new_version(bot: Bot):
 
     Notify admins when last commit and/or davtelepot version change.
     """
-    last_commit = await get_last_commit()
+    last_commit_hash, last_commit_message = await get_last_commit()
     old_record = bot.db['version_history'].find_one(
         order_by=['-id']
     )
@@ -955,7 +969,7 @@ async def notify_new_version(bot: Bot):
         f"{package.__name__}_version": get_package_version(package)
         for package in bot.packages
     }
-    current_versions['last_commit'] = last_commit
+    current_versions['last_commit'] = last_commit_hash
     if old_record is None:
         old_record = dict(
             updated_at=datetime.datetime.min,
@@ -978,13 +992,16 @@ async def notify_new_version(bot: Bot):
                 'admin', 'new_version', 'title',
                 user_record=admin
             ) + '\n\n'
-            if last_commit != old_record['last_commit']:
+            if last_commit_hash != old_record['last_commit']:
                 text += bot.get_message(
                     'admin', 'new_version', 'last_commit',
                     old_record=old_record,
                     new_record=current_versions,
                     user_record=admin
-                ) + '\n\n'
+                )
+                if last_commit_message:
+                    text += f"\n<i>{last_commit_message}</i>"
+                text += "\n\n"
             text += '\n'.join(
                 f"<b>{name[:-len('_version')]}</b>: "
                 f"<code>{old_record[name]}</code> —> "
