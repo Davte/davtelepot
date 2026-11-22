@@ -892,8 +892,7 @@ async def get_new_versions(bot: Bot,
                           "package %s", package.__name__)
         notification_record = bot.db['updates_notifications'].find_one(
             package=package.__name__,
-            order_by=['-id'],
-            _limit=1
+            order_by=['-id']
         )
         if (
                 new_version != current_version
