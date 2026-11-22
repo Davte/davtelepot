@@ -65,7 +65,6 @@ setuptools.setup(
         "Environment :: Console",
         "Framework :: AsyncIO",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3 :: Only",
