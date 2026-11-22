@@ -34,10 +34,7 @@ fi
 bash "$this_script_directory/push_to_remotes.sh"
 
 # Clean previous builds
-rm -rf 
-    "$this_script_directory/build" 
-    "$this_script_directory/dist" 
-    "$this_script_directory/davtelepot.egg-info"
+rm -rf "$this_script_directory"/{build,dist,davtelepot.egg-info}
 
 cd "$this_script_directory" || exit 1
 
